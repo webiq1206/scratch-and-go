@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Animated, ActivityIndicator, Alert, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Colors from '@/constants/colors';
 import Typography from '@/constants/typography';
@@ -14,6 +15,7 @@ import LocationSelector from '@/components/ui/LocationSelector';
 import { useActivity } from '@/contexts/ActivityContext';
 import { useLocation } from '@/contexts/LocationContext';
 import { useMemoryBook } from '@/contexts/MemoryBookContext';
+import { useSubscription } from '@/contexts/SubscriptionContext';
 import { Filters } from '@/types/activity';
 
 const MODE_KEY = 'scratch_and_go_mode';
@@ -21,6 +23,7 @@ const MODE_KEY = 'scratch_and_go_mode';
 type Mode = 'couples' | 'family';
 
 export default function HomeScreen() {
+  const router = useRouter();
   const [mode, setMode] = useState<Mode | null>(null);
   const [categoryFilter, setCategoryFilter] = useState('Any');
   const [budgetFilter, setBudgetFilter] = useState('Any');
@@ -38,6 +41,7 @@ export default function HomeScreen() {
 
   const { location } = useLocation();
   const { saveActivity, isActivitySaved } = useMemoryBook();
+  const { isPremium } = useSubscription();
   const [isSaved, setIsSaved] = useState(false);
 
   useEffect(() => {
@@ -83,7 +87,10 @@ export default function HomeScreen() {
       Alert.alert(
         'Scratch Limit Reached',
         `You've used your 3 free scratches this month! Upgrade to premium for unlimited scratches.`,
-        [{ text: 'OK' }]
+        [
+          { text: 'Not Now', style: 'cancel' },
+          { text: 'Upgrade', onPress: () => router.push('/paywall') }
+        ]
       );
       return;
     }
@@ -214,7 +221,14 @@ export default function HomeScreen() {
             />
           </View>
           <View>
-            <Text style={styles.appName}>Scratch & Go</Text>
+            <View style={styles.appNameRow}>
+              <Text style={styles.appName}>Scratch & Go</Text>
+              {isPremium && (
+                <View style={styles.premiumBadge}>
+                  <Text style={styles.premiumBadgeText}>PRO</Text>
+                </View>
+              )}
+            </View>
             <Text style={styles.modeLabel}>{mode === 'couples' ? 'Couples Mode' : 'Family Mode'}</Text>
           </View>
         </View>
@@ -317,7 +331,7 @@ export default function HomeScreen() {
 
         <View style={styles.scratchCountContainer}>
           <Text style={styles.scratchCountText}>
-            {remainingScratches} scratches remaining this month
+            {isPremium ? '✨ Unlimited scratches' : `${remainingScratches} scratches remaining this month`}
           </Text>
         </View>
 
@@ -410,10 +424,27 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
   },
+  appNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
   appName: {
     fontSize: Typography.sizes.body,
     fontWeight: '400' as const,
     color: Colors.text,
+  },
+  premiumBadge: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: Spacing.xs,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  premiumBadgeText: {
+    fontSize: 10,
+    fontWeight: '400' as const,
+    color: Colors.backgroundDark,
+    letterSpacing: 0.5,
   },
   modeLabel: {
     fontSize: Typography.sizes.caption,

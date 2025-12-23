@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { usePreferences } from './PreferencesContext';
 import { useLocation } from './LocationContext';
+import { useSubscription } from './SubscriptionContext';
 
 const HISTORY_KEY = 'scratch_and_go_history';
 const SCRATCH_COUNT_KEY = 'scratch_and_go_count';
@@ -14,6 +15,7 @@ const SCRATCH_MONTH_KEY = 'scratch_and_go_month';
 export const [ActivityProvider, useActivity] = createContextHook(() => {
   const { getContentRestrictions } = usePreferences();
   const { location } = useLocation();
+  const { isPremium } = useSubscription();
   const [currentActivity, setCurrentActivity] = useState<Activity | null>(null);
   const [activityHistory, setActivityHistory] = useState<Activity[]>([]);
   const [scratchCount, setScratchCount] = useState(0);
@@ -126,7 +128,7 @@ Create something unique, exciting, and memorable. Use inclusive language ("your 
   });
 
   const generateActivity = async (filters: Filters) => {
-    if (scratchCount >= 3) {
+    if (!isPremium && scratchCount >= 3) {
       console.log('Scratch limit reached for this month');
       return false;
     }
@@ -157,8 +159,8 @@ Create something unique, exciting, and memorable. Use inclusive language ("your 
     generateActivity,
     saveToHistory,
     clearCurrentActivity,
-    isLimitReached: scratchCount >= 3,
-    remainingScratches: Math.max(0, 3 - scratchCount),
+    isLimitReached: !isPremium && scratchCount >= 3,
+    remainingScratches: isPremium ? Infinity : Math.max(0, 3 - scratchCount),
   };
 });
 
