@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, KeyboardAvoidingView, Platform, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, KeyboardAvoidingView, Platform, Image as RNImage } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, Stack, router } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { Image } from 'expo-image';
 import { useMemoryBook } from '@/contexts/MemoryBookContext';
 import { useCollaborative } from '@/contexts/CollaborativeContext';
 import { useLocation } from '@/contexts/LocationContext';
@@ -12,11 +13,11 @@ import Colors from '@/constants/colors';
 import Typography from '@/constants/typography';
 import Spacing from '@/constants/spacing';
 import { BorderRadius } from '@/constants/design';
-import { Clock, DollarSign, Calendar, CheckCircle, Trash2, Edit3, Save, X, Share2, Users, CalendarPlus } from 'lucide-react-native';
+import { Clock, DollarSign, Calendar, CheckCircle, Trash2, Edit3, Save, X, Share2, Users, CalendarPlus, Camera, MapPin, Plus } from 'lucide-react-native';
 
 export default function ActivityDetailScreen() {
   const { id } = useLocalSearchParams();
-  const { getSavedActivity, markAsCompleted, markAsIncomplete, updateRating, updateNotes, unsaveActivity } = useMemoryBook();
+  const { getSavedActivity, markAsCompleted, markAsIncomplete, updateRating, updateNotes, unsaveActivity, addPhoto, removePhoto, updateLocationSnapshot } = useMemoryBook();
   const { addToQueue } = useCollaborative();
   const { location } = useLocation();
   
@@ -32,6 +33,7 @@ export default function ActivityDetailScreen() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [isAddingToCalendar, setIsAddingToCalendar] = useState(false);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
 
   if (!activity) {
     return (
@@ -158,6 +160,110 @@ export default function ActivityDetailScreen() {
     }
   };
 
+  const handlePickPhoto = async () => {
+    try {
+      if (Platform.OS !== 'web') {
+        const { launchImageLibraryAsync, requestMediaLibraryPermissionsAsync, MediaTypeOptions } = await import('expo-image-picker');
+        
+        const permissionResult = await requestMediaLibraryPermissionsAsync();
+        
+        if (!permissionResult.granted) {
+          Alert.alert('Permission Required', 'Please allow access to your photo library to add photos.');
+          return;
+        }
+
+        setIsUploadingPhoto(true);
+        const result = await launchImageLibraryAsync({
+          mediaTypes: MediaTypeOptions.Images,
+          allowsEditing: true,
+          quality: 0.8,
+        });
+
+        if (!result.canceled && result.assets[0]) {
+          addPhoto(activity.id, result.assets[0].uri);
+          Alert.alert('Success', 'Photo added successfully!');
+        }
+      } else {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.onchange = (e: any) => {
+          const file = e.target.files[0];
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+              if (event.target?.result) {
+                addPhoto(activity.id, event.target.result as string);
+                Alert.alert('Success', 'Photo added successfully!');
+              }
+            };
+            reader.readAsDataURL(file);
+          }
+        };
+        input.click();
+      }
+    } catch (error) {
+      console.error('Error picking photo:', error);
+      Alert.alert('Error', 'Failed to add photo. Please try again.');
+    } finally {
+      setIsUploadingPhoto(false);
+    }
+  };
+
+  const handleTakePhoto = async () => {
+    try {
+      if (Platform.OS !== 'web') {
+        const { launchCameraAsync, requestCameraPermissionsAsync, MediaTypeOptions } = await import('expo-image-picker');
+        
+        const permissionResult = await requestCameraPermissionsAsync();
+        
+        if (!permissionResult.granted) {
+          Alert.alert('Permission Required', 'Please allow access to your camera to take photos.');
+          return;
+        }
+
+        setIsUploadingPhoto(true);
+        const result = await launchCameraAsync({
+          mediaTypes: MediaTypeOptions.Images,
+          allowsEditing: true,
+          quality: 0.8,
+        });
+
+        if (!result.canceled && result.assets[0]) {
+          addPhoto(activity.id, result.assets[0].uri);
+          Alert.alert('Success', 'Photo added successfully!');
+        }
+      } else {
+        Alert.alert('Not Supported', 'Camera is not supported on web. Please use "Add from Library" instead.');
+      }
+    } catch (error) {
+      console.error('Error taking photo:', error);
+      Alert.alert('Error', 'Failed to take photo. Please try again.');
+    } finally {
+      setIsUploadingPhoto(false);
+    }
+  };
+
+  const handleRemovePhoto = (photoUri: string) => {
+    Alert.alert(
+      'Remove Photo',
+      'Are you sure you want to remove this photo?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: () => removePhoto(activity.id, photoUri),
+        },
+      ]
+    );
+  };
+
+  const handleUpdateLocation = () => {
+    updateLocationSnapshot(activity.id);
+    Alert.alert('Updated', 'Location snapshot updated to current location');
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <Stack.Screen 
@@ -186,6 +292,21 @@ export default function ActivityDetailScreen() {
 
           <Text style={styles.title}>{activity.title}</Text>
           <Text style={styles.description}>{activity.description}</Text>
+
+          {activity.locationSnapshot && (
+            <View style={styles.locationSection}>
+              <MapPin size={16} color={Colors.primary} />
+              <View style={styles.locationDetails}>
+                <Text style={styles.locationText}>
+                  {activity.locationSnapshot.city}, {activity.locationSnapshot.region}
+                </Text>
+                <Text style={styles.locationSubtext}>{activity.locationSnapshot.country}</Text>
+              </View>
+              <TouchableOpacity onPress={handleUpdateLocation} style={styles.updateLocationButton}>
+                <Text style={styles.updateLocationText}>Update</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           {location?.weather && (
             <View style={styles.weatherSection}>
@@ -269,7 +390,7 @@ export default function ActivityDetailScreen() {
                     activeOpacity={0.7}
                     style={styles.starButton}
                   >
-                    <Image
+                    <RNImage
                       source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/attachments/u0k4jkmq0pcfxvnip8sbu' }}
                       style={[
                         styles.starIcon,
@@ -336,6 +457,60 @@ export default function ActivityDetailScreen() {
                 ) : (
                   <Text style={styles.notesPlaceholder}>No notes yet. Tap Edit to add some!</Text>
                 )}
+              </View>
+            )}
+          </View>
+
+          <View style={styles.photosSection}>
+            <View style={styles.photosSectionHeader}>
+              <Text style={styles.sectionLabel}>Photos</Text>
+              <View style={styles.photoButtons}>
+                {Platform.OS !== 'web' && (
+                  <TouchableOpacity
+                    onPress={handleTakePhoto}
+                    style={styles.photoActionButton}
+                    disabled={isUploadingPhoto}
+                  >
+                    <Camera size={16} color={Colors.primary} />
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity
+                  onPress={handlePickPhoto}
+                  style={styles.photoActionButton}
+                  disabled={isUploadingPhoto}
+                >
+                  <Plus size={16} color={Colors.primary} />
+                </TouchableOpacity>
+              </View>
+            </View>
+            
+            {activity.photos && activity.photos.length > 0 ? (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.photosScroll}
+                contentContainerStyle={styles.photosScrollContent}
+              >
+                {activity.photos.map((photoUri, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    onLongPress={() => handleRemovePhoto(photoUri)}
+                    activeOpacity={0.8}
+                    style={styles.photoContainer}
+                  >
+                    <Image
+                      source={{ uri: photoUri }}
+                      style={styles.photo}
+                      contentFit="cover"
+                    />
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            ) : (
+              <View style={styles.noPhotosContainer}>
+                <Camera size={32} color={Colors.textLight} />
+                <Text style={styles.noPhotosText}>No photos yet</Text>
+                <Text style={styles.noPhotosSubtext}>Tap + to add photos from your memories</Text>
               </View>
             )}
           </View>
@@ -777,6 +952,99 @@ const styles = StyleSheet.create({
     fontSize: Typography.sizes.body,
     color: Colors.textLight,
     fontStyle: 'italic' as const,
+  },
+  locationSection: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    backgroundColor: Colors.cardBackground,
+    borderRadius: BorderRadius.medium,
+    padding: Spacing.md,
+    marginBottom: Spacing.lg,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    gap: Spacing.sm,
+  },
+  locationDetails: {
+    flex: 1,
+  },
+  locationText: {
+    fontSize: Typography.sizes.body,
+    color: Colors.text,
+    fontWeight: '400' as const,
+  },
+  locationSubtext: {
+    fontSize: Typography.sizes.caption,
+    color: Colors.textLight,
+    marginTop: 2,
+  },
+  updateLocationButton: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+  },
+  updateLocationText: {
+    fontSize: Typography.sizes.caption,
+    color: Colors.primary,
+    fontWeight: '400' as const,
+  },
+  photosSection: {
+    marginBottom: Spacing.lg,
+  },
+  photosSectionHeader: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
+    marginBottom: Spacing.md,
+  },
+  photoButtons: {
+    flexDirection: 'row' as const,
+    gap: Spacing.sm,
+  },
+  photoActionButton: {
+    padding: Spacing.sm,
+    backgroundColor: Colors.cardBackground,
+    borderRadius: BorderRadius.small,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+  },
+  photosScroll: {
+    marginHorizontal: -Spacing.lg,
+  },
+  photosScrollContent: {
+    paddingHorizontal: Spacing.lg,
+    gap: Spacing.md,
+  },
+  photoContainer: {
+    width: 160,
+    height: 160,
+    borderRadius: BorderRadius.medium,
+    overflow: 'hidden' as const,
+    backgroundColor: Colors.cardBackground,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  photo: {
+    width: '100%',
+    height: '100%',
+  },
+  noPhotosContainer: {
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    paddingVertical: Spacing.xxl,
+    backgroundColor: Colors.cardBackground,
+    borderRadius: BorderRadius.medium,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    borderStyle: 'dashed' as const,
+  },
+  noPhotosText: {
+    fontSize: Typography.sizes.body,
+    color: Colors.textLight,
+    marginTop: Spacing.md,
+  },
+  noPhotosSubtext: {
+    fontSize: Typography.sizes.caption,
+    color: Colors.textSecondary,
+    marginTop: Spacing.xs,
   },
   actionsSection: {
     gap: Spacing.md,

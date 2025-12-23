@@ -3,11 +3,13 @@ import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Activity, SavedActivity } from '@/types/activity';
 import { useActivity } from './ActivityContext';
+import { useLocation } from './LocationContext';
 
 const SAVED_ACTIVITIES_KEY = 'scratch_and_go_saved_activities';
 
 export const [MemoryBookProvider, useMemoryBook] = createContextHook(() => {
   const { trackInteraction } = useActivity();
+  const { location } = useLocation();
   const [savedActivities, setSavedActivities] = useState<SavedActivity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -43,6 +45,8 @@ export const [MemoryBookProvider, useMemoryBook] = createContextHook(() => {
       id: Date.now().toString() + Math.random().toString(36),
       savedAt: Date.now(),
       isCompleted: false,
+      photos: [],
+      locationSnapshot: location || undefined,
     };
 
     const updated = [savedActivity, ...savedActivities];
@@ -109,6 +113,39 @@ export const [MemoryBookProvider, useMemoryBook] = createContextHook(() => {
     console.log('Activity notes updated:', activityId);
   };
 
+  const addPhoto = (activityId: string, photoUri: string) => {
+    const updated = savedActivities.map(activity =>
+      activity.id === activityId
+        ? { ...activity, photos: [...(activity.photos || []), photoUri] }
+        : activity
+    );
+    setSavedActivities(updated);
+    saveSavedActivities(updated);
+    console.log('Photo added to activity:', activityId);
+  };
+
+  const removePhoto = (activityId: string, photoUri: string) => {
+    const updated = savedActivities.map(activity =>
+      activity.id === activityId
+        ? { ...activity, photos: (activity.photos || []).filter(p => p !== photoUri) }
+        : activity
+    );
+    setSavedActivities(updated);
+    saveSavedActivities(updated);
+    console.log('Photo removed from activity:', activityId);
+  };
+
+  const updateLocationSnapshot = (activityId: string) => {
+    const updated = savedActivities.map(activity =>
+      activity.id === activityId
+        ? { ...activity, locationSnapshot: location || undefined }
+        : activity
+    );
+    setSavedActivities(updated);
+    saveSavedActivities(updated);
+    console.log('Location snapshot updated for activity:', activityId);
+  };
+
   const isActivitySaved = (activityTitle: string): boolean => {
     return savedActivities.some(a => a.title === activityTitle);
   };
@@ -134,6 +171,9 @@ export const [MemoryBookProvider, useMemoryBook] = createContextHook(() => {
     markAsIncomplete,
     updateRating,
     updateNotes,
+    addPhoto,
+    removePhoto,
+    updateLocationSnapshot,
     isActivitySaved,
     getSavedActivity,
     getSavedActivities,

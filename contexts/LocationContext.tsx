@@ -1,20 +1,21 @@
 import createContextHook from '@nkzw/create-context-hook';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Platform } from 'react-native';
+import { Platform, AppState, AppStateStatus } from 'react-native';
 import { LocationData, WeatherData } from '@/types/activity';
 
 const LOCATION_KEY = 'scratch_and_go_location';
 const WEATHER_CACHE_DURATION = 30 * 60 * 1000;
+const LOCATION_CHECK_INTERVAL = 10 * 60 * 1000;
+const SIGNIFICANT_DISTANCE = 50000;
 
 export const [LocationProvider, useLocation] = createContextHook(() => {
   const [location, setLocation] = useState<LocationData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    loadSavedLocation();
-  }, []);
+  const [isTrackingEnabled, setIsTrackingEnabled] = useState(true);
+  const trackingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const appState = useRef<AppStateStatus>(AppState.currentState);
 
   const loadSavedLocation = async () => {
     try {
@@ -55,77 +56,11 @@ export const [LocationProvider, useLocation] = createContextHook(() => {
     }
   };
 
-  const getCurrentLocation = async (): Promise<LocationData | null> => {
-    const hasPermission = await requestLocationPermission();
-    if (!hasPermission) return null;
-
-    setIsLoading(true);
-    setError(null);
-
+  const saveLocation = async (locationData: LocationData) => {
     try {
-      if (Platform.OS === 'web') {
-        return await getWebLocation();
-      } else {
-        return await getNativeLocation();
-      }
+      await AsyncStorage.setItem(LOCATION_KEY, JSON.stringify(locationData));
     } catch (error) {
-      console.error('Failed to get location:', error);
-      setError('Failed to get your location');
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const getWebLocation = (): Promise<LocationData | null> => {
-    return new Promise((resolve) => {
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          const { latitude, longitude } = position.coords;
-          const locationData = await reverseGeocode(latitude, longitude);
-          resolve(locationData);
-        },
-        (error) => {
-          console.error('Web geolocation error:', error);
-          setError('Failed to get your location');
-          resolve(null);
-        }
-      );
-    });
-  };
-
-  const getNativeLocation = async (): Promise<LocationData | null> => {
-    try {
-      const { getCurrentPositionAsync, reverseGeocodeAsync } = await import('expo-location');
-      
-      const position = await getCurrentPositionAsync({
-        accuracy: 4,
-      });
-
-      const { latitude, longitude } = position.coords;
-      const geocoded = await reverseGeocodeAsync({ latitude, longitude });
-
-      if (geocoded && geocoded.length > 0) {
-        const place = geocoded[0];
-        const weather = await fetchWeather(latitude, longitude);
-
-        const locationData: LocationData = {
-          city: place.city || place.subregion || 'Unknown City',
-          region: place.region || place.subregion || 'Unknown Region',
-          country: place.country || 'Unknown Country',
-          coords: { latitude, longitude },
-          weather: weather || undefined,
-        };
-
-        await saveLocation(locationData);
-        setLocation(locationData);
-        return locationData;
-      }
-
-      return null;
-    } catch (error) {
-      console.error('Native location error:', error);
-      throw error;
+      console.error('Failed to save location:', error);
     }
   };
 
@@ -163,7 +98,7 @@ export const [LocationProvider, useLocation] = createContextHook(() => {
     }
   };
 
-  const reverseGeocode = async (latitude: number, longitude: number): Promise<LocationData | null> => {
+  const reverseGeocode = useCallback(async (latitude: number, longitude: number): Promise<LocationData | null> => {
     try {
       const response = await fetch(
         `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
@@ -187,15 +122,185 @@ export const [LocationProvider, useLocation] = createContextHook(() => {
       console.error('Reverse geocoding failed:', error);
       return null;
     }
-  };
+  }, []);
 
-  const saveLocation = async (locationData: LocationData) => {
+  const getWebLocation = useCallback((): Promise<LocationData | null> => {
+    return new Promise((resolve) => {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          const locationData = await reverseGeocode(latitude, longitude);
+          resolve(locationData);
+        },
+        (error) => {
+          console.error('Web geolocation error:', error);
+          setError('Failed to get your location');
+          resolve(null);
+        }
+      );
+    });
+  }, [reverseGeocode]);
+
+  const getNativeLocation = useCallback(async (): Promise<LocationData | null> => {
     try {
-      await AsyncStorage.setItem(LOCATION_KEY, JSON.stringify(locationData));
+      const { getCurrentPositionAsync, reverseGeocodeAsync } = await import('expo-location');
+      
+      const position = await getCurrentPositionAsync({
+        accuracy: 4,
+      });
+
+      const { latitude, longitude } = position.coords;
+      const geocoded = await reverseGeocodeAsync({ latitude, longitude });
+
+      if (geocoded && geocoded.length > 0) {
+        const place = geocoded[0];
+        const weather = await fetchWeather(latitude, longitude);
+
+        const locationData: LocationData = {
+          city: place.city || place.subregion || 'Unknown City',
+          region: place.region || place.subregion || 'Unknown Region',
+          country: place.country || 'Unknown Country',
+          coords: { latitude, longitude },
+          weather: weather || undefined,
+        };
+
+        await saveLocation(locationData);
+        setLocation(locationData);
+        return locationData;
+      }
+
+      return null;
     } catch (error) {
-      console.error('Failed to save location:', error);
+      console.error('Native location error:', error);
+      throw error;
     }
-  };
+  }, []);
+
+  const getCurrentLocation = useCallback(async (): Promise<LocationData | null> => {
+    const hasPermission = await requestLocationPermission();
+    if (!hasPermission) return null;
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      if (Platform.OS === 'web') {
+        return await getWebLocation();
+      } else {
+        return await getNativeLocation();
+      }
+    } catch (error) {
+      console.error('Failed to get location:', error);
+      setError('Failed to get your location');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [getWebLocation, getNativeLocation]);
+
+  const calculateDistance = useCallback((lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    const R = 6371e3;
+    const φ1 = lat1 * Math.PI / 180;
+    const φ2 = lat2 * Math.PI / 180;
+    const Δφ = (lat2 - lat1) * Math.PI / 180;
+    const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+              Math.cos(φ1) * Math.cos(φ2) *
+              Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return R * c;
+  }, []);
+
+  const checkAndUpdateLocation = useCallback(async () => {
+    if (!isTrackingEnabled) {
+      console.log('Location tracking disabled');
+      return;
+    }
+
+    console.log('Checking for location changes...');
+    
+    try {
+      const newLocation = await getCurrentLocation();
+      
+      if (!newLocation) {
+        console.log('Could not get new location');
+        return;
+      }
+
+      if (!location) {
+        console.log('No previous location, setting new location');
+        return;
+      }
+
+      const distance = calculateDistance(
+        location.coords?.latitude || 0,
+        location.coords?.longitude || 0,
+        newLocation.coords?.latitude || 0,
+        newLocation.coords?.longitude || 0
+      );
+
+      console.log(`Distance from last location: ${Math.round(distance / 1000)} km`);
+
+      if (distance > SIGNIFICANT_DISTANCE) {
+        console.log('Significant location change detected, updating...');
+        console.log(`New location: ${newLocation.city}, ${newLocation.region}, ${newLocation.country}`);
+      }
+    } catch (error) {
+      console.error('Error checking location:', error);
+    }
+  }, [isTrackingEnabled, location, calculateDistance, getCurrentLocation]);
+
+  const setupLocationTracking = useCallback(() => {
+    console.log('Setting up automatic location tracking');
+    
+    if (trackingIntervalRef.current) {
+      clearInterval(trackingIntervalRef.current);
+    }
+
+    trackingIntervalRef.current = setInterval(() => {
+      checkAndUpdateLocation();
+    }, LOCATION_CHECK_INTERVAL) as any;
+  }, [checkAndUpdateLocation]);
+
+  const stopLocationTracking = useCallback(() => {
+    console.log('Stopping automatic location tracking');
+    if (trackingIntervalRef.current) {
+      clearInterval(trackingIntervalRef.current);
+      trackingIntervalRef.current = null;
+    }
+  }, []);
+
+  const handleAppStateChange = useCallback((nextAppState: AppStateStatus) => {
+    if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+      console.log('App has come to foreground, checking location');
+      checkAndUpdateLocation();
+    }
+    appState.current = nextAppState;
+  }, [checkAndUpdateLocation]);
+
+  useEffect(() => {
+    loadSavedLocation();
+    setupLocationTracking();
+    
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    
+    return () => {
+      subscription.remove();
+      stopLocationTracking();
+    };
+  }, [handleAppStateChange, setupLocationTracking, stopLocationTracking]);
+
+  useEffect(() => {
+    if (isTrackingEnabled) {
+      setupLocationTracking();
+    } else {
+      stopLocationTracking();
+    }
+  }, [isTrackingEnabled, setupLocationTracking, stopLocationTracking]);
+
+
 
   const setManualLocation = async (locationData: LocationData) => {
     setLocation(locationData);
@@ -230,6 +335,12 @@ export const [LocationProvider, useLocation] = createContextHook(() => {
     await AsyncStorage.removeItem(LOCATION_KEY);
   };
 
+
+  const toggleLocationTracking = (enabled: boolean) => {
+    setIsTrackingEnabled(enabled);
+    console.log(`Location tracking ${enabled ? 'enabled' : 'disabled'}`);
+  };
+
   return {
     location,
     isLoading,
@@ -240,6 +351,8 @@ export const [LocationProvider, useLocation] = createContextHook(() => {
     refreshWeather,
     hasLocation: !!location,
     hasWeather: !!location?.weather,
+    isTrackingEnabled,
+    toggleLocationTracking,
   };
 });
 

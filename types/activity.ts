@@ -20,6 +20,8 @@ export interface SavedActivity extends Activity {
   completedAt?: number;
   rating?: number;
   notes?: string;
+  photos?: string[];
+  locationSnapshot?: LocationData;
 }
 
 export type Mode = 'couples' | 'family';
