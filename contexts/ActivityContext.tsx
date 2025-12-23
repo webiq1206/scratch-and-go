@@ -80,6 +80,10 @@ export const [ActivityProvider, useActivity] = createContextHook(() => {
     mutationFn: async (filters: Filters) => {
       console.log('Generating activity with filters:', filters);
       
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Request timeout - please try again')), 30000)
+      );
+      
       const currentSeason = getCurrentSeason();
       const currentTimeOfDay = getTimeOfDay();
       const historyTitles = activityHistory.map(a => a.title).join(', ');
@@ -157,15 +161,18 @@ ${weather && weather.condition === 'Clear' && weather.temp >= 60 && weather.temp
 
 Create something unique, exciting, and memorable. Use inclusive language ("your partner" not gendered terms).`;
 
-      const activity = await generateObject({
-        messages: [
-          {
-            role: 'user',
-            content: systemPrompt,
-          },
-        ],
-        schema: ActivitySchema,
-      });
+      const activity = await Promise.race([
+        generateObject({
+          messages: [
+            {
+              role: 'user',
+              content: systemPrompt,
+            },
+          ],
+          schema: ActivitySchema,
+        }),
+        timeoutPromise,
+      ]) as Activity;
 
       console.log('Generated activity:', activity);
       return activity;
@@ -177,7 +184,13 @@ Create something unique, exciting, and memorable. Use inclusive language ("your 
     onError: (error) => {
       console.error('Activity generation failed:', error);
       setIsGenerating(false);
+      
+      if (error instanceof Error && error.message.includes('timeout')) {
+        console.log('Generation timed out');
+      }
     },
+    retry: 2,
+    retryDelay: 1000,
   });
 
   const generateActivity = async (filters: Filters) => {
