@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Animated, ActivityIndicator, Alert, TouchableOpacity, Image } from 'react-native';
-import { Share2 } from 'lucide-react-native';
+import { Share2, ThumbsDown, RefreshCw } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -38,7 +38,9 @@ export default function HomeScreen() {
     generateActivity, 
     isGenerating, 
     isLimitReached, 
-    remainingScratches 
+    remainingScratches,
+    markAsNotInterested,
+    clearCurrentActivity
   } = useActivity();
 
   const { location } = useLocation();
@@ -170,6 +172,35 @@ export default function HomeScreen() {
 
   const handleScratchComplete = () => {
     console.log('Scratch complete - activity revealed');
+  };
+
+  const handleNotInterested = () => {
+    if (!currentActivity) return;
+    
+    Alert.alert(
+      'Not Interested',
+      'This helps us learn your preferences. We\'ll avoid suggesting similar activities in the future.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Not Interested', 
+          style: 'destructive',
+          onPress: async () => {
+            await markAsNotInterested();
+            setHasStartedScratch(false);
+            setIsSaved(false);
+          }
+        }
+      ]
+    );
+  };
+
+  const handleTryAgain = async () => {
+    if (!mode) return;
+    
+    clearCurrentActivity();
+    setHasStartedScratch(false);
+    setIsSaved(false);
   };
 
   const categories = mode === 'couples' 
@@ -377,6 +408,24 @@ export default function HomeScreen() {
                       >
                         <Share2 size={20} color={Colors.text} />
                         <Text style={styles.shareButtonText}>Share</Text>
+                      </TouchableOpacity>
+                    </View>
+                    <View style={styles.secondaryActions}>
+                      <TouchableOpacity
+                        style={styles.notInterestedButton}
+                        onPress={handleNotInterested}
+                        activeOpacity={0.7}
+                      >
+                        <ThumbsDown size={16} color={Colors.textSecondary} />
+                        <Text style={styles.notInterestedText}>Not Interested</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.tryAgainButton}
+                        onPress={handleTryAgain}
+                        activeOpacity={0.7}
+                      >
+                        <RefreshCw size={16} color={Colors.textSecondary} />
+                        <Text style={styles.tryAgainText}>Try Again</Text>
                       </TouchableOpacity>
                     </View>
                   </>
@@ -791,5 +840,37 @@ const styles = StyleSheet.create({
     fontSize: Typography.sizes.body,
     fontWeight: '400' as const,
     color: Colors.text,
+  },
+  secondaryActions: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+    marginTop: Spacing.sm,
+    width: '100%',
+    paddingHorizontal: Spacing.lg,
+    justifyContent: 'center',
+  },
+  notInterestedButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+  },
+  notInterestedText: {
+    fontSize: Typography.sizes.caption,
+    fontWeight: '400' as const,
+    color: Colors.textSecondary,
+  },
+  tryAgainButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+  },
+  tryAgainText: {
+    fontSize: Typography.sizes.caption,
+    fontWeight: '400' as const,
+    color: Colors.textSecondary,
   },
 });

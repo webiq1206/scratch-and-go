@@ -1,7 +1,7 @@
 import createContextHook from '@nkzw/create-context-hook';
 import { useMutation } from '@tanstack/react-query';
 import { generateObject } from '@rork-ai/toolkit-sdk';
-import { Activity, ActivitySchema, Filters } from '@/types/activity';
+import { Activity, ActivitySchema, Filters, ActivityWithInteraction } from '@/types/activity';
 import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { usePreferences } from './PreferencesContext';
@@ -11,6 +11,7 @@ import { useSubscription } from './SubscriptionContext';
 const HISTORY_KEY = 'scratch_and_go_history';
 const SCRATCH_COUNT_KEY = 'scratch_and_go_count';
 const SCRATCH_MONTH_KEY = 'scratch_and_go_month';
+const INTERACTIONS_KEY = 'scratch_and_go_interactions';
 
 export const [ActivityProvider, useActivity] = createContextHook(() => {
   const { getContentRestrictions } = usePreferences();
@@ -18,12 +19,14 @@ export const [ActivityProvider, useActivity] = createContextHook(() => {
   const { isPremium } = useSubscription();
   const [currentActivity, setCurrentActivity] = useState<Activity | null>(null);
   const [activityHistory, setActivityHistory] = useState<Activity[]>([]);
+  const [activityInteractions, setActivityInteractions] = useState<ActivityWithInteraction[]>([]);
   const [scratchCount, setScratchCount] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
 
   useEffect(() => {
     loadHistory();
     loadScratchCount();
+    loadInteractions();
   }, []);
 
   const loadHistory = async () => {
@@ -55,6 +58,17 @@ export const [ActivityProvider, useActivity] = createContextHook(() => {
     }
   };
 
+  const loadInteractions = async () => {
+    try {
+      const stored = await AsyncStorage.getItem(INTERACTIONS_KEY);
+      if (stored) {
+        setActivityInteractions(JSON.parse(stored));
+      }
+    } catch (error) {
+      console.error('Failed to load activity interactions:', error);
+    }
+  };
+
   const incrementScratchCount = async () => {
     const newCount = scratchCount + 1;
     setScratchCount(newCount);
@@ -69,6 +83,15 @@ export const [ActivityProvider, useActivity] = createContextHook(() => {
       const currentSeason = getCurrentSeason();
       const historyTitles = activityHistory.map(a => a.title).join(', ');
       const currentLocation = filters.location || location;
+
+      const notInterestedActivities = activityInteractions
+        .filter(a => a.interactionType === 'not_interested')
+        .slice(0, 10)
+        .map(a => `${a.title} (${a.category})`);
+      
+      const completedAndRatedActivities = activityInteractions
+        .filter(a => a.interactionType === 'completed')
+        .slice(0, 5);
 
       const contentRestrictions = getContentRestrictions();
       const systemPrompt = `You are an expert at creating unique, engaging ${filters.mode === 'couples' ? 'date night' : 'family'} activity ideas.
@@ -94,6 +117,14 @@ ${filters.kidAges ? `- Kid ages: ${filters.kidAges}` : ''}
 ${currentLocation ? `- Location: ${currentLocation.city}, ${currentLocation.region}` : ''}
 
 Previously generated activities (avoid repeating): ${historyTitles || 'None'}
+
+${notInterestedActivities.length > 0 ? `USER DISLIKES (avoid similar themes/categories):
+${notInterestedActivities.join(', ')}
+Do NOT suggest activities similar to these in theme, style, or category.` : ''}
+
+${completedAndRatedActivities.length > 0 ? `SUCCESSFUL ACTIVITIES (user enjoyed these):
+${completedAndRatedActivities.map(a => `${a.title} - ${a.category}`).join(', ')}
+Consider suggesting activities with similar themes or styles.` : ''}
 
 IMPORTANT: Make this suggestion highly relevant to the local area. Consider:
 - Local weather and seasonal activities typical for this region
@@ -151,14 +182,45 @@ Create something unique, exciting, and memorable. Use inclusive language ("your 
     setCurrentActivity(null);
   };
 
+  const trackInteraction = async (activity: Activity, interactionType: 'saved' | 'completed' | 'skipped' | 'not_interested') => {
+    const interaction: ActivityWithInteraction = {
+      ...activity,
+      interactionType,
+      interactionDate: Date.now(),
+    };
+
+    const newInteractions = [interaction, ...activityInteractions].slice(0, 100);
+    setActivityInteractions(newInteractions);
+    await AsyncStorage.setItem(INTERACTIONS_KEY, JSON.stringify(newInteractions));
+    console.log(`Tracked ${interactionType} interaction for: ${activity.title}`);
+  };
+
+  const skipCurrentActivity = async () => {
+    if (currentActivity) {
+      await trackInteraction(currentActivity, 'skipped');
+    }
+    clearCurrentActivity();
+  };
+
+  const markAsNotInterested = async () => {
+    if (currentActivity) {
+      await trackInteraction(currentActivity, 'not_interested');
+    }
+    clearCurrentActivity();
+  };
+
   return {
     currentActivity,
     activityHistory,
+    activityInteractions,
     scratchCount,
     isGenerating,
     generateActivity,
     saveToHistory,
     clearCurrentActivity,
+    trackInteraction,
+    skipCurrentActivity,
+    markAsNotInterested,
     isLimitReached: !isPremium && scratchCount >= 3,
     remainingScratches: isPremium ? Infinity : Math.max(0, 3 - scratchCount),
   };

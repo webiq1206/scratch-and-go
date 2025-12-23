@@ -10,6 +10,7 @@ const Colors = {
   accent: '#FBBF24',
   text: '#FFFFFF',
   textLight: '#B8B8B8',
+  textSecondary: '#9CA3AF',
   textMuted: '#6B7280',
   success: '#10B981',
   error: '#EF4444',

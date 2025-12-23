@@ -2,10 +2,12 @@ import createContextHook from '@nkzw/create-context-hook';
 import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Activity, SavedActivity } from '@/types/activity';
+import { useActivity } from './ActivityContext';
 
 const SAVED_ACTIVITIES_KEY = 'scratch_and_go_saved_activities';
 
 export const [MemoryBookProvider, useMemoryBook] = createContextHook(() => {
+  const { trackInteraction } = useActivity();
   const [savedActivities, setSavedActivities] = useState<SavedActivity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -46,6 +48,7 @@ export const [MemoryBookProvider, useMemoryBook] = createContextHook(() => {
     const updated = [savedActivity, ...savedActivities];
     setSavedActivities(updated);
     saveSavedActivities(updated);
+    trackInteraction(activity, 'saved');
 
     console.log('Activity saved:', savedActivity.title);
     return savedActivity;
@@ -59,13 +62,17 @@ export const [MemoryBookProvider, useMemoryBook] = createContextHook(() => {
   };
 
   const markAsCompleted = (activityId: string, completedAt: number = Date.now()) => {
-    const updated = savedActivities.map(activity =>
-      activity.id === activityId
-        ? { ...activity, isCompleted: true, completedAt }
-        : activity
+    const activity = savedActivities.find(a => a.id === activityId);
+    const updated = savedActivities.map(act =>
+      act.id === activityId
+        ? { ...act, isCompleted: true, completedAt }
+        : act
     );
     setSavedActivities(updated);
     saveSavedActivities(updated);
+    if (activity) {
+      trackInteraction(activity, 'completed');
+    }
     console.log('Activity marked as completed:', activityId);
   };
 

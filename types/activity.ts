@@ -43,3 +43,10 @@ export type Filters = {
   setting?: 'indoor' | 'outdoor' | 'either';
   location?: LocationData;
 };
+
+export type ActivityInteraction = 'saved' | 'completed' | 'skipped' | 'not_interested';
+
+export interface ActivityWithInteraction extends Activity {
+  interactionType: ActivityInteraction;
+  interactionDate: number;
+}
