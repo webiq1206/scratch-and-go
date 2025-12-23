@@ -3,22 +3,26 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert,
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, Stack, router } from 'expo-router';
 import { useMemoryBook } from '@/contexts/MemoryBookContext';
+import { useCollaborative } from '@/contexts/CollaborativeContext';
 import { shareActivity } from '@/utils/shareActivity';
 import Colors from '@/constants/colors';
 import Typography from '@/constants/typography';
 import Spacing from '@/constants/spacing';
 import { BorderRadius } from '@/constants/design';
-import { Clock, DollarSign, Calendar, CheckCircle, Trash2, Edit3, Save, X, Share2 } from 'lucide-react-native';
+import { Clock, DollarSign, Calendar, CheckCircle, Trash2, Edit3, Save, X, Share2, Users } from 'lucide-react-native';
 
 export default function ActivityDetailScreen() {
   const { id } = useLocalSearchParams();
   const { getSavedActivity, markAsCompleted, markAsIncomplete, updateRating, updateNotes, unsaveActivity } = useMemoryBook();
+  const { addToQueue } = useCollaborative();
   
   const activity = getSavedActivity(id as string);
   
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [notesText, setNotesText] = useState(activity?.notes || '');
   const [isSharing, setIsSharing] = useState(false);
+  const [showQueueModal, setShowQueueModal] = useState(false);
+  const [queueNote, setQueueNote] = useState('');
 
   if (!activity) {
     return (
@@ -98,6 +102,13 @@ export default function ActivityDetailScreen() {
     } finally {
       setIsSharing(false);
     }
+  };
+
+  const handleAddToQueue = async () => {
+    await addToQueue(activity, queueNote);
+    setShowQueueModal(false);
+    setQueueNote('');
+    Alert.alert('Added!', 'Activity added to collaborative queue');
   };
 
   return (
@@ -282,6 +293,15 @@ export default function ActivityDetailScreen() {
               <Text style={styles.shareActivityButtonText}>Share Activity</Text>
             </TouchableOpacity>
 
+            <TouchableOpacity
+              style={styles.queueButton}
+              onPress={() => setShowQueueModal(true)}
+              activeOpacity={0.8}
+            >
+              <Users size={20} color={Colors.white} />
+              <Text style={styles.queueButtonText}>Add to Queue</Text>
+            </TouchableOpacity>
+
             {!activity.isCompleted ? (
               <TouchableOpacity
                 style={styles.completeButton}
@@ -313,6 +333,47 @@ export default function ActivityDetailScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {showQueueModal && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Add to Queue</Text>
+            <Text style={styles.modalSubtitle}>Add a note for your partner (optional)</Text>
+            
+            <TextInput
+              style={styles.queueNoteInput}
+              value={queueNote}
+              onChangeText={setQueueNote}
+              placeholder="Why do you want to do this activity?"
+              placeholderTextColor={Colors.textLight}
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+            />
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={() => {
+                  setShowQueueModal(false);
+                  setQueueNote('');
+                }}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.modalConfirmButton}
+                onPress={handleAddToQueue}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.modalConfirmText}>Add to Queue</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -599,5 +660,96 @@ const styles = StyleSheet.create({
     fontSize: Typography.sizes.body,
     color: Colors.text,
     fontWeight: '400' as const,
+  },
+  queueButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    backgroundColor: Colors.cardBackground,
+    paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing.xl,
+    borderRadius: BorderRadius.medium,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+  },
+  queueButtonText: {
+    fontSize: Typography.sizes.body,
+    fontWeight: '400' as const,
+    color: Colors.white,
+  },
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: Spacing.xl,
+  },
+  modalContent: {
+    backgroundColor: Colors.cardBackground,
+    borderRadius: BorderRadius.large,
+    padding: Spacing.xl,
+    width: '100%',
+    maxWidth: 400,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  modalTitle: {
+    fontSize: Typography.sizes.h2,
+    fontWeight: '400' as const,
+    color: Colors.white,
+    marginBottom: Spacing.sm,
+    textAlign: 'center',
+  },
+  modalSubtitle: {
+    fontSize: Typography.sizes.body,
+    color: Colors.textLight,
+    marginBottom: Spacing.lg,
+    textAlign: 'center',
+  },
+  queueNoteInput: {
+    backgroundColor: Colors.backgroundDark,
+    borderRadius: BorderRadius.medium,
+    padding: Spacing.md,
+    fontSize: Typography.sizes.body,
+    color: Colors.white,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    minHeight: 100,
+    marginBottom: Spacing.lg,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+  },
+  modalCancelButton: {
+    flex: 1,
+    backgroundColor: Colors.backgroundDark,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.medium,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  modalCancelText: {
+    fontSize: Typography.sizes.body,
+    fontWeight: '400' as const,
+    color: Colors.textLight,
+  },
+  modalConfirmButton: {
+    flex: 1,
+    backgroundColor: Colors.primary,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.medium,
+    alignItems: 'center',
+  },
+  modalConfirmText: {
+    fontSize: Typography.sizes.body,
+    fontWeight: '400' as const,
+    color: Colors.white,
   },
 });
