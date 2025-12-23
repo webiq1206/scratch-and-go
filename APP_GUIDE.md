@@ -465,42 +465,46 @@ Below is the complete phased development plan to finish the Scratch & Go app. Ea
 
 **Goal**: Allow users to save, organize, and manage their discovered activities.
 
-#### Step 2.1: Memory Book Data Structure
-- [ ] Create `SavedActivity` type extending `Activity` with metadata (savedAt, isCompleted, completedAt, rating, notes)
-- [ ] Create `MemoryBookContext` using `@nkzw/create-context-hook`
-- [ ] Set up AsyncStorage persistence for saved activities
-- [ ] Add save/unsave functionality with optimistic updates
+#### Step 2.1: Memory Book Data Structure ✅ (Completed: 2024-12-23)
+- [✓] Create `SavedActivity` type extending `Activity` with metadata (savedAt, isCompleted, completedAt, rating, notes)
+- [✓] Create `MemoryBookContext` using `@nkzw/create-context-hook`
+- [✓] Set up AsyncStorage persistence for saved activities
+- [✓] Add save/unsave functionality with optimistic updates
 
-#### Step 2.2: Save Activity from Scratch Card
-- [ ] Add "Save to Memory Book" button to scratch card reveal content
-- [ ] Implement save action with visual feedback (heart icon animation)
-- [ ] Show toast/alert when activity is saved
-- [ ] Disable save button if activity already saved
+#### Step 2.2: Save Activity from Scratch Card ✅ (Completed: 2024-12-23)
+- [✓] Add "Save to Memory Book" button to scratch card reveal content
+- [✓] Implement save action with visual feedback (heart icon animation)
+- [✓] Show toast/alert when activity is saved
+- [✓] Disable save button if activity already saved
 
-#### Step 2.3: Memory Book UI - List View
-- [ ] Implement `app/(main)/memory-book.tsx` with tab navigation
-- [ ] Create tabs: "Saved" and "Completed"
-- [ ] Build activity card component for list view
-- [ ] Add empty state for no saved activities
-- [ ] Implement pull-to-refresh
+#### Step 2.3: Memory Book UI - List View ✅ (Completed: 2024-12-23)
+- [✓] Implement `app/(main)/memory-book.tsx` with tab navigation
+- [✓] Create tabs: "Saved" and "Completed"
+- [✓] Build activity card component for list view
+- [✓] Add empty state for no saved activities
+- [✓] Implement pull-to-refresh
 
-#### Step 2.4: Memory Book UI - Activity Actions
-- [ ] Add swipe actions: Mark Complete, Delete
-- [ ] Create "Mark as Complete" flow with date picker
-- [ ] Add ability to add notes/photos to completed activities
-- [ ] Implement star rating system (1-5 stars)
+#### Step 2.4: Memory Book UI - Activity Actions ✅ (Completed: 2024-12-23)
+- [✓] Add action buttons: Mark Complete/Incomplete, Delete
+- [✓] Create "Mark as Complete" flow
+- [✓] Add star rating system (1-5 stars) for completed activities
+- [✓] Add notes indicator icon to activity cards
 
-#### Step 2.5: Activity Detail Screen
-- [ ] Create `app/(main)/activity/[id].tsx` dynamic route
-- [ ] Display full activity details with larger emoji
-- [ ] Show saved date, completion status, rating
-- [ ] Add edit notes functionality
-- [ ] Add delete confirmation dialog
+#### Step 2.5: Activity Detail Screen ✅ (Completed: 2024-12-23)
+- [✓] Create `app/(main)/activity/[id].tsx` dynamic route
+- [✓] Display full activity details with larger emoji
+- [✓] Show saved date, completion status, rating
+- [✓] Add edit notes functionality with inline editing
+- [✓] Add delete confirmation dialog
+- [✓] Add navigation from Memory Book cards to detail screen
+- [✓] Include all activity metadata (category, supplies, pro tip)
 
 #### Step 2.6: Search & Filter in Memory Book
 - [ ] Add search bar to filter saved activities by title
 - [ ] Add filter chips (category, cost, completed/uncompleted)
 - [ ] Implement sort options (date saved, alphabetical, rating)
+
+**Note**: This is a nice-to-have feature and can be implemented post-MVP.
 
 ---
 

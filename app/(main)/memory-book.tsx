@@ -1,20 +1,21 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
 import Typography from '@/constants/typography';
 import Spacing from '@/constants/spacing';
 import Colors from '@/constants/colors';
 import { BorderRadius } from '@/constants/design';
 import { useMemoryBook } from '@/contexts/MemoryBookContext';
 import { SavedActivity } from '@/types/activity';
-import { Heart, Clock, DollarSign, Calendar, CheckCircle } from 'lucide-react-native';
+import { Heart, Clock, DollarSign, Calendar, CheckCircle, Star, FileText } from 'lucide-react-native';
 
 type Tab = 'saved' | 'completed';
 
 export default function MemoryBookScreen() {
   const [activeTab, setActiveTab] = useState<Tab>('saved');
   const [refreshing, setRefreshing] = useState(false);
-  const { getSavedActivities, getCompletedActivities, markAsCompleted, markAsIncomplete, unsaveActivity } = useMemoryBook();
+  const { getSavedActivities, getCompletedActivities, markAsCompleted, markAsIncomplete, unsaveActivity, updateRating } = useMemoryBook();
 
   const savedActivities = getSavedActivities();
   const completedActivities = getCompletedActivities();
@@ -40,7 +41,11 @@ export default function MemoryBookScreen() {
   };
 
   const handleActivityPress = (activity: SavedActivity) => {
-    console.log('Activity pressed:', activity.id);
+    router.push(`/activity/${activity.id}`);
+  };
+
+  const handleRatingChange = (activityId: string, rating: number) => {
+    updateRating(activityId, rating);
   };
 
   return (
@@ -124,6 +129,8 @@ export default function MemoryBookScreen() {
               onMarkComplete={() => handleMarkComplete(activity.id)}
               onMarkIncomplete={() => handleMarkIncomplete(activity.id)}
               onDelete={() => handleDelete(activity.id)}
+              onRatingChange={(rating) => handleRatingChange(activity.id, rating)}
+              isCompleted={activeTab === 'completed'}
             />
           ))}
         </ScrollView>
@@ -138,9 +145,11 @@ interface ActivityCardProps {
   onMarkComplete: () => void;
   onMarkIncomplete: () => void;
   onDelete: () => void;
+  onRatingChange: (rating: number) => void;
+  isCompleted: boolean;
 }
 
-function ActivityCard({ activity, onPress, onMarkComplete, onMarkIncomplete, onDelete }: ActivityCardProps) {
+function ActivityCard({ activity, onPress, onMarkComplete, onMarkIncomplete, onDelete, onRatingChange, isCompleted }: ActivityCardProps) {
   return (
     <TouchableOpacity
       style={styles.activityCard}
@@ -172,7 +181,39 @@ function ActivityCard({ activity, onPress, onMarkComplete, onMarkIncomplete, onD
             </Text>
           </View>
         )}
+        {activity.notes && (
+          <View style={styles.metaItem}>
+            <FileText size={14} color={Colors.accent} />
+            <Text style={styles.metaText}>Note</Text>
+          </View>
+        )}
       </View>
+
+      {isCompleted && (
+        <View style={styles.ratingContainer}>
+          <Text style={styles.ratingLabel}>Rate your experience:</Text>
+          <View style={styles.starsRow}>
+            {[1, 2, 3, 4, 5].map((star) => (
+              <TouchableOpacity
+                key={star}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  onRatingChange(star);
+                }}
+                activeOpacity={0.7}
+                style={styles.starButton}
+              >
+                <Star
+                  size={24}
+                  color={Colors.accent}
+                  fill={(activity.rating && star <= activity.rating) ? Colors.accent : 'none'}
+                  strokeWidth={2}
+                />
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      )}
 
       <View style={styles.activityActions}>
         {!activity.isCompleted ? (
@@ -374,5 +415,23 @@ const styles = StyleSheet.create({
     fontSize: Typography.sizes.caption,
     fontWeight: '400' as const,
     color: '#FF4444',
+  },
+  ratingContainer: {
+    paddingVertical: Spacing.md,
+    paddingTop: Spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: Colors.cardBorder,
+  },
+  ratingLabel: {
+    fontSize: Typography.sizes.caption,
+    color: Colors.textLight,
+    marginBottom: Spacing.sm,
+  },
+  starsRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+  },
+  starButton: {
+    padding: Spacing.xs,
   },
 });
