@@ -7,6 +7,7 @@ import { ActivityProvider } from "@/contexts/ActivityContext";
 import { PreferencesProvider, usePreferences } from "@/contexts/PreferencesContext";
 import { LocationProvider } from "@/contexts/LocationContext";
 import { MemoryBookProvider } from "@/contexts/MemoryBookContext";
+import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -64,15 +65,17 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <PreferencesProvider>
-        <LocationProvider>
-          <ActivityProvider>
-            <MemoryBookProvider>
-              <GestureHandlerRootView style={{ flex: 1 }}>
-                <RootLayoutNav />
-              </GestureHandlerRootView>
-            </MemoryBookProvider>
-          </ActivityProvider>
-        </LocationProvider>
+        <SubscriptionProvider>
+          <LocationProvider>
+            <ActivityProvider>
+              <MemoryBookProvider>
+                <GestureHandlerRootView style={{ flex: 1 }}>
+                  <RootLayoutNav />
+                </GestureHandlerRootView>
+              </MemoryBookProvider>
+            </ActivityProvider>
+          </LocationProvider>
+        </SubscriptionProvider>
       </PreferencesProvider>
     </QueryClientProvider>
   );
