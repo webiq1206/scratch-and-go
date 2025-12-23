@@ -4,13 +4,6 @@ import { Stack } from 'expo-router';
 import { useStats } from '@/contexts/StatsContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { 
-  Zap, 
-  Heart, 
-  CheckCircle2, 
-  Clock, 
-  DollarSign, 
-  TrendingUp,
-  Calendar,
   Award,
   Sparkles
 } from 'lucide-react-native';
@@ -58,33 +51,25 @@ export default function StatsScreen() {
 
         <View style={styles.statsGrid}>
           <View style={styles.statCard}>
-            <View style={styles.statIconContainer}>
-              <Zap size={24} color={Colors.primaryGradientStart} />
-            </View>
+            <Text style={styles.statEmoji}>✨</Text>
             <Text style={styles.statValue}>{stats.totalScratched}</Text>
             <Text style={styles.statLabel}>Activities Scratched</Text>
           </View>
 
           <View style={styles.statCard}>
-            <View style={styles.statIconContainer}>
-              <Heart size={24} color={Colors.error} />
-            </View>
+            <Text style={styles.statEmoji}>💝</Text>
             <Text style={styles.statValue}>{stats.totalSaved}</Text>
             <Text style={styles.statLabel}>Activities Saved</Text>
           </View>
 
           <View style={styles.statCard}>
-            <View style={styles.statIconContainer}>
-              <CheckCircle2 size={24} color={Colors.success} />
-            </View>
+            <Text style={styles.statEmoji}>🎉</Text>
             <Text style={styles.statValue}>{stats.totalCompleted}</Text>
             <Text style={styles.statLabel}>Completed</Text>
           </View>
 
           <View style={styles.statCard}>
-            <View style={styles.statIconContainer}>
-              <Calendar size={24} color={Colors.accent} />
-            </View>
+            <Text style={styles.statEmoji}>📅</Text>
             <Text style={styles.statValue}>{stats.currentMonthScratches}</Text>
             <Text style={styles.statLabel}>This Month</Text>
           </View>
@@ -116,12 +101,12 @@ export default function StatsScreen() {
           <Text style={styles.sectionTitle}>Time & Money</Text>
           <View style={styles.row}>
             <View style={styles.timeMoneyCard}>
-              <Clock size={24} color={Colors.accent} />
+              <Text style={styles.timeMoneyEmoji}>⏰</Text>
               <Text style={styles.timeMoneyValue}>{formatTime(stats.estimatedTimeSpent)}</Text>
               <Text style={styles.timeMoneyLabel}>Time Spent</Text>
             </View>
             <View style={styles.timeMoneyCard}>
-              <DollarSign size={24} color={Colors.success} />
+              <Text style={styles.timeMoneyEmoji}>💰</Text>
               <Text style={styles.timeMoneyValue}>{formatMoney(stats.estimatedMoneySpent)}</Text>
               <Text style={styles.timeMoneyLabel}>Invested</Text>
             </View>
@@ -158,7 +143,7 @@ export default function StatsScreen() {
         {stats.monthlyRecap.highlights.length > 0 && (
           <View style={styles.section}>
             <View style={styles.recapHeader}>
-              <TrendingUp size={24} color={Colors.primaryGradientStart} />
+              <Text style={styles.recapEmoji}>📊</Text>
               <Text style={styles.sectionTitle}>
                 {stats.monthlyRecap.month} Recap
               </Text>
@@ -282,8 +267,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.cardBorder,
   },
-  statIconContainer: {
-    marginBottom: Spacing.sm,
+  statEmoji: {
+    fontSize: 36,
+    marginBottom: Spacing.xs,
   },
   statValue: {
     fontSize: Typography.sizes.h1,
@@ -353,6 +339,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.cardBorder,
   },
+  timeMoneyEmoji: {
+    fontSize: 32,
+    marginBottom: Spacing.xs,
+  },
   timeMoneyValue: {
     fontSize: Typography.sizes.h2,
     fontWeight: Typography.weights.regular,
@@ -418,6 +408,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: Spacing.md,
+  },
+  recapEmoji: {
+    fontSize: 24,
+    marginRight: Spacing.sm,
   },
   recapCard: {
     backgroundColor: Colors.cardBackground,
