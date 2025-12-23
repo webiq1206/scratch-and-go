@@ -499,12 +499,18 @@ Below is the complete phased development plan to finish the Scratch & Go app. Ea
 - [✓] Add navigation from Memory Book cards to detail screen
 - [✓] Include all activity metadata (category, supplies, pro tip)
 
-#### Step 2.6: Search & Filter in Memory Book
-- [ ] Add search bar to filter saved activities by title
-- [ ] Add filter chips (category, cost, completed/uncompleted)
-- [ ] Implement sort options (date saved, alphabetical, rating)
+#### Step 2.6: Search & Filter in Memory Book ✅ (Completed: 2024-12-23)
+- [✓] Add search bar to filter saved activities by title
+- [✓] Add filter chips (category, cost, completed/uncompleted)
+- [✓] Implement sort options (date saved, alphabetical, rating)
 
-**Note**: This is a nice-to-have feature and can be implemented post-MVP.
+**Implementation Notes:**
+- Search filters by title, description, and category
+- Filter chips for Budget (All, Free, $, $, $$) and Category (All, Chill, Active, Creative, Foodie, Adventure, Outdoor, Educational)
+- Collapsible filters panel with visual indicator badge when filters are active
+- Sort dropdown menu with options: Recently Saved, Oldest First, A to Z, Highest Rated
+- Smart empty states that detect when no results match filters vs. no activities exist
+- All filtering and sorting works with useMemo for optimal performance
 
 ---
 

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import React, { useState, useMemo } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import Typography from '@/constants/typography';
@@ -8,19 +8,85 @@ import Colors from '@/constants/colors';
 import { BorderRadius } from '@/constants/design';
 import { useMemoryBook } from '@/contexts/MemoryBookContext';
 import { SavedActivity } from '@/types/activity';
-import { Heart, Clock, DollarSign, Calendar, CheckCircle, Star, FileText } from 'lucide-react-native';
+import { Heart, Clock, DollarSign, Calendar, CheckCircle, Star, FileText, Search, X, Filter, ArrowUpDown } from 'lucide-react-native';
+import FilterPill from '@/components/ui/FilterPill';
 
 type Tab = 'saved' | 'completed';
+
+const COST_FILTERS = ['All', 'Free', '$', '$$', '$$$'];
+const CATEGORY_FILTERS = ['All', 'Chill', 'Active', 'Creative', 'Foodie', 'Adventure', 'Outdoor', 'Educational'];
+const SORT_OPTIONS = [
+  { value: 'date-desc', label: 'Recently Saved' },
+  { value: 'date-asc', label: 'Oldest First' },
+  { value: 'alphabetical', label: 'A to Z' },
+  { value: 'rating-desc', label: 'Highest Rated' },
+];
+
+type SortOption = 'date-desc' | 'date-asc' | 'alphabetical' | 'rating-desc';
 
 export default function MemoryBookScreen() {
   const [activeTab, setActiveTab] = useState<Tab>('saved');
   const [refreshing, setRefreshing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCost, setSelectedCost] = useState('All');
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [showFilters, setShowFilters] = useState(false);
+  const [sortBy, setSortBy] = useState<SortOption>('date-desc');
+  const [showSortMenu, setShowSortMenu] = useState(false);
   const { getSavedActivities, getCompletedActivities, markAsCompleted, markAsIncomplete, unsaveActivity, updateRating } = useMemoryBook();
 
   const savedActivities = getSavedActivities();
   const completedActivities = getCompletedActivities();
 
-  const displayedActivities = activeTab === 'saved' ? savedActivities : completedActivities;
+  const filteredActivities = useMemo(() => {
+    const activities = activeTab === 'saved' ? savedActivities : completedActivities;
+    
+    let filtered = activities;
+
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(activity => 
+        activity.title.toLowerCase().includes(query) ||
+        activity.description.toLowerCase().includes(query) ||
+        activity.category.toLowerCase().includes(query)
+      );
+    }
+
+    if (selectedCost !== 'All') {
+      filtered = filtered.filter(activity => {
+        const cost = activity.cost.toLowerCase();
+        const filter = selectedCost.toLowerCase();
+        return cost === filter || (filter === 'free' && cost === 'free');
+      });
+    }
+
+    if (selectedCategory !== 'All') {
+      filtered = filtered.filter(activity => 
+        activity.category.toLowerCase().includes(selectedCategory.toLowerCase())
+      );
+    }
+
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'date-desc':
+          return b.savedAt - a.savedAt;
+        case 'date-asc':
+          return a.savedAt - b.savedAt;
+        case 'alphabetical':
+          return a.title.localeCompare(b.title);
+        case 'rating-desc':
+          const ratingA = a.rating || 0;
+          const ratingB = b.rating || 0;
+          return ratingB - ratingA;
+        default:
+          return 0;
+      }
+    });
+
+    return filtered;
+  }, [activeTab, savedActivities, completedActivities, searchQuery, selectedCost, selectedCategory, sortBy]);
+
+  const displayedActivities = filteredActivities;
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -48,6 +114,8 @@ export default function MemoryBookScreen() {
     updateRating(activityId, rating);
   };
 
+  const hasActiveFilters = searchQuery.trim() || selectedCost !== 'All' || selectedCategory !== 'All';
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
@@ -58,6 +126,131 @@ export default function MemoryBookScreen() {
             : 'Memories you\'ve created'
           }
         </Text>
+      </View>
+
+      <View style={styles.searchContainer}>
+        <View style={styles.searchInputWrapper}>
+          <Search size={20} color={Colors.textLight} style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search activities..."
+            placeholderTextColor={Colors.textLight}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity
+              onPress={() => setSearchQuery('')}
+              activeOpacity={0.7}
+              style={styles.clearButton}
+            >
+              <X size={18} color={Colors.textLight} />
+            </TouchableOpacity>
+          )}
+        </View>
+        
+        <TouchableOpacity
+          style={styles.filterToggle}
+          onPress={() => setShowFilters(!showFilters)}
+          activeOpacity={0.7}
+        >
+          <Filter size={18} color={Colors.primary} />
+          <Text style={styles.filterToggleText}>Filters</Text>
+          {(selectedCost !== 'All' || selectedCategory !== 'All') && (
+            <View style={styles.filterBadge} />
+          )}
+        </TouchableOpacity>
+      </View>
+
+      {showFilters && (
+        <View style={styles.filtersPanel}>
+          <View style={styles.filterSection}>
+            <Text style={styles.filterSectionLabel}>Budget</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.filterScrollContent}
+            >
+              {COST_FILTERS.map((cost) => (
+                <FilterPill
+                  key={cost}
+                  label={cost}
+                  selected={selectedCost === cost}
+                  onPress={() => setSelectedCost(cost)}
+                />
+              ))}
+            </ScrollView>
+          </View>
+
+          <View style={styles.filterSection}>
+            <Text style={styles.filterSectionLabel}>Category</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.filterScrollContent}
+            >
+              {CATEGORY_FILTERS.map((category) => (
+                <FilterPill
+                  key={category}
+                  label={category}
+                  selected={selectedCategory === category}
+                  onPress={() => setSelectedCategory(category)}
+                />
+              ))}
+            </ScrollView>
+          </View>
+
+          {(selectedCost !== 'All' || selectedCategory !== 'All') && (
+            <TouchableOpacity
+              style={styles.clearFiltersButton}
+              onPress={() => {
+                setSelectedCost('All');
+                setSelectedCategory('All');
+              }}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.clearFiltersText}>Clear All Filters</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
+      <View style={styles.sortContainer}>
+        <TouchableOpacity
+          style={styles.sortButton}
+          onPress={() => setShowSortMenu(!showSortMenu)}
+          activeOpacity={0.7}
+        >
+          <ArrowUpDown size={16} color={Colors.textLight} />
+          <Text style={styles.sortButtonText}>
+            {SORT_OPTIONS.find(opt => opt.value === sortBy)?.label || 'Sort'}
+          </Text>
+        </TouchableOpacity>
+
+        {showSortMenu && (
+          <View style={styles.sortMenu}>
+            {SORT_OPTIONS.map((option) => (
+              <TouchableOpacity
+                key={option.value}
+                style={[styles.sortMenuItem, sortBy === option.value && styles.sortMenuItemActive]}
+                onPress={() => {
+                  setSortBy(option.value as SortOption);
+                  setShowSortMenu(false);
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.sortMenuItemText, sortBy === option.value && styles.sortMenuItemTextActive]}>
+                  {option.label}
+                </Text>
+                {sortBy === option.value && (
+                  <View style={styles.sortCheckmark} />
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
       </View>
 
       <View style={styles.tabBar}>
@@ -95,15 +288,21 @@ export default function MemoryBookScreen() {
       {displayedActivities.length === 0 ? (
         <View style={styles.emptyState}>
           <Text style={styles.emptyEmoji}>
-            {activeTab === 'saved' ? '💝' : '🎉'}
+            {hasActiveFilters ? '🔍' : (activeTab === 'saved' ? '💝' : '🎉')}
           </Text>
           <Text style={styles.emptyTitle}>
-            {activeTab === 'saved' ? 'No saved adventures' : 'No completed adventures'}
+            {hasActiveFilters
+              ? 'No matching activities'
+              : (activeTab === 'saved' ? 'No saved adventures' : 'No completed adventures')
+            }
           </Text>
           <Text style={styles.emptyText}>
-            {activeTab === 'saved'
-              ? 'Start scratching cards and save activities\nyou want to try'
-              : 'Mark activities as complete to see\nthem appear here'
+            {hasActiveFilters
+              ? 'Try adjusting your search or filters'
+              : (activeTab === 'saved'
+                ? 'Start scratching cards and save activities\nyou want to try'
+                : 'Mark activities as complete to see\nthem appear here'
+              )
             }
           </Text>
         </View>
@@ -276,6 +475,157 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: Typography.sizes.body,
     color: Colors.textLight,
+  },
+  searchContainer: {
+    paddingHorizontal: Spacing.lg,
+    marginBottom: Spacing.md,
+  },
+  searchInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.cardBackground,
+    borderRadius: BorderRadius.medium,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+  },
+  searchIcon: {
+    marginRight: Spacing.sm,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: Typography.sizes.body,
+    fontWeight: '400' as const,
+    color: Colors.text,
+    paddingVertical: Spacing.xs,
+  },
+  clearButton: {
+    padding: Spacing.xs,
+    marginLeft: Spacing.xs,
+  },
+  filterToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.xs,
+    marginTop: Spacing.md,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
+    backgroundColor: Colors.cardBackground,
+    borderRadius: BorderRadius.medium,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+  },
+  filterToggleText: {
+    fontSize: Typography.sizes.body,
+    fontWeight: '400' as const,
+    color: Colors.primary,
+  },
+  filterBadge: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.accent,
+    marginLeft: Spacing.xs,
+  },
+  filtersPanel: {
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    backgroundColor: Colors.backgroundLight,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.cardBorder,
+  },
+  filterSection: {
+    marginBottom: Spacing.md,
+  },
+  filterSectionLabel: {
+    fontSize: Typography.sizes.caption,
+    fontWeight: '400' as const,
+    color: Colors.textLight,
+    marginBottom: Spacing.sm,
+    paddingLeft: Spacing.xs,
+  },
+  filterScrollContent: {
+    paddingRight: Spacing.lg,
+  },
+  clearFiltersButton: {
+    alignSelf: 'center',
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
+    backgroundColor: Colors.background,
+    borderRadius: BorderRadius.small,
+    borderWidth: 1,
+    borderColor: Colors.textLight,
+    marginTop: Spacing.xs,
+  },
+  clearFiltersText: {
+    fontSize: Typography.sizes.caption,
+    fontWeight: '400' as const,
+    color: Colors.textLight,
+  },
+  sortContainer: {
+    paddingHorizontal: Spacing.lg,
+    marginBottom: Spacing.md,
+  },
+  sortButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    backgroundColor: Colors.cardBackground,
+    borderRadius: BorderRadius.small,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    alignSelf: 'flex-start',
+  },
+  sortButtonText: {
+    fontSize: Typography.sizes.caption,
+    fontWeight: '400' as const,
+    color: Colors.textLight,
+  },
+  sortMenu: {
+    position: 'absolute',
+    top: 40,
+    left: Spacing.lg,
+    backgroundColor: Colors.cardBackground,
+    borderRadius: BorderRadius.medium,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    minWidth: 180,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+    zIndex: 1000,
+  },
+  sortMenuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.cardBorder,
+  },
+  sortMenuItemActive: {
+    backgroundColor: Colors.primary + '10',
+  },
+  sortMenuItemText: {
+    fontSize: Typography.sizes.body,
+    fontWeight: '400' as const,
+    color: Colors.text,
+  },
+  sortMenuItemTextActive: {
+    color: Colors.primary,
+  },
+  sortCheckmark: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.primary,
   },
   tabBar: {
     flexDirection: 'row',
