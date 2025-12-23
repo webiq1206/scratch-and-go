@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Dimensions } from 'react-native';
-import { Heart } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -215,10 +214,6 @@ export default function WelcomeScreen() {
       </View>
 
       <View style={styles.contentContainer}>
-        <View style={styles.heartContainer}>
-          <Heart size={48} color="#FF6B9D" strokeWidth={2.5} fill="#FF6B9D" />
-        </View>
-
         <Text style={styles.mainTagline}>Make every moment count.</Text>
         <Text style={styles.subTagline}>
           Discover personalized date ideas and{'\n'}family activities tailored just for you.
@@ -319,9 +314,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 20,
   },
-  heartContainer: {
-    marginBottom: Spacing.lg,
-  },
+
   mainTagline: {
     fontSize: 24,
     fontWeight: '400' as const,

@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { BookHeart } from 'lucide-react-native';
 import Typography from '@/constants/typography';
 import Spacing from '@/constants/spacing';
 
@@ -14,9 +13,6 @@ export default function MemoryBookScreen() {
       </View>
 
       <View style={styles.emptyState}>
-        <View style={styles.emptyIconContainer}>
-          <BookHeart size={64} color="#FF6B9D" strokeWidth={1.5} />
-        </View>
         <Text style={styles.emptyTitle}>No adventures yet</Text>
         <Text style={styles.emptyText}>Start scratching to create memorable moments{"\n"}and build your adventure collection</Text>
       </View>
@@ -50,17 +46,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: Spacing.xl,
   },
-  emptyIconContainer: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: '#252525',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: Spacing.xl,
-    borderWidth: 1,
-    borderColor: '#333333',
-  },
+
   emptyTitle: {
     fontSize: Typography.sizes.h2,
     fontWeight: '400' as const,

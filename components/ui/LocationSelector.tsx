@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, ActivityIndicator, Alert } from 'react-native';
-import { MapPin, X, Navigation } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import Typography from '@/constants/typography';
 import Spacing from '@/constants/spacing';
@@ -45,7 +44,6 @@ export default function LocationSelector() {
         style={styles.locationButton}
         onPress={() => setModalVisible(true)}
       >
-        <MapPin size={20} color={location ? Colors.primary : Colors.textLight} />
         <Text style={[styles.locationText, location && styles.locationTextActive]}>
           {location ? `${location.city}, ${location.region}` : 'Set Location'}
         </Text>
@@ -62,7 +60,7 @@ export default function LocationSelector() {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Your Location</Text>
               <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <X size={24} color={Colors.text} />
+                <Text style={styles.closeButton}>✕</Text>
               </TouchableOpacity>
             </View>
 
@@ -86,10 +84,7 @@ export default function LocationSelector() {
               {isLoading ? (
                 <ActivityIndicator color={Colors.background} />
               ) : (
-                <>
-                  <Navigation size={20} color={Colors.background} />
-                  <Text style={styles.detectButtonText}>Detect My Location</Text>
-                </>
+                <Text style={styles.detectButtonText}>Detect My Location</Text>
               )}
             </TouchableOpacity>
 
@@ -188,6 +183,11 @@ const styles = StyleSheet.create({
     fontSize: Typography.sizes.h2,
     fontWeight: '400' as const,
     color: '#FFFFFF',
+  },
+  closeButton: {
+    fontSize: 24,
+    color: '#FFFFFF',
+    fontWeight: '400' as const,
   },
   modalDescription: {
     fontSize: Typography.sizes.body,

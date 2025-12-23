@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, ScrollView, Animated, ActivityIndicator, Alert,
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Sparkles, Heart } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import Typography from '@/constants/typography';
 import Spacing from '@/constants/spacing';
@@ -120,7 +119,6 @@ export default function HomeScreen() {
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={styles.modeSelectionContainer}>
           <View style={styles.modeHeader}>
-            <Sparkles size={40} color="#FFD700" fill="#FFD700" />
             <Text style={styles.modeTitle}>Scratch & Go</Text>
             <Text style={styles.modeSubtitle}>Scratch your next adventure</Text>
           </View>
@@ -191,9 +189,6 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <View style={styles.logoContainer}>
-            <Heart size={28} color={Colors.primary} fill={Colors.primary} />
-          </View>
           <View>
             <Text style={styles.appName}>Scratch & Go</Text>
             <Text style={styles.modeLabel}>{mode === 'couples' ? 'Couples Mode' : 'Family Mode'}</Text>
@@ -232,7 +227,6 @@ export default function HomeScreen() {
                   ]}
                 />
                 <View style={styles.scratchContent}>
-                  <Sparkles size={48} color={Colors.backgroundDark} strokeWidth={2} />
                   <Text style={styles.scratchText}>Scratch Me</Text>
                 </View>
               </LinearGradient>
