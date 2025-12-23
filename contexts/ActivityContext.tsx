@@ -1,0 +1,156 @@
+import createContextHook from '@nkzw/create-context-hook';
+import { useMutation } from '@tanstack/react-query';
+import { generateObject } from '@rork-ai/toolkit-sdk';
+import { Activity, ActivitySchema, Filters } from '@/types/activity';
+import { useState, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const HISTORY_KEY = 'scratch_and_go_history';
+const SCRATCH_COUNT_KEY = 'scratch_and_go_count';
+const SCRATCH_MONTH_KEY = 'scratch_and_go_month';
+
+export const [ActivityProvider, useActivity] = createContextHook(() => {
+  const [currentActivity, setCurrentActivity] = useState<Activity | null>(null);
+  const [activityHistory, setActivityHistory] = useState<Activity[]>([]);
+  const [scratchCount, setScratchCount] = useState(0);
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  useEffect(() => {
+    loadHistory();
+    loadScratchCount();
+  }, []);
+
+  const loadHistory = async () => {
+    try {
+      const stored = await AsyncStorage.getItem(HISTORY_KEY);
+      if (stored) {
+        setActivityHistory(JSON.parse(stored));
+      }
+    } catch (error) {
+      console.error('Failed to load activity history:', error);
+    }
+  };
+
+  const loadScratchCount = async () => {
+    try {
+      const currentMonth = new Date().getMonth();
+      const storedMonth = await AsyncStorage.getItem(SCRATCH_MONTH_KEY);
+      const storedCount = await AsyncStorage.getItem(SCRATCH_COUNT_KEY);
+
+      if (storedMonth && parseInt(storedMonth) !== currentMonth) {
+        await AsyncStorage.setItem(SCRATCH_COUNT_KEY, '0');
+        await AsyncStorage.setItem(SCRATCH_MONTH_KEY, currentMonth.toString());
+        setScratchCount(0);
+      } else if (storedCount) {
+        setScratchCount(parseInt(storedCount));
+      }
+    } catch (error) {
+      console.error('Failed to load scratch count:', error);
+    }
+  };
+
+  const incrementScratchCount = async () => {
+    const newCount = scratchCount + 1;
+    setScratchCount(newCount);
+    await AsyncStorage.setItem(SCRATCH_COUNT_KEY, newCount.toString());
+    await AsyncStorage.setItem(SCRATCH_MONTH_KEY, new Date().getMonth().toString());
+  };
+
+  const generateActivityMutation = useMutation({
+    mutationFn: async (filters: Filters) => {
+      console.log('Generating activity with filters:', filters);
+      
+      const currentSeason = getCurrentSeason();
+      const historyTitles = activityHistory.map(a => a.title).join(', ');
+
+      const systemPrompt = `You are an expert at creating unique, engaging ${filters.mode === 'couples' ? 'date night' : 'family'} activity ideas.
+
+CRITICAL CONTENT RESTRICTIONS:
+- Never suggest alcohol, bars, breweries, wineries, cocktails, or drinking
+- Never suggest religious activities, churches, or faith-based events
+- Never suggest gambling, casinos, or betting
+- Never suggest hunting or activities involving weapons
+- Never suggest politically affiliated events
+- Avoid specific dietary places (use "restaurant" not "steakhouse")
+- Keep all content appropriate and inclusive
+
+Generate a personalized activity with these parameters:
+- Mode: ${filters.mode}
+- Category: ${filters.category !== 'Any' ? filters.category : 'any category'}
+- Budget: ${filters.budget !== 'Any' ? filters.budget : 'any budget'}
+- Duration: ${filters.timing !== 'Anytime' ? filters.timing : 'any duration'}
+${filters.setting && filters.setting !== 'either' ? `- Setting: ${filters.setting}` : ''}
+${filters.kidAges ? `- Kid ages: ${filters.kidAges}` : ''}
+- Current season: ${currentSeason}
+
+Previously generated activities (avoid repeating): ${historyTitles || 'None'}
+
+Create something unique, exciting, and memorable. Use inclusive language ("your partner" not gendered terms).`;
+
+      const activity = await generateObject({
+        messages: [
+          {
+            role: 'user',
+            content: systemPrompt,
+          },
+        ],
+        schema: ActivitySchema,
+      });
+
+      console.log('Generated activity:', activity);
+      return activity;
+    },
+    onSuccess: (activity) => {
+      setCurrentActivity(activity);
+      setIsGenerating(false);
+    },
+    onError: (error) => {
+      console.error('Activity generation failed:', error);
+      setIsGenerating(false);
+    },
+  });
+
+  const generateActivity = async (filters: Filters) => {
+    if (scratchCount >= 3) {
+      console.log('Scratch limit reached for this month');
+      return false;
+    }
+
+    setIsGenerating(true);
+    await incrementScratchCount();
+    generateActivityMutation.mutate(filters);
+    return true;
+  };
+
+  const saveToHistory = async () => {
+    if (!currentActivity) return;
+
+    const newHistory = [currentActivity, ...activityHistory];
+    setActivityHistory(newHistory);
+    await AsyncStorage.setItem(HISTORY_KEY, JSON.stringify(newHistory));
+  };
+
+  const clearCurrentActivity = () => {
+    setCurrentActivity(null);
+  };
+
+  return {
+    currentActivity,
+    activityHistory,
+    scratchCount,
+    isGenerating,
+    generateActivity,
+    saveToHistory,
+    clearCurrentActivity,
+    isLimitReached: scratchCount >= 3,
+    remainingScratches: Math.max(0, 3 - scratchCount),
+  };
+});
+
+function getCurrentSeason(): string {
+  const month = new Date().getMonth();
+  if (month >= 2 && month <= 4) return 'Spring';
+  if (month >= 5 && month <= 7) return 'Summer';
+  if (month >= 8 && month <= 10) return 'Fall';
+  return 'Winter';
+}
