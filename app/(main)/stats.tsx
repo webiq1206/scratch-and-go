@@ -1,11 +1,12 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions } from 'react-native';
-import { Stack } from 'expo-router';
+import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity } from 'react-native';
+import { Stack, router } from 'expo-router';
 import { useStats } from '@/contexts/StatsContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { 
   Award,
-  Sparkles
+  Sparkles,
+  Calendar
 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import Typography from '@/constants/typography';
@@ -48,6 +49,27 @@ export default function StatsScreen() {
             Track your adventures and achievements
           </Text>
         </View>
+
+        <TouchableOpacity
+          style={styles.yearRecapButton}
+          onPress={() => router.push('/(main)/year-recap')}
+          activeOpacity={0.8}
+        >
+          <LinearGradient
+            colors={['#FF6B6B', '#C471ED', '#12C2E9']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.yearRecapGradient}
+          >
+            <View style={styles.yearRecapContent}>
+              <Calendar size={28} color={Colors.white} />
+              <View style={styles.yearRecapText}>
+                <Text style={styles.yearRecapTitle}>Your {new Date().getFullYear()} Year in Review</Text>
+                <Text style={styles.yearRecapSubtitle}>See your memories and achievements</Text>
+              </View>
+            </View>
+          </LinearGradient>
+        </TouchableOpacity>
 
         <View style={styles.statsGrid}>
           <View style={styles.statCard}>
@@ -514,5 +536,33 @@ const styles = StyleSheet.create({
   },
   bottomSpacer: {
     height: Spacing.xl,
+  },
+  yearRecapButton: {
+    marginBottom: Spacing.md,
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  yearRecapGradient: {
+    borderRadius: 16,
+    padding: Spacing.lg,
+  },
+  yearRecapContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  yearRecapText: {
+    flex: 1,
+    marginLeft: Spacing.md,
+  },
+  yearRecapTitle: {
+    fontSize: Typography.sizes.h3,
+    fontWeight: Typography.weights.bold as any,
+    color: Colors.white,
+    marginBottom: Spacing.xs,
+  },
+  yearRecapSubtitle: {
+    fontSize: Typography.sizes.caption,
+    color: Colors.white,
+    opacity: 0.9,
   },
 });
