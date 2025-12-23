@@ -563,11 +563,20 @@ Below is the complete phased development plan to finish the Scratch & Go app. Ea
 - [ ] Implement `expo-sharing` for native share sheet (with web fallback)
 - [ ] Generate share text with activity details and app link
 
-#### Step 4.2: Deep Linking Setup
-- [ ] Configure deep linking in `app.json`
-- [ ] Create `app/activity-shared/[id].tsx` for shared activities
-- [ ] Handle incoming links and display shared activity
-- [ ] Add "Try Scratch & Go" CTA for non-users
+#### Step 4.2: Deep Linking Setup ✅ (Completed: 2024-12-23)
+- [✓] Configure deep linking in `app.json` (scheme: scratchandgo)
+- [✓] Create `app/activity-shared/[id].tsx` for shared activities
+- [✓] Handle incoming links and display shared activity
+- [✓] Add "Try Scratch & Go" CTA for non-users
+
+**Implementation Details:**
+- Deep links follow pattern: `https://scratchandgo.app/activity-shared/{encodedActivity}`
+- Activity data is encoded as base64 URL-encoded JSON
+- Shared activity screen displays full activity details with save functionality
+- Non-onboarded users see CTA to join app with feature highlights
+- Modal presentation with smooth animations
+- Error handling for invalid/expired links
+- Root layout skips onboarding check for shared activity links
 
 #### Step 4.3: Activity Recommendations
 - [ ] Add "Share with Partner" flow (send via text/email)

@@ -1,8 +1,17 @@
 import { Platform, Share } from 'react-native';
 import type { Activity } from '@/types/activity';
 
+function generateShareableLink(activity: Activity): string {
+  const activityJson = JSON.stringify(activity);
+  const encodedActivity = encodeURIComponent(btoa(activityJson));
+  
+  const deepLink = `https://scratchandgo.app/activity-shared/${encodedActivity}`;
+  return deepLink;
+}
+
 export async function shareActivity(activity: Activity): Promise<void> {
-  const shareText = formatActivityShareText(activity);
+  const shareLink = generateShareableLink(activity);
+  const shareText = formatActivityShareText(activity, shareLink);
   
   try {
     if (Platform.OS === 'web') {
@@ -10,6 +19,7 @@ export async function shareActivity(activity: Activity): Promise<void> {
         await navigator.share({
           title: activity.title,
           text: shareText,
+          url: shareLink,
         });
       } else {
         await navigator.clipboard.writeText(shareText);
@@ -18,6 +28,7 @@ export async function shareActivity(activity: Activity): Promise<void> {
     } else {
       await Share.share({
         message: shareText,
+        url: shareLink,
         title: activity.title,
       });
     }
@@ -31,7 +42,7 @@ export async function shareActivity(activity: Activity): Promise<void> {
   }
 }
 
-function formatActivityShareText(activity: Activity): string {
+function formatActivityShareText(activity: Activity, shareLink: string): string {
   const costSymbol = activity.cost === 'free' ? 'Free' : activity.cost.toUpperCase();
   
   let text = `${activity.emoji} ${activity.title}\n\n`;
@@ -47,7 +58,8 @@ function formatActivityShareText(activity: Activity): string {
     text += `\n💡 Pro Tip: ${activity.proTip}\n`;
   }
   
-  text += `\n✨ Discover more activities with Scratch & Go!`;
+  text += `\n✨ Discover more activities with Scratch & Go!\n`;
+  text += `\n${shareLink}`;
   
   return text;
 }

@@ -29,8 +29,16 @@ function RootLayoutNav() {
       try {
         const inMain = segments[0] === '(main)';
         const inWelcome = segments[0] === 'welcome';
+        const inActivityShared = segments[0] === 'activity-shared';
 
-        console.log('[Navigation] inMain:', inMain, 'inWelcome:', inWelcome);
+        console.log('[Navigation] inMain:', inMain, 'inWelcome:', inWelcome, 'inActivityShared:', inActivityShared);
+
+        if (inActivityShared) {
+          console.log('[Navigation] Opening shared activity, skipping onboarding check');
+          hasNavigated.current = true;
+          await SplashScreen.hideAsync();
+          return;
+        }
 
         if (!preferences.completedOnboarding && !inWelcome) {
           console.log('[Navigation] Navigating to welcome');
@@ -58,6 +66,13 @@ function RootLayoutNav() {
       <Stack.Screen name="welcome" />
       <Stack.Screen 
         name="paywall" 
+        options={{ 
+          presentation: 'modal',
+          animation: 'slide_from_bottom',
+        }} 
+      />
+      <Stack.Screen 
+        name="activity-shared/[id]" 
         options={{ 
           presentation: 'modal',
           animation: 'slide_from_bottom',
