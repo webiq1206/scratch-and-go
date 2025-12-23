@@ -160,7 +160,7 @@ const styles = StyleSheet.create({
   locationText: {
     fontSize: Typography.sizes.caption,
     color: Colors.textLight,
-    fontWeight: Typography.weights.medium,
+    fontWeight: '400' as const,
   },
   locationTextActive: {
     color: Colors.primary,
@@ -186,7 +186,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: Typography.sizes.h2,
-    fontWeight: Typography.weights.bold,
+    fontWeight: '400' as const,
     color: '#FFFFFF',
   },
   modalDescription: {
@@ -207,7 +207,7 @@ const styles = StyleSheet.create({
   },
   detectButtonText: {
     fontSize: Typography.sizes.body,
-    fontWeight: Typography.weights.semibold,
+    fontWeight: '400' as const,
     color: '#1A1A1A',
   },
   divider: {
@@ -230,7 +230,7 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: Typography.sizes.caption,
-    fontWeight: Typography.weights.semibold,
+    fontWeight: '400' as const,
     color: '#FFFFFF',
     marginBottom: Spacing.xs,
   },
@@ -253,7 +253,7 @@ const styles = StyleSheet.create({
   },
   submitButtonText: {
     fontSize: Typography.sizes.body,
-    fontWeight: Typography.weights.semibold,
+    fontWeight: '400' as const,
     color: '#1A1A1A',
   },
   currentLocationText: {
@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
   },
   optionalBadgeText: {
     fontSize: Typography.sizes.caption,
-    fontWeight: Typography.weights.bold,
+    fontWeight: '400' as const,
     color: '#1A1A1A',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -293,7 +293,7 @@ const styles = StyleSheet.create({
   },
   skipButtonText: {
     fontSize: Typography.sizes.body,
-    fontWeight: Typography.weights.medium,
+    fontWeight: '400' as const,
     color: '#B8B8B8',
   },
 });

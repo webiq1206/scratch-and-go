@@ -365,7 +365,7 @@ const styles = StyleSheet.create({
   },
   appName: {
     fontSize: Typography.sizes.body,
-    fontWeight: Typography.weights.bold,
+    fontWeight: '400' as const,
     color: Colors.text,
   },
   modeLabel: {
@@ -386,7 +386,7 @@ const styles = StyleSheet.create({
   },
   headline: {
     fontSize: Typography.sizes.hero,
-    fontWeight: Typography.weights.bold,
+    fontWeight: '400' as const,
     color: Colors.text,
     marginBottom: Spacing.sm,
     textAlign: 'center',
@@ -422,7 +422,7 @@ const styles = StyleSheet.create({
   },
   scratchText: {
     fontSize: Typography.sizes.h2,
-    fontWeight: Typography.weights.bold,
+    fontWeight: '400' as const,
     color: Colors.backgroundDark,
     textShadowColor: 'rgba(0, 0, 0, 0.1)',
     textShadowOffset: { width: 0, height: 1 },
@@ -440,7 +440,7 @@ const styles = StyleSheet.create({
   },
   revealTitle: {
     fontSize: Typography.sizes.h2,
-    fontWeight: Typography.weights.bold,
+    fontWeight: '400' as const,
     color: Colors.text,
     textAlign: 'center',
     marginBottom: Spacing.sm,
@@ -468,7 +468,7 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: Typography.sizes.body,
-    fontWeight: Typography.weights.semibold,
+    fontWeight: '400' as const,
     color: Colors.primary,
   },
   proTipBox: {
@@ -480,7 +480,7 @@ const styles = StyleSheet.create({
   },
   proTipLabel: {
     fontSize: Typography.sizes.caption,
-    fontWeight: Typography.weights.semibold,
+    fontWeight: '400' as const,
     color: Colors.accent,
     marginBottom: Spacing.xs,
   },
@@ -501,7 +501,7 @@ const styles = StyleSheet.create({
   scratchCountText: {
     fontSize: Typography.sizes.caption,
     color: Colors.textLight,
-    fontWeight: Typography.weights.semibold,
+    fontWeight: '400' as const,
   },
   filtersSection: {
     gap: Spacing.lg,
@@ -511,7 +511,7 @@ const styles = StyleSheet.create({
   },
   filterLabel: {
     fontSize: Typography.sizes.body,
-    fontWeight: Typography.weights.semibold,
+    fontWeight: '400' as const,
     color: Colors.text,
     marginBottom: Spacing.xs,
   },
@@ -530,7 +530,7 @@ const styles = StyleSheet.create({
   },
   modeTitle: {
     fontSize: 32,
-    fontWeight: Typography.weights.bold,
+    fontWeight: '400' as const,
     color: '#FFFFFF',
     marginTop: Spacing.md,
     marginBottom: Spacing.xs,
@@ -584,7 +584,7 @@ const styles = StyleSheet.create({
   },
   modeCardTitle: {
     fontSize: Typography.sizes.h2,
-    fontWeight: Typography.weights.bold,
+    fontWeight: '400' as const,
     color: '#FFFFFF',
     marginBottom: Spacing.xs,
   },

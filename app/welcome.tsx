@@ -260,7 +260,7 @@ const styles = StyleSheet.create({
   },
   mainTagline: {
     fontSize: 24,
-    fontWeight: Typography.weights.bold,
+    fontWeight: '400' as const,
     color: '#FFFFFF',
     textAlign: 'center',
     marginBottom: Spacing.sm,
@@ -281,7 +281,7 @@ const styles = StyleSheet.create({
   },
   nextButtonText: {
     fontSize: Typography.sizes.h3,
-    fontWeight: Typography.weights.semibold,
+    fontWeight: '400' as const,
     color: '#1A1A1A',
   },
   loginContainer: {
@@ -295,7 +295,7 @@ const styles = StyleSheet.create({
   loginLink: {
     fontSize: Typography.sizes.body,
     color: '#FFFFFF',
-    fontWeight: Typography.weights.semibold,
+    fontWeight: '400' as const,
   },
   scrollContent: {
     flexGrow: 1,
@@ -333,7 +333,7 @@ const styles = StyleSheet.create({
   },
   questionTitle: {
     fontSize: Typography.sizes.h1,
-    fontWeight: Typography.weights.bold,
+    fontWeight: '400' as const,
     color: '#FFFFFF',
     textAlign: 'center',
     marginBottom: Spacing.md,
@@ -360,7 +360,7 @@ const styles = StyleSheet.create({
   },
   answerButtonText: {
     fontSize: Typography.sizes.h3,
-    fontWeight: Typography.weights.semibold,
+    fontWeight: '400' as const,
     color: '#1A1A1A',
   },
   answerButtonSecondary: {
@@ -374,7 +374,7 @@ const styles = StyleSheet.create({
   },
   answerButtonSecondaryText: {
     fontSize: Typography.sizes.h3,
-    fontWeight: Typography.weights.semibold,
+    fontWeight: '400' as const,
     color: '#FFFFFF',
   },
   privacyNote: {

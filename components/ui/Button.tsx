@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   baseText: {
-    fontWeight: Typography.weights.semibold,
+    fontWeight: '400' as const,
   },
   primaryText: {
     color: Colors.backgroundDark,

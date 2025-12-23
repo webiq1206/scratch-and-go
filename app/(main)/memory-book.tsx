@@ -36,7 +36,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: Typography.sizes.hero,
-    fontWeight: Typography.weights.bold,
+    fontWeight: '400' as const,
     color: '#FFFFFF',
     marginBottom: Spacing.xs,
   },
@@ -63,7 +63,7 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: Typography.sizes.h2,
-    fontWeight: Typography.weights.bold,
+    fontWeight: '400' as const,
     color: '#FFFFFF',
     marginBottom: Spacing.md,
     textAlign: 'center',

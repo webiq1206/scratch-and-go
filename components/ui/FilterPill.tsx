@@ -39,11 +39,11 @@ const styles = StyleSheet.create({
   },
   text: {
     fontSize: Typography.sizes.caption,
-    fontWeight: Typography.weights.semibold,
+    fontWeight: '400' as const,
     color: '#B8B8B8',
   },
   selectedText: {
     color: '#1A1A1A',
-    fontWeight: Typography.weights.bold,
+    fontWeight: '400' as const,
   },
 });
