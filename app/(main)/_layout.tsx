@@ -1,5 +1,6 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
+import { Home, BookHeart, Settings } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import Typography from '@/constants/typography';
 
@@ -28,12 +29,21 @@ export default function MainLayout() {
         name="(home)"
         options={{
           title: 'Home',
+          tabBarIcon: ({ color, size }) => <Home size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="memory-book"
         options={{
           title: 'Memories',
+          tabBarIcon: ({ color, size }) => <BookHeart size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title: 'Settings',
+          tabBarIcon: ({ color, size }) => <Settings size={size} color={color} />,
         }}
       />
     </Tabs>
