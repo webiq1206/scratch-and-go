@@ -117,34 +117,24 @@ export default function WelcomeScreen() {
   }
 
   const polaroidImages = [
-    { uri: 'https://r2-pub.rork.com/generated-images/607ff251-9133-410d-ace6-05dca7cff93b.png', rotation: '-8deg', top: 20, left: 10, zIndex: 3 },
-    { uri: 'https://r2-pub.rork.com/generated-images/048f8fae-5bc5-4aed-9540-052c641f597e.png', rotation: '5deg', top: 50, right: 20, zIndex: 5 },
-    { uri: 'https://r2-pub.rork.com/generated-images/07d8a70f-801b-4db1-9df0-f279c96f76a5.png', rotation: '12deg', top: 180, left: 30, zIndex: 2 },
-    { uri: 'https://r2-pub.rork.com/generated-images/2ab872a7-455c-4c34-a695-a732c39bf7ab.png', rotation: '-5deg', top: 140, right: 10, zIndex: 4 },
-    { uri: 'https://r2-pub.rork.com/generated-images/095b3f39-4b79-4885-9987-db534bfa986c.png', rotation: '3deg', top: 280, left: 50, zIndex: 1 },
-    { uri: 'https://r2-pub.rork.com/generated-images/edd5ca88-9972-49cb-8976-6c43c0717761.png', rotation: '-10deg', top: 260, right: 40, zIndex: 6 },
+    { uri: 'https://r2-pub.rork.com/generated-images/607ff251-9133-410d-ace6-05dca7cff93b.png' },
+    { uri: 'https://r2-pub.rork.com/generated-images/048f8fae-5bc5-4aed-9540-052c641f597e.png' },
+    { uri: 'https://r2-pub.rork.com/generated-images/07d8a70f-801b-4db1-9df0-f279c96f76a5.png' },
+    { uri: 'https://r2-pub.rork.com/generated-images/2ab872a7-455c-4c34-a695-a732c39bf7ab.png' },
+    { uri: 'https://r2-pub.rork.com/generated-images/095b3f39-4b79-4885-9987-db534bfa986c.png' },
+    { uri: 'https://r2-pub.rork.com/generated-images/edd5ca88-9972-49cb-8976-6c43c0717761.png' },
   ];
 
   return (
     <View style={styles.container}>
       <View style={styles.photoCollageContainer}>
-        {polaroidImages.map((photo, index) => (
-          <View
-            key={index}
-            style={[
-              styles.polaroid,
-              {
-                transform: [{ rotate: photo.rotation }],
-                top: photo.top,
-                left: photo.left,
-                right: photo.right,
-                zIndex: photo.zIndex,
-              },
-            ]}
-          >
-            <Image source={{ uri: photo.uri }} style={styles.polaroidImage} />
-          </View>
-        ))}
+        <View style={styles.polaroidGrid}>
+          {polaroidImages.map((photo, index) => (
+            <View key={index} style={styles.polaroid}>
+              <Image source={{ uri: photo.uri }} style={styles.polaroidImage} />
+            </View>
+          ))}
+        </View>
         <View style={styles.photoOverlay} />
       </View>
 
@@ -199,14 +189,24 @@ const styles = StyleSheet.create({
     height: SCREEN_HEIGHT * 0.55,
     position: 'relative',
     backgroundColor: '#1A1A1A',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  polaroidGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.lg,
+    gap: 12,
+    width: '100%',
   },
   polaroid: {
-    position: 'absolute',
-    width: 110,
-    height: 130,
+    width: (SCREEN_WIDTH - Spacing.lg * 2 - 24) / 2,
+    height: ((SCREEN_WIDTH - Spacing.lg * 2 - 24) / 2) * 1.2,
     backgroundColor: '#FFFFFF',
     padding: 8,
-    paddingBottom: 20,
+    paddingBottom: 24,
     borderRadius: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -225,7 +225,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
     zIndex: 10,
   },
   contentContainer: {
