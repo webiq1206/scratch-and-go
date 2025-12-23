@@ -109,7 +109,7 @@ export default function HomeScreen() {
     setIsSaved(true);
     
     Alert.alert(
-      '💖 Saved!',
+      'Saved!',
       'Activity added to your Memory Book',
       [{ text: 'OK' }]
     );
@@ -286,9 +286,20 @@ export default function HomeScreen() {
                       disabled={isSaved || isActivitySaved(currentActivity.title)}
                       activeOpacity={0.7}
                     >
-                      <Text style={styles.saveButtonText}>
-                        {(isSaved || isActivitySaved(currentActivity.title)) ? '✓ Saved to Memory Book' : '💖 Save to Memory Book'}
-                      </Text>
+                      <View style={styles.saveButtonContent}>
+                        {(isSaved || isActivitySaved(currentActivity.title)) ? (
+                          <Text style={styles.saveButtonText}>✓ Saved to Memory Book</Text>
+                        ) : (
+                          <>
+                            <Image 
+                              source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/attachments/1n8u08ei0gt3gyiihcy40' }}
+                              style={styles.heartIcon}
+                              resizeMode="contain"
+                            />
+                            <Text style={styles.saveButtonText}>Save to Memory Book</Text>
+                          </>
+                        )}
+                      </View>
                     </TouchableOpacity>
                   </>
                 )}
@@ -642,10 +653,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.cardBorder,
   },
+  saveButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.xs,
+  },
   saveButtonText: {
     fontSize: Typography.sizes.body,
     fontWeight: '400' as const,
     color: Colors.text,
-    textAlign: 'center',
+  },
+  heartIcon: {
+    width: 18,
+    height: 18,
   },
 });
