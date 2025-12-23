@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Dimensions } from 'react-native';
+import { Heart } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Colors from '@/constants/colors';
@@ -37,10 +38,7 @@ export default function WelcomeScreen() {
     checkExistingMode();
   }, [router]);
 
-  const handleModeSelection = (mode: 'couples' | 'family') => {
-    setSelectedMode(mode);
-    setStep('preferences');
-  };
+
 
   const handlePreferenceAnswer = (value: boolean) => {
     const currentQuestion = ONBOARDING_QUESTIONS[currentQuestionIndex];
@@ -117,100 +115,158 @@ export default function WelcomeScreen() {
     );
   }
 
+  const polaroidImages = [
+    { uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/projects/xz00xar8pn4xhtrdicpyk/generations/1735017775890_polaroid1.webp', rotation: '-8deg', top: 20, left: 10, zIndex: 3 },
+    { uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/projects/xz00xar8pn4xhtrdicpyk/generations/1735017775908_polaroid2.webp', rotation: '5deg', top: 50, right: 20, zIndex: 5 },
+    { uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/projects/xz00xar8pn4xhtrdicpyk/generations/1735017775924_polaroid3.webp', rotation: '12deg', top: 180, left: 30, zIndex: 2 },
+    { uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/projects/xz00xar8pn4xhtrdicpyk/generations/1735017775941_polaroid4.webp', rotation: '-5deg', top: 140, right: 10, zIndex: 4 },
+    { uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/projects/xz00xar8pn4xhtrdicpyk/generations/1735017775957_polaroid5.webp', rotation: '3deg', top: 280, left: 50, zIndex: 1 },
+    { uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/projects/xz00xar8pn4xhtrdicpyk/generations/1735017775973_polaroid6.webp', rotation: '-10deg', top: 260, right: 40, zIndex: 6 },
+  ];
+
   return (
     <View style={styles.container}>
-      <ScrollView 
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        <Text style={styles.logo}>✨</Text>
-        <Text style={styles.title}>Scratch & Go</Text>
-        <Text style={styles.tagline}>Scratch your next adventure</Text>
-
-        <View style={styles.cardsContainer}>
-          <TouchableOpacity
-            style={styles.modeCard}
-            onPress={() => handleModeSelection('couples')}
-            activeOpacity={0.7}
+      <View style={styles.photoCollageContainer}>
+        {polaroidImages.map((photo, index) => (
+          <View
+            key={index}
+            style={[
+              styles.polaroid,
+              {
+                transform: [{ rotate: photo.rotation }],
+                top: photo.top,
+                left: photo.left,
+                right: photo.right,
+                zIndex: photo.zIndex,
+              },
+            ]}
           >
-            <Text style={styles.modeEmoji}>💑</Text>
-            <Text style={styles.modeTitle}>Couples Mode</Text>
-            <Text style={styles.modeDescription}>Date night ideas for two</Text>
-          </TouchableOpacity>
+            <Image source={{ uri: photo.uri }} style={styles.polaroidImage} />
+          </View>
+        ))}
+        <View style={styles.photoOverlay} />
+      </View>
 
-          <TouchableOpacity
-            style={styles.modeCard}
-            onPress={() => handleModeSelection('family')}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.modeEmoji}>👨‍👩‍👧‍👦</Text>
-            <Text style={styles.modeTitle}>Family Mode</Text>
-            <Text style={styles.modeDescription}>Fun activities for everyone</Text>
-          </TouchableOpacity>
+      <View style={styles.contentContainer}>
+        <View style={styles.heartContainer}>
+          <Heart size={48} color="#FF6B9D" strokeWidth={2.5} fill="#FF6B9D" />
         </View>
 
-        <Text style={styles.switchText}>You can switch anytime</Text>
-      </ScrollView>
+        <Text style={styles.mainTagline}>Inclusive, reliable, safe.</Text>
+        <Text style={styles.subTagline}>
+          Go beyond your social circle & connect{'\n'}with people near and far.
+        </Text>
+
+        <TouchableOpacity
+          style={styles.nextButton}
+          onPress={() => {
+            setSelectedMode('couples');
+            setStep('preferences');
+          }}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.nextButtonText}>Next</Text>
+        </TouchableOpacity>
+
+        <View style={styles.loginContainer}>
+          <Text style={styles.loginPrompt}>Already have an account?</Text>
+          <TouchableOpacity onPress={() => router.replace('/(main)/(home)')}>
+            <Text style={styles.loginLink}>Login</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
     </View>
   );
 }
 
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: '#1A1A1A',
   },
-  content: {
+  photoCollageContainer: {
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT * 0.55,
+    position: 'relative',
+    backgroundColor: '#1A1A1A',
+  },
+  polaroid: {
+    position: 'absolute',
+    width: 110,
+    height: 130,
+    backgroundColor: '#FFFFFF',
+    padding: 8,
+    paddingBottom: 20,
+    borderRadius: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  polaroidImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 2,
+  },
+  photoOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  contentContainer: {
     flex: 1,
-    alignItems: 'center',
+    paddingHorizontal: Spacing.xl,
     justifyContent: 'center',
-    paddingHorizontal: Spacing.lg,
+    alignItems: 'center',
   },
-  logo: {
-    fontSize: 64,
-    marginBottom: Spacing.md,
+  heartContainer: {
+    marginBottom: Spacing.lg,
   },
-  title: {
-    fontSize: Typography.sizes.hero,
+  mainTagline: {
+    fontSize: 24,
     fontWeight: Typography.weights.bold,
-    color: Colors.text,
+    color: '#FFFFFF',
+    textAlign: 'center',
     marginBottom: Spacing.sm,
   },
-  tagline: {
+  subTagline: {
     fontSize: Typography.sizes.body,
-    color: Colors.textLight,
+    color: '#B8B8B8',
+    textAlign: 'center',
+    lineHeight: 22,
     marginBottom: Spacing.xxl,
   },
-  cardsContainer: {
+  nextButton: {
     width: '100%',
-    gap: Spacing.md,
-  },
-  modeCard: {
-    backgroundColor: Colors.cardBackground,
-    borderRadius: BorderRadius.large,
-    padding: Spacing.xl,
+    backgroundColor: '#FFB3D9',
+    paddingVertical: 16,
+    borderRadius: BorderRadius.full,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: Colors.cardBorder,
+    marginBottom: Spacing.xl,
   },
-  modeEmoji: {
-    fontSize: 48,
-    marginBottom: Spacing.md,
-  },
-  modeTitle: {
-    fontSize: Typography.sizes.h2,
+  nextButtonText: {
+    fontSize: Typography.sizes.h3,
     fontWeight: Typography.weights.semibold,
-    color: Colors.text,
-    marginBottom: Spacing.xs,
+    color: '#1A1A1A',
   },
-  modeDescription: {
-    fontSize: Typography.sizes.caption,
-    color: Colors.textLight,
+  loginContainer: {
+    flexDirection: 'row',
+    gap: 6,
   },
-  switchText: {
-    fontSize: Typography.sizes.small,
-    color: Colors.textLight,
-    marginTop: Spacing.lg,
+  loginPrompt: {
+    fontSize: Typography.sizes.body,
+    color: '#B8B8B8',
+  },
+  loginLink: {
+    fontSize: Typography.sizes.body,
+    color: '#FFFFFF',
+    fontWeight: Typography.weights.semibold,
   },
   scrollContent: {
     flexGrow: 1,
