@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert, Linking, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Settings as SettingsIcon, User, Heart } from 'lucide-react-native';
+import { Settings as SettingsIcon, User, Heart, Crown, RefreshCw, Edit } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import Typography from '@/constants/typography';
 import Spacing from '@/constants/spacing';
 import { BorderRadius } from '@/constants/design';
 import { usePreferences } from '@/contexts/PreferencesContext';
+import { useSubscription } from '@/contexts/SubscriptionContext';
 import { RELIGIONS } from '@/types/preferences';
 
 const MODE_KEY = 'scratch_and_go_mode';
@@ -17,7 +18,9 @@ const MODE_KEY = 'scratch_and_go_mode';
 type Mode = 'couples' | 'family';
 
 export default function SettingsScreen() {
+  const router = useRouter();
   const { preferences, updatePreferences } = usePreferences();
+  const { subscriptionStatus, isPremium, isTrial, getTrialDaysRemaining, getSubscriptionEndDate, restorePurchases } = useSubscription();
   const [mode, setMode] = useState<Mode>('couples');
   const [showReligionPicker, setShowReligionPicker] = useState(false);
 
@@ -57,6 +60,101 @@ export default function SettingsScreen() {
     if (!preferences.religion) return 'Not selected';
     const religion = RELIGIONS.find(r => r.id === preferences.religion);
     return religion?.label || 'Not selected';
+  };
+
+  const handleUpgradeToPremium = () => {
+    router.push('/paywall');
+  };
+
+  const handleManageSubscription = () => {
+    const message = Platform.select({
+      ios: 'To manage your subscription, open the App Store, tap your profile icon, then tap Subscriptions.',
+      android: 'To manage your subscription, open the Google Play Store, tap Menu → Subscriptions.',
+      default: 'Subscription management is available through the app store on mobile devices.',
+    });
+    
+    Alert.alert('Manage Subscription', message, [
+      { text: 'OK', style: 'default' },
+      Platform.OS === 'ios' ? {
+        text: 'Open App Store',
+        onPress: () => Linking.openURL('itms-apps://apps.apple.com/account/subscriptions'),
+      } : Platform.OS === 'android' ? {
+        text: 'Open Play Store',
+        onPress: () => Linking.openURL('https://play.google.com/store/account/subscriptions'),
+      } : undefined,
+    ].filter(Boolean) as any);
+  };
+
+  const handleRestorePurchases = async () => {
+    Alert.alert(
+      'Restore Purchases',
+      'Checking for previous purchases...',
+      [{ text: 'Cancel', style: 'cancel' }]
+    );
+    
+    const restored = await restorePurchases();
+    
+    if (restored) {
+      Alert.alert('Success', 'Your purchases have been restored!');
+    } else {
+      Alert.alert('No Purchases Found', 'We couldn\'t find any previous purchases to restore.');
+    }
+  };
+
+  const handleResetPreferences = () => {
+    Alert.alert(
+      'Reset Preferences',
+      'This will clear your content preferences and you can set them up again. Continue?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset',
+          style: 'destructive',
+          onPress: async () => {
+            await updatePreferences({
+              includeAlcohol: true,
+              includeReligious: false,
+              includeGambling: false,
+              includeWeapons: false,
+              religion: undefined,
+            });
+            Alert.alert('Preferences Reset', 'Your content preferences have been reset to defaults.');
+          },
+        },
+      ]
+    );
+  };
+
+  const formatSubscriptionEndDate = () => {
+    const endDate = getSubscriptionEndDate();
+    if (!endDate) return null;
+    
+    const options: Intl.DateTimeFormatOptions = { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    };
+    return endDate.toLocaleDateString(undefined, options);
+  };
+
+  const getSubscriptionStatusText = () => {
+    if (isTrial) {
+      const daysRemaining = getTrialDaysRemaining();
+      return `${daysRemaining} day${daysRemaining !== 1 ? 's' : ''} remaining in trial`;
+    }
+    if (isPremium) {
+      if (subscriptionStatus.cancelAtPeriodEnd) {
+        return `Expires ${formatSubscriptionEndDate()}`;
+      }
+      return `Active • Renews ${formatSubscriptionEndDate()}`;
+    }
+    return '3 free scratches per month';
+  };
+
+  const getSubscriptionTierLabel = () => {
+    if (isTrial) return 'Premium Trial';
+    if (isPremium) return 'Premium';
+    return 'Free';
   };
 
   if (showReligionPicker) {
@@ -111,6 +209,75 @@ export default function SettingsScreen() {
       }} />
       
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Crown size={20} color={Colors.primary} />
+            <Text style={styles.sectionTitle}>Subscription</Text>
+          </View>
+          
+          <View style={styles.subscriptionCard}>
+            <View style={styles.subscriptionHeader}>
+              <View style={styles.subscriptionInfo}>
+                <Text style={styles.subscriptionTier}>{getSubscriptionTierLabel()}</Text>
+                {(isPremium || isTrial) && (
+                  <View style={styles.premiumBadge}>
+                    <LinearGradient
+                      colors={[Colors.primaryGradientStart, Colors.primaryGradientEnd]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={styles.premiumBadgeGradient}
+                    >
+                      <Crown size={12} color="#1A1A1A" />
+                      <Text style={styles.premiumBadgeText}>PREMIUM</Text>
+                    </LinearGradient>
+                  </View>
+                )}
+              </View>
+            </View>
+            
+            <Text style={styles.subscriptionStatus}>{getSubscriptionStatusText()}</Text>
+            
+            <View style={styles.subscriptionActions}>
+              {!isPremium && !isTrial ? (
+                <TouchableOpacity
+                  style={styles.upgradeButton}
+                  onPress={handleUpgradeToPremium}
+                  activeOpacity={0.7}
+                >
+                  <LinearGradient
+                    colors={[Colors.primaryGradientStart, Colors.primaryGradientEnd]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.upgradeButtonGradient}
+                  >
+                    <Crown size={18} color="#1A1A1A" />
+                    <Text style={styles.upgradeButtonText}>Upgrade to Premium</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={styles.manageButton}
+                  onPress={handleManageSubscription}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.manageButtonText}>Manage Subscription</Text>
+                </TouchableOpacity>
+              )}
+              
+              <TouchableOpacity
+                style={styles.restoreButton}
+                onPress={handleRestorePurchases}
+                activeOpacity={0.7}
+              >
+                <RefreshCw size={16} color={Colors.textLight} />
+                <Text style={styles.restoreButtonText}>Restore Purchases</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.divider} />
+
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <User size={20} color={Colors.primary} />
@@ -254,6 +421,27 @@ export default function SettingsScreen() {
               />
             </View>
           </View>
+        </View>
+
+        <View style={styles.divider} />
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Edit size={20} color={Colors.primary} />
+            <Text style={styles.sectionTitle}>Manage Preferences</Text>
+          </View>
+          <Text style={styles.sectionDescription}>
+            Reset your content preferences to start fresh
+          </Text>
+          
+          <TouchableOpacity
+            style={styles.resetButton}
+            onPress={handleResetPreferences}
+            activeOpacity={0.7}
+          >
+            <RefreshCw size={18} color={Colors.text} />
+            <Text style={styles.resetButtonText}>Reset All Preferences</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.divider} />
@@ -428,5 +616,109 @@ const styles = StyleSheet.create({
   },
   religionOptionTextSelected: {
     color: Colors.primary,
+  },
+  subscriptionCard: {
+    padding: Spacing.lg,
+    backgroundColor: '#1A1A1A',
+    borderRadius: BorderRadius.medium,
+    borderWidth: 1,
+    borderColor: '#262626',
+  },
+  subscriptionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.sm,
+  },
+  subscriptionInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  subscriptionTier: {
+    fontSize: Typography.sizes.h3,
+    fontWeight: '400' as const,
+    color: Colors.text,
+  },
+  premiumBadge: {
+    borderRadius: BorderRadius.small,
+    overflow: 'hidden',
+  },
+  premiumBadgeGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
+  },
+  premiumBadgeText: {
+    fontSize: Typography.sizes.small,
+    fontWeight: '400' as const,
+    color: '#1A1A1A',
+  },
+  subscriptionStatus: {
+    fontSize: Typography.sizes.caption,
+    color: Colors.textLight,
+    marginBottom: Spacing.lg,
+  },
+  subscriptionActions: {
+    gap: Spacing.md,
+  },
+  upgradeButton: {
+    borderRadius: BorderRadius.medium,
+    overflow: 'hidden',
+  },
+  upgradeButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    padding: Spacing.lg,
+  },
+  upgradeButtonText: {
+    fontSize: Typography.sizes.body,
+    fontWeight: '400' as const,
+    color: '#1A1A1A',
+  },
+  manageButton: {
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.medium,
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    alignItems: 'center',
+  },
+  manageButtonText: {
+    fontSize: Typography.sizes.body,
+    fontWeight: '400' as const,
+    color: Colors.primary,
+  },
+  restoreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    padding: Spacing.md,
+  },
+  restoreButtonText: {
+    fontSize: Typography.sizes.caption,
+    fontWeight: '400' as const,
+    color: Colors.textLight,
+  },
+  resetButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.medium,
+    backgroundColor: '#1A1A1A',
+    borderWidth: 1,
+    borderColor: '#3A3A3A',
+  },
+  resetButtonText: {
+    fontSize: Typography.sizes.body,
+    fontWeight: '400' as const,
+    color: Colors.text,
   },
 });
