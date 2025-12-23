@@ -80,6 +80,31 @@ export default function HomeScreen() {
     setMode(selectedMode);
   };
 
+  const getPremiumCategories = () => {
+    return mode === 'couples' 
+      ? ['Adventure'] 
+      : ['Outdoor'];
+  };
+
+  const isCategoryPremium = (category: string) => {
+    return getPremiumCategories().includes(category);
+  };
+
+  const handleCategorySelect = (category: string) => {
+    if (isCategoryPremium(category) && !isPremium) {
+      Alert.alert(
+        'Premium Category',
+        `'${category}' is a premium category. Upgrade to unlock exclusive activity categories!`,
+        [
+          { text: 'Not Now', style: 'cancel' },
+          { text: 'Upgrade', onPress: () => router.push('/paywall') }
+        ]
+      );
+      return;
+    }
+    setCategoryFilter(category);
+  };
+
   const handleScratchStart = async () => {
     if (hasStartedScratch || !mode) return;
     
@@ -348,7 +373,9 @@ export default function HomeScreen() {
                   key={cat}
                   label={cat}
                   selected={categoryFilter === cat}
-                  onPress={() => setCategoryFilter(cat)}
+                  onPress={() => handleCategorySelect(cat)}
+                  isPremium={isCategoryPremium(cat)}
+                  showPremiumBadge={isPremium}
                 />
               ))}
             </ScrollView>
