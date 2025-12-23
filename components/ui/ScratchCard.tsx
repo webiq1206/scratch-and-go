@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { View, StyleSheet, PanResponder, Animated, Dimensions } from 'react-native';
+import { View, StyleSheet, PanResponder, Animated, Dimensions, Platform } from 'react-native';
+import MaskedView from '@react-native-masked-view/masked-view';
 import * as Haptics from 'expo-haptics';
 import { BorderRadius } from '@/constants/design';
 
@@ -72,6 +73,38 @@ export default function ScratchCard({
     }
   };
 
+  if (Platform.OS === 'web') {
+    return (
+      <View style={styles.container}>
+        <View style={styles.revealLayer}>
+          {revealContent}
+        </View>
+
+        {!isRevealed && (
+          <Animated.View 
+            style={[styles.scratchLayer, { opacity }]}
+            {...panResponder.panHandlers}
+          >
+            {scratchLayer}
+            
+            {scratches.map((scratch, index) => (
+              <View
+                key={index}
+                style={[
+                  styles.scratchMarkWeb,
+                  {
+                    left: scratch.x - 25,
+                    top: scratch.y - 25,
+                  },
+                ]}
+              />
+            ))}
+          </Animated.View>
+        )}
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.revealLayer}>
@@ -79,24 +112,34 @@ export default function ScratchCard({
       </View>
 
       {!isRevealed && (
-        <Animated.View 
-          style={[styles.scratchLayer, { opacity }]}
-          {...panResponder.panHandlers}
-        >
-          {scratchLayer}
-          
-          {scratches.map((scratch, index) => (
-            <View
-              key={index}
-              style={[
-                styles.scratchMark,
-                {
-                  left: scratch.x - 20,
-                  top: scratch.y - 20,
-                },
-              ]}
-            />
-          ))}
+        <Animated.View style={{ opacity }}>
+          <MaskedView
+            style={StyleSheet.absoluteFill}
+            maskElement={
+              <View style={styles.maskContainer}>
+                <View style={styles.maskBase} />
+                {scratches.map((scratch, index) => (
+                  <View
+                    key={index}
+                    style={[
+                      styles.scratchHole,
+                      {
+                        left: scratch.x - 25,
+                        top: scratch.y - 25,
+                      },
+                    ]}
+                  />
+                ))}
+              </View>
+            }
+          >
+            <View 
+              style={StyleSheet.absoluteFill}
+              {...panResponder.panHandlers}
+            >
+              {scratchLayer}
+            </View>
+          </MaskedView>
         </Animated.View>
       )}
     </View>
@@ -121,11 +164,26 @@ const styles = StyleSheet.create({
   scratchLayer: {
     ...StyleSheet.absoluteFillObject,
   },
-  scratchMark: {
+  maskContainer: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
+  maskBase: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'white',
+  },
+  scratchHole: {
     position: 'absolute',
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    backgroundColor: 'black',
+  },
+  scratchMarkWeb: {
+    position: 'absolute',
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
   },
 });
