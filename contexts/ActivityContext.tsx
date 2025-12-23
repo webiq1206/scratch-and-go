@@ -4,12 +4,14 @@ import { generateObject } from '@rork-ai/toolkit-sdk';
 import { Activity, ActivitySchema, Filters } from '@/types/activity';
 import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { usePreferences } from './PreferencesContext';
 
 const HISTORY_KEY = 'scratch_and_go_history';
 const SCRATCH_COUNT_KEY = 'scratch_and_go_count';
 const SCRATCH_MONTH_KEY = 'scratch_and_go_month';
 
 export const [ActivityProvider, useActivity] = createContextHook(() => {
+  const { getContentRestrictions } = usePreferences();
   const [currentActivity, setCurrentActivity] = useState<Activity | null>(null);
   const [activityHistory, setActivityHistory] = useState<Activity[]>([]);
   const [scratchCount, setScratchCount] = useState(0);
@@ -63,16 +65,11 @@ export const [ActivityProvider, useActivity] = createContextHook(() => {
       const currentSeason = getCurrentSeason();
       const historyTitles = activityHistory.map(a => a.title).join(', ');
 
+      const contentRestrictions = getContentRestrictions();
       const systemPrompt = `You are an expert at creating unique, engaging ${filters.mode === 'couples' ? 'date night' : 'family'} activity ideas.
 
 CRITICAL CONTENT RESTRICTIONS:
-- Never suggest alcohol, bars, breweries, wineries, cocktails, or drinking
-- Never suggest religious activities, churches, or faith-based events
-- Never suggest gambling, casinos, or betting
-- Never suggest hunting or activities involving weapons
-- Never suggest politically affiliated events
-- Avoid specific dietary places (use "restaurant" not "steakhouse")
-- Keep all content appropriate and inclusive
+${contentRestrictions.map(r => `- ${r}`).join('\n')}
 
 Generate a personalized activity with these parameters:
 - Mode: ${filters.mode}
