@@ -248,14 +248,14 @@ export default function HomeScreen() {
                   </View>
                   <View style={[styles.polaroidFrame, styles.polaroidCol3, { transform: [{ rotate: '-4deg' }] }]}>
                     <Image 
-                      source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/projects/xz00xar8pn4xhtrdicpyk/generations/1735017775890_polaroid1.webp' }}
+                      source={{ uri: 'https://images.unsplash.com/photo-1493246507139-91e8fad9978e?w=400' }}
                       style={styles.polaroidPhoto}
                       resizeMode="cover"
                     />
                   </View>
                   <View style={[styles.polaroidFrame, styles.polaroidCol4, { transform: [{ rotate: '6deg' }] }]}>
                     <Image 
-                      source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/projects/xz00xar8pn4xhtrdicpyk/generations/1735017775908_polaroid2.webp' }}
+                      source={{ uri: 'https://images.unsplash.com/photo-1518568814500-bf0f8d125f46?w=400' }}
                       style={styles.polaroidPhoto}
                       resizeMode="cover"
                     />
@@ -289,14 +289,14 @@ export default function HomeScreen() {
                   </View>
                   <View style={[styles.polaroidFrame, styles.polaroidCol3, { transform: [{ rotate: '5deg' }] }]}>
                     <Image 
-                      source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/projects/xz00xar8pn4xhtrdicpyk/generations/1735017775924_polaroid3.webp' }}
+                      source={{ uri: 'https://images.unsplash.com/photo-1476234251651-f353703a034d?w=400' }}
                       style={styles.polaroidPhoto}
                       resizeMode="cover"
                     />
                   </View>
                   <View style={[styles.polaroidFrame, styles.polaroidCol4, { transform: [{ rotate: '-6deg' }] }]}>
                     <Image 
-                      source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/projects/xz00xar8pn4xhtrdicpyk/generations/1735017775941_polaroid4.webp' }}
+                      source={{ uri: 'https://images.unsplash.com/photo-1511895426328-dc8714191300?w=400' }}
                       style={styles.polaroidPhoto}
                       resizeMode="cover"
                     />
@@ -818,18 +818,19 @@ const styles = StyleSheet.create({
   },
   polaroidGrid: {
     flexDirection: 'row',
-    width: 320,
-    height: 120,
+    width: '100%',
+    height: 140,
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
+    overflow: 'hidden',
   },
   polaroidFrame: {
-    width: 60,
-    height: 75,
+    width: 70,
+    height: 88,
     backgroundColor: '#FFFFFF',
-    padding: 4,
-    paddingBottom: 12,
+    padding: 5,
+    paddingBottom: 14,
     borderRadius: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -839,20 +840,20 @@ const styles = StyleSheet.create({
     position: 'absolute',
   },
   polaroidCol1: {
-    left: -10,
-    top: 15,
+    left: -20,
+    top: 30,
   },
   polaroidCol2: {
-    left: 60,
-    top: 5,
+    left: 65,
+    top: 10,
   },
   polaroidCol3: {
-    left: 130,
-    top: 20,
+    left: 150,
+    top: 35,
   },
   polaroidCol4: {
-    left: 200,
-    top: 10,
+    right: -20,
+    top: 15,
   },
   polaroidPhoto: {
     width: '100%',
