@@ -436,6 +436,286 @@ bun run start -- --android
 
 ---
 
+## Development Roadmap
+
+### Current Status: Phase 1 Complete ✅
+
+Below is the complete phased development plan to finish the Scratch & Go app. Each phase is broken into logical, manageable steps to ensure nothing is missed.
+
+---
+
+### **Phase 1: Core Experience (COMPLETE)**
+
+✅ All steps completed
+
+**Completed Features:**
+- Welcome screen with polaroid image grid
+- Mode selection (Couples/Family)
+- Preference questionnaire with AsyncStorage persistence
+- Interactive scratch card with gradient overlay
+- AI activity generation via @rork-ai/toolkit-sdk
+- Filter system (category, budget, timing)
+- Location detection and manual selection
+- Scratch limit system (3 free per month)
+- Design system implementation (colors, typography, spacing)
+
+---
+
+### **Phase 2: Memory Book & Activity Management**
+
+**Goal**: Allow users to save, organize, and manage their discovered activities.
+
+#### Step 2.1: Memory Book Data Structure
+- [ ] Create `SavedActivity` type extending `Activity` with metadata (savedAt, isCompleted, completedAt, rating, notes)
+- [ ] Create `MemoryBookContext` using `@nkzw/create-context-hook`
+- [ ] Set up AsyncStorage persistence for saved activities
+- [ ] Add save/unsave functionality with optimistic updates
+
+#### Step 2.2: Save Activity from Scratch Card
+- [ ] Add "Save to Memory Book" button to scratch card reveal content
+- [ ] Implement save action with visual feedback (heart icon animation)
+- [ ] Show toast/alert when activity is saved
+- [ ] Disable save button if activity already saved
+
+#### Step 2.3: Memory Book UI - List View
+- [ ] Implement `app/(main)/memory-book.tsx` with tab navigation
+- [ ] Create tabs: "Saved" and "Completed"
+- [ ] Build activity card component for list view
+- [ ] Add empty state for no saved activities
+- [ ] Implement pull-to-refresh
+
+#### Step 2.4: Memory Book UI - Activity Actions
+- [ ] Add swipe actions: Mark Complete, Delete
+- [ ] Create "Mark as Complete" flow with date picker
+- [ ] Add ability to add notes/photos to completed activities
+- [ ] Implement star rating system (1-5 stars)
+
+#### Step 2.5: Activity Detail Screen
+- [ ] Create `app/(main)/activity/[id].tsx` dynamic route
+- [ ] Display full activity details with larger emoji
+- [ ] Show saved date, completion status, rating
+- [ ] Add edit notes functionality
+- [ ] Add delete confirmation dialog
+
+#### Step 2.6: Search & Filter in Memory Book
+- [ ] Add search bar to filter saved activities by title
+- [ ] Add filter chips (category, cost, completed/uncompleted)
+- [ ] Implement sort options (date saved, alphabetical, rating)
+
+---
+
+### **Phase 3: Premium Subscription & Monetization**
+
+**Goal**: Implement premium features and payment system.
+
+#### Step 3.1: Premium Context Setup
+- [ ] Create `SubscriptionContext` using `@nkzw/create-context-hook`
+- [ ] Add subscription status tracking (free, premium, trial)
+- [ ] Store subscription state in AsyncStorage
+- [ ] Add mock premium check for development
+
+#### Step 3.2: Paywall Screen
+- [ ] Create `app/paywall.tsx` as modal screen
+- [ ] Design premium benefits list (unlimited scratches, exclusive categories, priority support)
+- [ ] Add pricing cards (monthly/annual options)
+- [ ] Create "Restore Purchases" button
+- [ ] Add terms of service and privacy policy links
+
+#### Step 3.3: Payment Integration (Choose One)
+- [ ] **Option A**: Integrate Stripe for web/credit card payments
+- [ ] **Option B**: Integrate RevenueCat for native in-app purchases (requires Custom Development Build)
+- [ ] Set up subscription products (monthly, annual)
+- [ ] Implement purchase flow with loading states
+- [ ] Handle purchase success/failure with proper user feedback
+
+#### Step 3.4: Premium Features Gating
+- [ ] Update scratch limit check to bypass for premium users
+- [ ] Add "Premium" badge to exclusive activity categories
+- [ ] Show upgrade prompt when free users hit limit
+- [ ] Add premium indicator in app header
+
+#### Step 3.5: Settings & Subscription Management
+- [ ] Create `app/(main)/settings.tsx`
+- [ ] Display current subscription status
+- [ ] Add "Manage Subscription" button (links to app store)
+- [ ] Show subscription expiry date for premium users
+- [ ] Add preference editing (re-do questionnaire)
+
+---
+
+### **Phase 4: Social Features & Sharing**
+
+**Goal**: Enable users to share activities and connect with others.
+
+#### Step 4.1: Activity Sharing
+- [ ] Add "Share Activity" button to scratch card and activity details
+- [ ] Create shareable activity card image (with app branding)
+- [ ] Implement `expo-sharing` for native share sheet (with web fallback)
+- [ ] Generate share text with activity details and app link
+
+#### Step 4.2: Deep Linking Setup
+- [ ] Configure deep linking in `app.json`
+- [ ] Create `app/activity-shared/[id].tsx` for shared activities
+- [ ] Handle incoming links and display shared activity
+- [ ] Add "Try Scratch & Go" CTA for non-users
+
+#### Step 4.3: Activity Recommendations
+- [ ] Add "Share with Partner" flow (send via text/email)
+- [ ] Create collaborative activity queue (shared list between partners)
+- [ ] Add voting system (both partners vote on suggested activities)
+
+---
+
+### **Phase 5: Advanced Features & Polish**
+
+**Goal**: Enhance personalization, add quality-of-life features, and polish the experience.
+
+#### Step 5.1: Enhanced Personalization
+- [ ] Track activity interaction (saved, completed, skipped)
+- [ ] Use history to improve AI suggestions (avoid suggesting similar activities)
+- [ ] Add "Not Interested" button to refine preferences
+- [ ] Implement activity ratings to improve future suggestions
+
+#### Step 5.2: Weather & Time Integration
+- [ ] Integrate weather API (OpenWeather or similar)
+- [ ] Factor weather into activity suggestions (indoor vs outdoor)
+- [ ] Add time-of-day awareness (brunch, evening activities)
+- [ ] Show weather forecast on activity cards
+
+#### Step 5.3: Calendar Integration
+- [ ] Add "Add to Calendar" button for activities
+- [ ] Integrate with `expo-calendar` (with permissions)
+- [ ] Allow scheduling activities for specific dates
+- [ ] Send reminders before scheduled activities
+
+#### Step 5.4: Activity History & Stats
+- [ ] Create stats dashboard showing:
+  - Total activities scratched
+  - Total activities completed
+  - Favorite categories
+  - Total time spent on activities
+  - Total money spent (estimated)
+- [ ] Add monthly recap feature
+- [ ] Show streak counter for consecutive weeks with activities
+
+#### Step 5.5: Onboarding Improvements
+- [ ] Add tutorial overlay on first scratch
+- [ ] Create helpful tooltips for filters and features
+- [ ] Add "What's New" modal for returning users after updates
+- [ ] Implement progressive onboarding (introduce features gradually)
+
+#### Step 5.6: Performance Optimization
+- [ ] Implement image caching for polaroid photos
+- [ ] Optimize AI generation (add retry logic, timeout handling)
+- [ ] Add offline mode (browse saved activities without internet)
+- [ ] Implement lazy loading for Memory Book
+
+#### Step 5.7: Accessibility
+- [ ] Add accessibility labels to all interactive elements
+- [ ] Test with screen readers (iOS VoiceOver, Android TalkBack)
+- [ ] Ensure proper color contrast ratios
+- [ ] Add haptic feedback for key interactions
+- [ ] Support dynamic text sizing
+
+#### Step 5.8: Error Handling & Edge Cases
+- [ ] Add global error boundary
+- [ ] Improve error messages (network errors, AI generation failures)
+- [ ] Add retry buttons for failed operations
+- [ ] Handle location permission denial gracefully
+- [ ] Add fallback for AI generation failures
+
+#### Step 5.9: Testing & QA
+- [ ] Test all features on iOS devices
+- [ ] Test all features on Android devices
+- [ ] Test web compatibility for all features
+- [ ] Test different screen sizes (small phones, tablets)
+- [ ] Test edge cases (no internet, no location, etc.)
+- [ ] Perform user acceptance testing
+
+---
+
+### **Phase 6: Launch Preparation**
+
+**Goal**: Prepare app for App Store and Google Play submission.
+
+#### Step 6.1: App Store Assets
+- [ ] Create app icon (1024x1024)
+- [ ] Design screenshots for App Store (multiple device sizes)
+- [ ] Write app description and keywords
+- [ ] Create promotional text and release notes
+- [ ] Design marketing website or landing page
+
+#### Step 6.2: Legal & Compliance
+- [ ] Write Privacy Policy
+- [ ] Write Terms of Service
+- [ ] Add in-app links to legal documents
+- [ ] Ensure GDPR compliance (if applicable)
+- [ ] Add data deletion request flow
+
+#### Step 6.3: Analytics & Monitoring
+- [ ] Integrate analytics (Expo Analytics, Mixpanel, or Amplitude)
+- [ ] Track key events (scratches, saves, completions, upgrades)
+- [ ] Set up crash reporting (Sentry or similar)
+- [ ] Add performance monitoring
+
+#### Step 6.4: App Store Submission
+- [ ] Configure `app.json` with final metadata
+- [ ] Set up EAS Build configuration
+- [ ] Create production builds (iOS and Android)
+- [ ] Submit to App Store for review
+- [ ] Submit to Google Play for review
+
+---
+
+## Implementation Guidelines
+
+### How to Proceed
+
+1. **Work Phase by Phase**: Complete each phase fully before moving to the next
+2. **Step-by-Step**: Work on one step at a time within each phase
+3. **Test After Each Step**: Verify functionality works before proceeding
+4. **Commit Frequently**: Save progress after completing each step
+5. **Document Changes**: Update this guide as features are completed
+
+### Marking Progress
+
+As you complete each step:
+1. Change `[ ]` to `[✓]` in the checklist
+2. Add completion date next to the checkmark
+3. Note any deviations or important decisions made
+
+### Example:
+```markdown
+- [✓] Create SavedActivity type (Completed: 2024-12-23)
+  Note: Added optional photoUri field for future photo uploads
+```
+
+---
+
+## Priority Recommendations
+
+### Must-Have (For MVP Launch)
+- Phase 1: Core Experience ✅ (Complete)
+- Phase 2: Memory Book & Activity Management (Steps 2.1-2.5)
+- Phase 3: Premium Subscription (Steps 3.1-3.4)
+- Phase 5: Error Handling & Edge Cases (Step 5.8)
+- Phase 6: Launch Preparation (All steps)
+
+### Nice-to-Have (Post-Launch)
+- Phase 2: Search & Filter (Step 2.6)
+- Phase 4: Social Features (All steps)
+- Phase 5: Advanced Features (Steps 5.1-5.7, 5.9)
+
+### Future Enhancements
+- Multi-language support
+- Dark/light theme toggle (currently dark only)
+- Activity recommendations based on friends
+- Integration with ticket booking services (Eventbrite, etc.)
+- AR features for discovering nearby activities
+- Gamification (achievements, badges, leaderboards)
+
+---
+
 ## Credits
 
 Built with ❤️ using React Native, Expo, and AI-powered activity generation.
