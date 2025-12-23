@@ -27,6 +27,7 @@ export interface OnboardingQuestion {
 
 export const RELIGIONS = [
   { id: 'christianity', label: 'Christianity', emoji: '✝️' },
+  { id: 'mormon', label: 'Mormon (LDS)', emoji: '📖' },
   { id: 'islam', label: 'Islam', emoji: '☪️' },
   { id: 'judaism', label: 'Judaism', emoji: '✡️' },
   { id: 'buddhism', label: 'Buddhism', emoji: '☸️' },

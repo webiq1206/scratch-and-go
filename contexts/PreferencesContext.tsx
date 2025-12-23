@@ -49,6 +49,7 @@ export const [PreferencesProvider, usePreferences] = createContextHook(() => {
     } else if (preferences.religion && preferences.religion !== 'none') {
       const religionNames: { [key: string]: string } = {
         christianity: 'Christian',
+        mormon: 'Mormon (Latter-day Saints)',
         islam: 'Islamic',
         judaism: 'Jewish',
         buddhism: 'Buddhist',
