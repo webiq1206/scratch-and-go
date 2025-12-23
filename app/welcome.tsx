@@ -9,7 +9,6 @@ import Typography from '@/constants/typography';
 import Spacing from '@/constants/spacing';
 import { BorderRadius } from '@/constants/design';
 import { UserPreferences, DEFAULT_PREFERENCES, ONBOARDING_QUESTIONS } from '@/types/preferences';
-import Button from '@/components/ui/Button';
 
 const MODE_KEY = 'scratch_and_go_mode';
 const PREFERENCES_KEY = 'scratch_and_go_preferences';
@@ -93,18 +92,27 @@ export default function WelcomeScreen() {
           </View>
 
           <View style={styles.buttonContainer}>
-            <Button
-              title={currentQuestion.yesLabel}
+            <TouchableOpacity
+              style={styles.answerButton}
               onPress={() => handlePreferenceAnswer(true)}
-              variant="primary"
-              style={styles.answerButton}
-            />
-            <Button
-              title={currentQuestion.noLabel}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={[Colors.primaryGradientStart, Colors.primaryGradientEnd]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.gradientButton}
+              >
+                <Text style={styles.answerButtonText}>{currentQuestion.yesLabel}</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.answerButtonSecondary}
               onPress={() => handlePreferenceAnswer(false)}
-              variant="secondary"
-              style={styles.answerButton}
-            />
+              activeOpacity={0.8}
+            >
+              <Text style={styles.answerButtonSecondaryText}>{currentQuestion.noLabel}</Text>
+            </TouchableOpacity>
           </View>
 
           <Text style={styles.privacyNote}>
@@ -300,19 +308,19 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     height: 4,
-    backgroundColor: Colors.cardBorder,
+    backgroundColor: '#333333',
     borderRadius: 2,
     overflow: 'hidden',
     marginBottom: Spacing.sm,
   },
   progressFill: {
     height: '100%',
-    backgroundColor: Colors.primary,
+    backgroundColor: '#FF6B9D',
     borderRadius: 2,
   },
   progressText: {
     fontSize: Typography.sizes.small,
-    color: Colors.textLight,
+    color: '#B8B8B8',
     textAlign: 'center',
   },
   questionContent: {
@@ -326,13 +334,13 @@ const styles = StyleSheet.create({
   questionTitle: {
     fontSize: Typography.sizes.h1,
     fontWeight: Typography.weights.bold,
-    color: Colors.text,
+    color: '#FFFFFF',
     textAlign: 'center',
     marginBottom: Spacing.md,
   },
   questionDescription: {
     fontSize: Typography.sizes.body,
-    color: Colors.textLight,
+    color: '#B8B8B8',
     textAlign: 'center',
     lineHeight: 24,
   },
@@ -344,9 +352,34 @@ const styles = StyleSheet.create({
   answerButton: {
     width: '100%',
   },
+  gradientButton: {
+    width: '100%',
+    paddingVertical: 16,
+    borderRadius: BorderRadius.full,
+    alignItems: 'center',
+  },
+  answerButtonText: {
+    fontSize: Typography.sizes.h3,
+    fontWeight: Typography.weights.semibold,
+    color: '#1A1A1A',
+  },
+  answerButtonSecondary: {
+    width: '100%',
+    paddingVertical: 16,
+    borderRadius: BorderRadius.full,
+    alignItems: 'center',
+    backgroundColor: '#252525',
+    borderWidth: 1,
+    borderColor: '#333333',
+  },
+  answerButtonSecondaryText: {
+    fontSize: Typography.sizes.h3,
+    fontWeight: Typography.weights.semibold,
+    color: '#FFFFFF',
+  },
   privacyNote: {
     fontSize: Typography.sizes.small,
-    color: Colors.textLight,
+    color: '#B8B8B8',
     textAlign: 'center',
     fontStyle: 'italic',
   },

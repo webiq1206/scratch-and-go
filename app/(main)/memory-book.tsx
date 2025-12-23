@@ -2,7 +2,6 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BookHeart } from 'lucide-react-native';
-import Colors from '@/constants/colors';
 import Typography from '@/constants/typography';
 import Spacing from '@/constants/spacing';
 
@@ -16,7 +15,7 @@ export default function MemoryBookScreen() {
 
       <View style={styles.emptyState}>
         <View style={styles.emptyIconContainer}>
-          <BookHeart size={64} color={Colors.primary} strokeWidth={1.5} />
+          <BookHeart size={64} color="#FF6B9D" strokeWidth={1.5} />
         </View>
         <Text style={styles.emptyTitle}>No adventures yet</Text>
         <Text style={styles.emptyText}>Start scratching to create memorable moments{"\n"}and build your adventure collection</Text>
@@ -28,7 +27,7 @@ export default function MemoryBookScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: '#1A1A1A',
   },
   header: {
     paddingHorizontal: Spacing.lg,
@@ -38,12 +37,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: Typography.sizes.hero,
     fontWeight: Typography.weights.bold,
-    color: Colors.text,
+    color: '#FFFFFF',
     marginBottom: Spacing.xs,
   },
   subtitle: {
     fontSize: Typography.sizes.body,
-    color: Colors.textLight,
+    color: '#B8B8B8',
   },
   emptyState: {
     flex: 1,
@@ -55,21 +54,23 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: Colors.cardBackground,
+    backgroundColor: '#252525',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: Spacing.xl,
+    borderWidth: 1,
+    borderColor: '#333333',
   },
   emptyTitle: {
     fontSize: Typography.sizes.h2,
     fontWeight: Typography.weights.bold,
-    color: Colors.text,
+    color: '#FFFFFF',
     marginBottom: Spacing.md,
     textAlign: 'center',
   },
   emptyText: {
     fontSize: Typography.sizes.body,
-    color: Colors.textLight,
+    color: '#B8B8B8',
     textAlign: 'center',
     lineHeight: 24,
   },

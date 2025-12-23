@@ -28,9 +28,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.sm + 2,
     borderRadius: BorderRadius.full,
-    backgroundColor: Colors.inputBackground,
+    backgroundColor: '#252525',
     borderWidth: 1.5,
-    borderColor: Colors.cardBorder,
+    borderColor: '#333333',
     marginRight: Spacing.sm,
   },
   selected: {
@@ -40,10 +40,10 @@ const styles = StyleSheet.create({
   text: {
     fontSize: Typography.sizes.caption,
     fontWeight: Typography.weights.semibold,
-    color: Colors.textLight,
+    color: '#B8B8B8',
   },
   selectedText: {
-    color: Colors.backgroundDark,
+    color: '#1A1A1A',
     fontWeight: Typography.weights.bold,
   },
 });

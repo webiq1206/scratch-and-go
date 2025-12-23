@@ -104,7 +104,7 @@ export default function LocationSelector() {
               <TextInput
                 style={styles.input}
                 placeholder="e.g., San Francisco"
-                placeholderTextColor={Colors.textLight}
+                placeholderTextColor="#666666"
                 value={manualCity}
                 onChangeText={setManualCity}
               />
@@ -115,7 +115,7 @@ export default function LocationSelector() {
               <TextInput
                 style={styles.input}
                 placeholder="e.g., California"
-                placeholderTextColor={Colors.textLight}
+                placeholderTextColor="#666666"
                 value={manualRegion}
                 onChangeText={setManualRegion}
               />
@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: Colors.background,
+    backgroundColor: '#1A1A1A',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: Spacing.xl,
@@ -187,16 +187,16 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: Typography.sizes.h2,
     fontWeight: Typography.weights.bold,
-    color: Colors.text,
+    color: '#FFFFFF',
   },
   modalDescription: {
     fontSize: Typography.sizes.body,
-    color: Colors.textLight,
+    color: '#B8B8B8',
     marginBottom: Spacing.xl,
     lineHeight: 22,
   },
   detectButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: '#FF6B9D',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
   detectButtonText: {
     fontSize: Typography.sizes.body,
     fontWeight: Typography.weights.semibold,
-    color: Colors.background,
+    color: '#1A1A1A',
   },
   divider: {
     flexDirection: 'row',
@@ -218,11 +218,11 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: Colors.divider,
+    backgroundColor: '#333333',
   },
   dividerText: {
     fontSize: Typography.sizes.caption,
-    color: Colors.textLight,
+    color: '#B8B8B8',
     marginHorizontal: Spacing.md,
   },
   inputContainer: {
@@ -231,21 +231,21 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: Typography.sizes.caption,
     fontWeight: Typography.weights.semibold,
-    color: Colors.text,
+    color: '#FFFFFF',
     marginBottom: Spacing.xs,
   },
   input: {
-    backgroundColor: Colors.cardBackground,
+    backgroundColor: '#252525',
     borderRadius: 12,
     paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.md,
     fontSize: Typography.sizes.body,
-    color: Colors.text,
+    color: '#FFFFFF',
     borderWidth: 1,
-    borderColor: Colors.divider,
+    borderColor: '#333333',
   },
   submitButton: {
-    backgroundColor: Colors.secondary,
+    backgroundColor: '#FF6B9D',
     paddingVertical: Spacing.md,
     borderRadius: 12,
     alignItems: 'center',
@@ -254,17 +254,17 @@ const styles = StyleSheet.create({
   submitButtonText: {
     fontSize: Typography.sizes.body,
     fontWeight: Typography.weights.semibold,
-    color: Colors.background,
+    color: '#1A1A1A',
   },
   currentLocationText: {
     fontSize: Typography.sizes.caption,
-    color: Colors.textLight,
+    color: '#B8B8B8',
     textAlign: 'center',
     marginTop: Spacing.lg,
   },
   optionalBadge: {
     alignSelf: 'center',
-    backgroundColor: Colors.accent,
+    backgroundColor: '#FFD700',
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.xs,
     borderRadius: 20,
@@ -273,14 +273,14 @@ const styles = StyleSheet.create({
   optionalBadgeText: {
     fontSize: Typography.sizes.caption,
     fontWeight: Typography.weights.bold,
-    color: Colors.background,
+    color: '#1A1A1A',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   modalNote: {
     fontSize: Typography.sizes.small,
-    color: Colors.textLight,
-    backgroundColor: Colors.cardBackground,
+    color: '#B8B8B8',
+    backgroundColor: '#252525',
     padding: Spacing.md,
     borderRadius: 12,
     marginBottom: Spacing.lg,
@@ -294,6 +294,6 @@ const styles = StyleSheet.create({
   skipButtonText: {
     fontSize: Typography.sizes.body,
     fontWeight: Typography.weights.medium,
-    color: Colors.textLight,
+    color: '#B8B8B8',
   },
 });
