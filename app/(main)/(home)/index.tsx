@@ -315,7 +315,7 @@ export default function HomeScreen() {
                   <View style={[styles.polaroidColumn, styles.column1]}>
                     <View style={[styles.polaroidFrame, { transform: [{ rotate: '10deg' }], marginTop: 8 }]}>
                       <Image 
-                        source={{ uri: 'https://images.unsplash.com/photo-1542831371-29b0f74f9713?w=400&q=80' }}
+                        source={{ uri: 'https://images.unsplash.com/photo-1475503572774-15a45e5d60b9?w=400&q=80' }}
                         style={styles.polaroidPhoto}
                         resizeMode="cover"
                       />
@@ -373,7 +373,7 @@ export default function HomeScreen() {
                     </View>
                     <View style={[styles.polaroidFrame, { transform: [{ rotate: '9deg' }], marginTop: 8 }]}>
                       <Image 
-                        source={{ uri: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&q=80' }}
+                        source={{ uri: 'https://images.unsplash.com/photo-1609220136736-443140cffec6?w=400&q=80' }}
                         style={styles.polaroidPhoto}
                         resizeMode="cover"
                       />
