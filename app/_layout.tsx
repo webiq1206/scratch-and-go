@@ -9,6 +9,7 @@ import { LocationProvider } from "@/contexts/LocationContext";
 import { MemoryBookProvider } from "@/contexts/MemoryBookContext";
 import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
 import { CollaborativeProvider } from "@/contexts/CollaborativeContext";
+import { StatsProvider } from "@/contexts/StatsContext";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -93,9 +94,11 @@ export default function RootLayout() {
             <ActivityProvider>
               <MemoryBookProvider>
                 <CollaborativeProvider>
-                  <GestureHandlerRootView style={{ flex: 1 }}>
-                    <RootLayoutNav />
-                  </GestureHandlerRootView>
+                  <StatsProvider>
+                    <GestureHandlerRootView style={{ flex: 1 }}>
+                      <RootLayoutNav />
+                    </GestureHandlerRootView>
+                  </StatsProvider>
                 </CollaborativeProvider>
               </MemoryBookProvider>
             </ActivityProvider>

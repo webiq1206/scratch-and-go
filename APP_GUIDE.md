@@ -811,15 +811,87 @@ Currently uses mock payment system for development and testing. Ready to integra
 - [ ] Allow scheduling activities for specific dates
 - [ ] Send reminders before scheduled activities
 
-#### Step 5.4: Activity History & Stats
-- [ ] Create stats dashboard showing:
+#### Step 5.4: Activity History & Stats ✅ (Completed: 2024-12-23)
+- [✓] Create stats dashboard showing:
   - Total activities scratched
   - Total activities completed
   - Favorite categories
   - Total time spent on activities
   - Total money spent (estimated)
-- [ ] Add monthly recap feature
-- [ ] Show streak counter for consecutive weeks with activities
+- [✓] Add monthly recap feature
+- [✓] Show streak counter for consecutive weeks with activities
+
+**Files Created:**
+- `types/stats.ts` - Type definitions for stats, monthly recap, streaks, and categories
+- `contexts/StatsContext.tsx` - Stats context with comprehensive calculations
+- `app/(main)/stats.tsx` - Stats dashboard screen with beautiful UI
+
+**Features Implemented:**
+✅ Stats Dashboard:
+  - Total activities scratched counter
+  - Total activities saved counter
+  - Total completed activities counter
+  - Current month scratches counter
+  - Beautiful 2x2 grid layout with icons
+
+✅ Time & Money Tracking:
+  - Estimated time spent on completed activities (in hours/minutes)
+  - Estimated money invested (based on cost tiers)
+  - Calculation logic:
+    - Quick/1-2 hours = 90 minutes
+    - Half day = 4 hours
+    - Full day = 8 hours
+    - Free = $0, $ = $25, $ = $75, $$ = $150
+
+✅ Favorite Categories:
+  - Top 5 most scratched categories
+  - Visual progress bars showing percentage
+  - Ranked list with #1, #2, #3, etc.
+  - Activity count for each category
+
+✅ Streak System:
+  - Current streak counter (consecutive weeks with completed activities)
+  - Longest streak tracker (personal best)
+  - Beautiful gradient card display when streak is active
+  - Fire emoji for motivation
+  - Tracks last 52 weeks of activity
+
+✅ Monthly Recap:
+  - Dynamic month/year display
+  - Activities scratched this month
+  - Activities completed this month
+  - Total time spent this month
+  - Total money spent this month
+  - Highlights section with key achievements:
+    - Number of activities completed
+    - Favorite category of the month
+    - Current streak mention
+
+✅ Weekly Activity Visualization:
+  - Bar chart showing last 12 weeks
+  - Active weeks highlighted in pink
+  - Inactive weeks shown in gray
+  - Visual timeline from "Now" to "12 weeks ago"
+
+✅ Empty State:
+  - Friendly message for new users
+  - Encouragement to start scratching activities
+  - Sparkles icon for visual appeal
+
+✅ Integration:
+  - StatsProvider added to root layout context hierarchy
+  - Stats tab added to main navigation with BarChart3 icon
+  - Full integration with ActivityContext and MemoryBookContext
+  - Real-time stats updates as users interact with app
+
+**UI/UX:**
+- Consistent dark theme with pink gradient accents
+- Section-based layout with clear hierarchy
+- Beautiful stat cards with icons and colors
+- Smooth scrolling with proper spacing
+- Responsive grid layouts
+- Empty states for zero-data scenarios
+- Gradient streak card for motivation
 
 #### Step 5.5: Onboarding Improvements
 - [ ] Add tutorial overlay on first scratch
