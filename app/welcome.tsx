@@ -185,23 +185,31 @@ export default function WelcomeScreen() {
   }
 
   const polaroidImages = [
-    { uri: 'https://r2-pub.rork.com/generated-images/607ff251-9133-410d-ace6-05dca7cff93b.png' },
-    { uri: 'https://r2-pub.rork.com/generated-images/048f8fae-5bc5-4aed-9540-052c641f597e.png' },
-    { uri: 'https://r2-pub.rork.com/generated-images/07d8a70f-801b-4db1-9df0-f279c96f76a5.png' },
-    { uri: 'https://r2-pub.rork.com/generated-images/2ab872a7-455c-4c34-a695-a732c39bf7ab.png' },
-    { uri: 'https://r2-pub.rork.com/generated-images/095b3f39-4b79-4885-9987-db534bfa986c.png' },
-    { uri: 'https://r2-pub.rork.com/generated-images/edd5ca88-9972-49cb-8976-6c43c0717761.png' },
+    { uri: 'https://r2-pub.rork.com/generated-images/607ff251-9133-410d-ace6-05dca7cff93b.png', offset: 8 },
+    { uri: 'https://r2-pub.rork.com/generated-images/048f8fae-5bc5-4aed-9540-052c641f597e.png', offset: 0 },
+    { uri: 'https://r2-pub.rork.com/generated-images/07d8a70f-801b-4db1-9df0-f279c96f76a5.png', offset: -6 },
+    { uri: 'https://r2-pub.rork.com/generated-images/2ab872a7-455c-4c34-a695-a732c39bf7ab.png', offset: 12 },
+    { uri: 'https://r2-pub.rork.com/generated-images/095b3f39-4b79-4885-9987-db534bfa986c.png', offset: -10 },
+    { uri: 'https://r2-pub.rork.com/generated-images/edd5ca88-9972-49cb-8976-6c43c0717761.png', offset: 6 },
+    { uri: 'https://images.unsplash.com/photo-1511895426328-dc8714191300?w=400', offset: 0 },
+    { uri: 'https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=400', offset: 15 },
+    { uri: 'https://images.unsplash.com/photo-1541694458248-5aa2101c77df?w=400', offset: -8 },
+    { uri: 'https://images.unsplash.com/photo-1516733968668-dbdce39c4651?w=400', offset: 10 },
+    { uri: 'https://images.unsplash.com/photo-1502086223501-7ea6ecd79368?w=400', offset: -5 },
+    { uri: 'https://images.unsplash.com/photo-1522038038628-2876b5e21c88?w=400', offset: 8 },
   ];
 
   return (
     <View style={styles.container}>
       <View style={styles.photoCollageContainer}>
-        <View style={styles.polaroidGrid}>
-          {polaroidImages.map((photo, index) => (
-            <View key={index} style={styles.polaroid}>
-              <Image source={{ uri: photo.uri }} style={styles.polaroidImage} />
-            </View>
-          ))}
+        <View style={styles.polaroidGridWrapper}>
+          <View style={styles.polaroidGrid}>
+            {polaroidImages.map((photo, index) => (
+              <View key={index} style={[styles.polaroid, { marginTop: photo.offset }]}>
+                <Image source={{ uri: photo.uri }} style={styles.polaroidImage} />
+              </View>
+            ))}
+          </View>
         </View>
         <LinearGradient
           colors={['rgba(0, 0, 0, 0.2)', 'rgba(0, 0, 0, 0.5)', 'rgba(0, 0, 0, 0.85)', '#000000']}
@@ -263,29 +271,34 @@ const styles = StyleSheet.create({
     backgroundColor: '#000000',
     justifyContent: 'flex-start',
     alignItems: 'center',
-    paddingTop: SCREEN_HEIGHT * 0.1,
+    paddingTop: 70,
+  },
+  polaroidGridWrapper: {
+    width: SCREEN_WIDTH,
+    overflow: 'hidden',
   },
   polaroidGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    gap: 12,
-    width: '100%',
+    justifyContent: 'flex-start',
+    alignItems: 'flex-start',
+    paddingHorizontal: 0,
+    marginLeft: -30,
+    width: SCREEN_WIDTH + 60,
+    gap: 14,
   },
   polaroid: {
-    width: (SCREEN_WIDTH - Spacing.lg * 2 - 24) / 2,
-    height: ((SCREEN_WIDTH - Spacing.lg * 2 - 24) / 2) * 1.2,
-    backgroundColor: '#FFFFFF',
+    width: (SCREEN_WIDTH - 28) / 4,
+    height: ((SCREEN_WIDTH - 28) / 4) * 1.2,
+    backgroundColor: '#E8E8E8',
     padding: 8,
     paddingBottom: 24,
-    borderRadius: 4,
+    borderRadius: 3,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.45,
+    shadowRadius: 16,
+    elevation: 10,
   },
   polaroidImage: {
     width: '100%',
