@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, TextInput, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import Typography from '@/constants/typography';
@@ -8,7 +8,7 @@ import Colors from '@/constants/colors';
 import { BorderRadius } from '@/constants/design';
 import { useMemoryBook } from '@/contexts/MemoryBookContext';
 import { SavedActivity } from '@/types/activity';
-import { Heart, Clock, DollarSign, Calendar, CheckCircle, Star, FileText, Search, X, Filter, ArrowUpDown } from 'lucide-react-native';
+import { Heart, Clock, DollarSign, Calendar, CheckCircle, FileText, Search, X, Filter, ArrowUpDown } from 'lucide-react-native';
 import FilterPill from '@/components/ui/FilterPill';
 
 type Tab = 'saved' | 'completed';
@@ -402,14 +402,15 @@ function ActivityCard({ activity, onPress, onMarkComplete, onMarkIncomplete, onD
                 activeOpacity={0.7}
                 style={styles.starButton}
               >
-                <Star
-                  size={24}
-                  color={Colors.accent}
-                  fill={(activity.rating && star <= activity.rating) ? Colors.accent : 'none'}
-                  strokeWidth={2}
+                <Image
+                  source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/attachments/u0k4jkmq0pcfxvnip8sbu' }}
+                  style={[
+                    styles.starIcon,
+                    { opacity: (activity.rating && star <= activity.rating) ? 1 : 0.3 }
+                  ]}
                 />
               </TouchableOpacity>
-            ))}
+            ))})
           </View>
         </View>
       )}
@@ -783,5 +784,9 @@ const styles = StyleSheet.create({
   },
   starButton: {
     padding: Spacing.xs,
+  },
+  starIcon: {
+    width: 24,
+    height: 24,
   },
 });

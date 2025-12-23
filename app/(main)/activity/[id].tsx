@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, KeyboardAvoidingView, Platform, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, Stack, router } from 'expo-router';
 import { useMemoryBook } from '@/contexts/MemoryBookContext';
@@ -7,7 +7,7 @@ import Colors from '@/constants/colors';
 import Typography from '@/constants/typography';
 import Spacing from '@/constants/spacing';
 import { BorderRadius } from '@/constants/design';
-import { Clock, DollarSign, Calendar, Star, CheckCircle, Trash2, Edit3, Save, X } from 'lucide-react-native';
+import { Clock, DollarSign, Calendar, CheckCircle, Trash2, Edit3, Save, X } from 'lucide-react-native';
 
 export default function ActivityDetailScreen() {
   const { id } = useLocalSearchParams();
@@ -180,14 +180,15 @@ export default function ActivityDetailScreen() {
                     activeOpacity={0.7}
                     style={styles.starButton}
                   >
-                    <Star
-                      size={32}
-                      color={Colors.accent}
-                      fill={(activity.rating && star <= activity.rating) ? Colors.accent : 'none'}
-                      strokeWidth={2}
+                    <Image
+                      source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/attachments/u0k4jkmq0pcfxvnip8sbu' }}
+                      style={[
+                        styles.starIcon,
+                        { opacity: (activity.rating && star <= activity.rating) ? 1 : 0.3 }
+                      ]}
                     />
                   </TouchableOpacity>
-                ))}
+                ))})
               </View>
               {activity.rating && (
                 <Text style={styles.ratingText}>{activity.rating} out of 5 stars</Text>
@@ -408,6 +409,10 @@ const styles = StyleSheet.create({
   },
   starButton: {
     padding: Spacing.xs,
+  },
+  starIcon: {
+    width: 32,
+    height: 32,
   },
   ratingText: {
     fontSize: Typography.sizes.caption,
