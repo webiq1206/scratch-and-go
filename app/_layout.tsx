@@ -6,6 +6,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ActivityProvider } from "@/contexts/ActivityContext";
 import { PreferencesProvider, usePreferences } from "@/contexts/PreferencesContext";
 import { LocationProvider } from "@/contexts/LocationContext";
+import { MemoryBookProvider } from "@/contexts/MemoryBookContext";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -46,9 +47,11 @@ export default function RootLayout() {
       <PreferencesProvider>
         <LocationProvider>
           <ActivityProvider>
-            <GestureHandlerRootView style={{ flex: 1 }}>
-              <RootLayoutNav />
-            </GestureHandlerRootView>
+            <MemoryBookProvider>
+              <GestureHandlerRootView style={{ flex: 1 }}>
+                <RootLayoutNav />
+              </GestureHandlerRootView>
+            </MemoryBookProvider>
           </ActivityProvider>
         </LocationProvider>
       </PreferencesProvider>

@@ -13,6 +13,15 @@ export const ActivitySchema = z.object({
 
 export type Activity = z.infer<typeof ActivitySchema>;
 
+export interface SavedActivity extends Activity {
+  id: string;
+  savedAt: number;
+  isCompleted: boolean;
+  completedAt?: number;
+  rating?: number;
+  notes?: string;
+}
+
 export type Mode = 'couples' | 'family';
 
 export interface LocationData {
