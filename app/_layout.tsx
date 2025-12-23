@@ -27,6 +27,8 @@ function RootLayoutNav() {
     } else if (preferences.completedOnboarding && !inMain) {
       router.replace('/(main)/(home)');
     }
+
+    SplashScreen.hideAsync();
   }, [isLoading, preferences.completedOnboarding, segments, router]);
 
   return (
@@ -39,10 +41,6 @@ function RootLayoutNav() {
 }
 
 export default function RootLayout() {
-  useEffect(() => {
-    SplashScreen.hideAsync();
-  }, []);
-
   return (
     <QueryClientProvider client={queryClient}>
       <PreferencesProvider>
