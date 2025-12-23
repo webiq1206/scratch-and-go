@@ -11,6 +11,7 @@ import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
 import { CollaborativeProvider } from "@/contexts/CollaborativeContext";
 import { StatsProvider } from "@/contexts/StatsContext";
 import { YearRecapProvider } from "@/contexts/YearRecapContext";
+import { AuthContext } from "@/contexts/AuthContext";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -89,25 +90,27 @@ function RootLayoutNav() {
 export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
-      <PreferencesProvider>
-        <SubscriptionProvider>
-          <LocationProvider>
-            <ActivityProvider>
-              <MemoryBookProvider>
-                <CollaborativeProvider>
-                  <StatsProvider>
-                    <YearRecapProvider>
-                      <GestureHandlerRootView style={{ flex: 1 }}>
-                        <RootLayoutNav />
-                      </GestureHandlerRootView>
-                    </YearRecapProvider>
-                  </StatsProvider>
-                </CollaborativeProvider>
-              </MemoryBookProvider>
-            </ActivityProvider>
-          </LocationProvider>
-        </SubscriptionProvider>
-      </PreferencesProvider>
+      <AuthContext>
+        <PreferencesProvider>
+          <SubscriptionProvider>
+            <LocationProvider>
+              <ActivityProvider>
+                <MemoryBookProvider>
+                  <CollaborativeProvider>
+                    <StatsProvider>
+                      <YearRecapProvider>
+                        <GestureHandlerRootView style={{ flex: 1 }}>
+                          <RootLayoutNav />
+                        </GestureHandlerRootView>
+                      </YearRecapProvider>
+                    </StatsProvider>
+                  </CollaborativeProvider>
+                </MemoryBookProvider>
+              </ActivityProvider>
+            </LocationProvider>
+          </SubscriptionProvider>
+        </PreferencesProvider>
+      </AuthContext>
     </QueryClientProvider>
   );
 }

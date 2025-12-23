@@ -1,5 +1,7 @@
-import { Platform, Share } from 'react-native';
+import { Platform, Share, Alert } from 'react-native';
+import * as Linking from 'expo-linking';
 import type { Activity } from '@/types/activity';
+import type { User } from '@/contexts/AuthContext';
 
 function generateShareableLink(activity: Activity): string {
   const activityJson = JSON.stringify(activity);
@@ -69,4 +71,82 @@ export function canShare(): boolean {
     return !!(navigator.share || navigator.clipboard);
   }
   return true;
+}
+
+export async function shareToFacebook(activity: Activity, user: User | null): Promise<void> {
+  if (!user || user.provider !== 'facebook') {
+    Alert.alert(
+      'Facebook Login Required',
+      'Please log in with Facebook to share to Facebook.'
+    );
+    return;
+  }
+
+  const shareText = formatActivityShareText(activity, generateShareableLink(activity));
+
+  try {
+    const facebookUrl = `https://www.facebook.com/dialog/share?app_id=${process.env.EXPO_PUBLIC_FACEBOOK_APP_ID}&display=popup&href=${encodeURIComponent(generateShareableLink(activity))}&quote=${encodeURIComponent(shareText)}`;
+    
+    const supported = await Linking.canOpenURL(facebookUrl);
+    if (supported) {
+      await Linking.openURL(facebookUrl);
+    } else {
+      Alert.alert('Error', 'Cannot open Facebook');
+    }
+  } catch (error) {
+    console.error('Error sharing to Facebook:', error);
+    Alert.alert('Error', 'Failed to share to Facebook');
+  }
+}
+
+export async function shareToInstagram(activity: Activity, user: User | null, imageUri?: string): Promise<void> {
+  if (!user || user.provider !== 'facebook') {
+    Alert.alert(
+      'Facebook Login Required',
+      'Please log in with Facebook to share to Instagram.'
+    );
+    return;
+  }
+
+  if (!user.accessToken) {
+    Alert.alert('Error', 'No access token available');
+    return;
+  }
+
+  try {
+    if (imageUri) {
+      const instagramUrl = `instagram://library?AssetPath=${encodeURIComponent(imageUri)}`;
+      const supported = await Linking.canOpenURL(instagramUrl);
+      
+      if (supported) {
+        await Linking.openURL(instagramUrl);
+      } else {
+        Alert.alert(
+          'Instagram Not Available',
+          'Please make sure Instagram is installed on your device.'
+        );
+      }
+    } else {
+      Alert.alert(
+        'Photo Required',
+        'Please add a photo to this activity to share on Instagram.'
+      );
+    }
+  } catch (error) {
+    console.error('Error sharing to Instagram:', error);
+    Alert.alert('Error', 'Failed to share to Instagram');
+  }
+}
+
+export async function shareToSocialMedia(
+  activity: Activity,
+  user: User | null,
+  platform: 'facebook' | 'instagram',
+  imageUri?: string
+): Promise<void> {
+  if (platform === 'facebook') {
+    await shareToFacebook(activity, user);
+  } else if (platform === 'instagram') {
+    await shareToInstagram(activity, user, imageUri);
+  }
 }

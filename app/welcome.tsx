@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Dimensions, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Facebook } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import Typography from '@/constants/typography';
 import Spacing from '@/constants/spacing';
 import { BorderRadius } from '@/constants/design';
 import { UserPreferences, DEFAULT_PREFERENCES, ONBOARDING_QUESTIONS, RELIGIONS } from '@/types/preferences';
+import { useAuth } from '@/contexts/AuthContext';
 
 const MODE_KEY = 'scratch_and_go_mode';
 const PREFERENCES_KEY = 'scratch_and_go_preferences';
@@ -16,10 +18,12 @@ type OnboardingStep = 'mode' | 'preferences' | 'religion';
 
 export default function WelcomeScreen() {
   const router = useRouter();
+  const { loginWithGoogle, loginWithFacebook, isAuthenticated } = useAuth();
   const [step, setStep] = useState<OnboardingStep>('mode');
   const [selectedMode, setSelectedMode] = useState<'couples' | 'family' | null>(null);
   const [preferences, setPreferences] = useState<UserPreferences>(DEFAULT_PREFERENCES);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   useEffect(() => {
     const checkExistingMode = async () => {
@@ -36,6 +40,31 @@ export default function WelcomeScreen() {
     
     checkExistingMode();
   }, [router]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      setStep('preferences');
+      setSelectedMode('couples');
+    }
+  }, [isAuthenticated]);
+
+  const handleGoogleLogin = async () => {
+    setIsLoggingIn(true);
+    try {
+      await loginWithGoogle();
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  const handleFacebookLogin = async () => {
+    setIsLoggingIn(true);
+    try {
+      await loginWithFacebook();
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
 
 
 
@@ -224,28 +253,61 @@ export default function WelcomeScreen() {
           Discover meaningful moments to share{('\n')}with the people you love most.
         </Text>
 
-        <TouchableOpacity
-          onPress={() => {
-            setSelectedMode('couples');
-            setStep('preferences');
-          }}
-          activeOpacity={0.8}
-          style={{ width: '100%' }}
-        >
-          <LinearGradient
-            colors={[Colors.primaryGradientStart, Colors.primaryGradientEnd]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.nextButton}
+        <View style={styles.authButtonsContainer}>
+          <TouchableOpacity
+            onPress={handleGoogleLogin}
+            activeOpacity={0.8}
+            style={styles.socialButton}
+            disabled={isLoggingIn}
           >
-            <Text style={styles.nextButtonText}>Next</Text>
-          </LinearGradient>
-        </TouchableOpacity>
+            <View style={styles.socialButtonContent}>
+              <Image
+                source={{ uri: 'https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg' }}
+                style={styles.socialIcon}
+              />
+              <Text style={styles.socialButtonText}>Continue with Google</Text>
+            </View>
+          </TouchableOpacity>
 
-        <View style={styles.loginContainer}>
-          <Text style={styles.loginPrompt}>Already have an account?</Text>
-          <TouchableOpacity onPress={() => router.replace('/(main)/(home)')}>
-            <Text style={styles.loginLink}>Login</Text>
+          <TouchableOpacity
+            onPress={handleFacebookLogin}
+            activeOpacity={0.8}
+            style={[styles.socialButton, styles.facebookButton]}
+            disabled={isLoggingIn}
+          >
+            <View style={styles.socialButtonContent}>
+              <Facebook size={20} color="#FFFFFF" />
+              <Text style={[styles.socialButtonText, styles.facebookButtonText]}>Continue with Facebook</Text>
+            </View>
+          </TouchableOpacity>
+
+          <View style={styles.dividerContainer}>
+            <View style={styles.divider} />
+            <Text style={styles.dividerText}>or</Text>
+            <View style={styles.divider} />
+          </View>
+
+          <TouchableOpacity
+            onPress={() => {
+              setSelectedMode('couples');
+              setStep('preferences');
+            }}
+            activeOpacity={0.8}
+            style={{ width: '100%' }}
+            disabled={isLoggingIn}
+          >
+            <LinearGradient
+              colors={[Colors.primaryGradientStart, Colors.primaryGradientEnd]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.nextButton}
+            >
+              {isLoggingIn ? (
+                <ActivityIndicator color="#1A1A1A" />
+              ) : (
+                <Text style={styles.nextButtonText}>Continue</Text>
+              )}
+            </LinearGradient>
           </TouchableOpacity>
         </View>
       </View>
@@ -363,6 +425,56 @@ const styles = StyleSheet.create({
     fontSize: Typography.sizes.body,
     color: '#FFFFFF',
     fontWeight: '400' as const,
+  },
+  authButtonsContainer: {
+    width: '100%',
+    gap: Spacing.md,
+  },
+  socialButton: {
+    width: '100%',
+    paddingVertical: 14,
+    borderRadius: BorderRadius.full,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#333333',
+  },
+  facebookButton: {
+    backgroundColor: '#1877F2',
+    borderColor: '#1877F2',
+  },
+  socialButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  socialIcon: {
+    width: 20,
+    height: 20,
+  },
+  socialButtonText: {
+    fontSize: Typography.sizes.body,
+    fontWeight: '500' as const,
+    color: '#1A1A1A',
+  },
+  facebookButtonText: {
+    color: '#FFFFFF',
+  },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: Spacing.sm,
+    width: '100%',
+  },
+  divider: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#333333',
+  },
+  dividerText: {
+    fontSize: Typography.sizes.small,
+    color: '#B8B8B8',
+    marginHorizontal: Spacing.md,
   },
   scrollContent: {
     flexGrow: 1,
