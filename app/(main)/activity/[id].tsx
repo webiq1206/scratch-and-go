@@ -67,7 +67,19 @@ export default function ActivityDetailScreen() {
 
   const handleMarkComplete = () => {
     markAsCompleted(activity.id);
-    Alert.alert('Completed!', 'Activity marked as completed');
+    
+    if (!activity.photos || activity.photos.length === 0) {
+      Alert.alert(
+        '🎉 Completed!',
+        'Don\'t forget to capture this memory! Add photos to remember this moment forever.',
+        [
+          { text: 'Add Photos Now', onPress: () => handleTakePhoto() },
+          { text: 'Maybe Later', style: 'cancel' }
+        ]
+      );
+    } else {
+      Alert.alert('🎉 Completed!', 'Another amazing memory created!');
+    }
   };
 
   const handleMarkIncomplete = () => {
@@ -443,7 +455,7 @@ export default function ActivityDetailScreen() {
                 style={styles.notesInput}
                 value={notesText}
                 onChangeText={setNotesText}
-                placeholder="Add your thoughts, memories, or tips..."
+                placeholder="Share your story... What made this moment special? 💭"
                 placeholderTextColor={Colors.textLight}
                 multiline
                 numberOfLines={6}
@@ -455,7 +467,7 @@ export default function ActivityDetailScreen() {
                 {activity.notes ? (
                   <Text style={styles.notesText}>{activity.notes}</Text>
                 ) : (
-                  <Text style={styles.notesPlaceholder}>No notes yet. Tap Edit to add some!</Text>
+                  <Text style={styles.notesPlaceholder}>✍️ Share your experience! What made this special?</Text>
                 )}
               </View>
             )}
@@ -463,7 +475,7 @@ export default function ActivityDetailScreen() {
 
           <View style={styles.photosSection}>
             <View style={styles.photosSectionHeader}>
-              <Text style={styles.sectionLabel}>Photos</Text>
+              <Text style={styles.sectionLabel}>📷 Your Memories</Text>
               <View style={styles.photoButtons}>
                 {Platform.OS !== 'web' && (
                   <TouchableOpacity
@@ -508,9 +520,17 @@ export default function ActivityDetailScreen() {
               </ScrollView>
             ) : (
               <View style={styles.noPhotosContainer}>
-                <Camera size={32} color={Colors.textLight} />
-                <Text style={styles.noPhotosText}>No photos yet</Text>
-                <Text style={styles.noPhotosSubtext}>Tap + to add photos from your memories</Text>
+                <Camera size={40} color={Colors.primary} />
+                <Text style={styles.noPhotosText}>📸 Capture the Memory!</Text>
+                <Text style={styles.noPhotosSubtext}>Take a photo to remember this moment forever</Text>
+                <TouchableOpacity
+                  style={styles.addPhotoPromptButton}
+                  onPress={handleTakePhoto}
+                  activeOpacity={0.8}
+                >
+                  <Camera size={18} color={Colors.white} />
+                  <Text style={styles.addPhotoPromptText}>Take Photo</Text>
+                </TouchableOpacity>
               </View>
             )}
           </View>
@@ -1030,21 +1050,39 @@ const styles = StyleSheet.create({
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
     paddingVertical: Spacing.xxl,
-    backgroundColor: Colors.cardBackground,
+    backgroundColor: Colors.primary + '10',
     borderRadius: BorderRadius.medium,
-    borderWidth: 1,
-    borderColor: Colors.cardBorder,
+    borderWidth: 2,
+    borderColor: Colors.primary,
     borderStyle: 'dashed' as const,
   },
   noPhotosText: {
-    fontSize: Typography.sizes.body,
-    color: Colors.textLight,
+    fontSize: Typography.sizes.h3,
+    color: Colors.text,
     marginTop: Spacing.md,
+    fontWeight: '500' as const,
   },
   noPhotosSubtext: {
-    fontSize: Typography.sizes.caption,
-    color: Colors.textSecondary,
+    fontSize: Typography.sizes.body,
+    color: Colors.textLight,
     marginTop: Spacing.xs,
+    textAlign: 'center' as const,
+    paddingHorizontal: Spacing.lg,
+  },
+  addPhotoPromptButton: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: Spacing.sm,
+    backgroundColor: Colors.primary,
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.medium,
+    marginTop: Spacing.lg,
+  },
+  addPhotoPromptText: {
+    fontSize: Typography.sizes.body,
+    color: Colors.white,
+    fontWeight: '500' as const,
   },
   actionsSection: {
     gap: Spacing.md,

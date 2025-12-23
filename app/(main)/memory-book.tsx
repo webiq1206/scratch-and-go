@@ -121,11 +121,11 @@ export default function MemoryBookScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.title}>Your Adventures</Text>
+        <Text style={styles.title}>📖 Your Adventures</Text>
         <Text style={styles.subtitle}>
           {activeTab === 'saved' 
-            ? 'Activities waiting for you'
-            : 'Memories you\'ve created'
+            ? '✨ Activities waiting for you - capture every moment!'
+            : '📸 Memories you\'ve created - relive the moments'
           }
         </Text>
       </View>

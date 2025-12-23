@@ -146,9 +146,11 @@ export default function HomeScreen() {
     setIsSaved(true);
     
     Alert.alert(
-      'Saved!',
-      'Activity added to your Memory Book',
-      [{ text: 'OK' }]
+      '💝 Saved!',
+      'Activity added to your Memory Book! Don\'t forget to capture photos when you do this activity to preserve the memories.',
+      [
+        { text: 'Got it!', style: 'default' }
+      ]
     );
   };
 
