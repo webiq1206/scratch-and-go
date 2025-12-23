@@ -206,6 +206,13 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <View style={styles.headerLeft}>
+          <View style={styles.logoContainer}>
+            <Image 
+              source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/attachments/y0y3gb7wc49gdw8yub9ef' }}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
+          </View>
           <View>
             <Text style={styles.appName}>Scratch & Go</Text>
             <Text style={styles.modeLabel}>{mode === 'couples' ? 'Couples Mode' : 'Family Mode'}</Text>
@@ -398,6 +405,10 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.cardBackground,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  logoImage: {
+    width: 28,
+    height: 28,
   },
   appName: {
     fontSize: Typography.sizes.body,
