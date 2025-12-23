@@ -277,7 +277,7 @@ export default function ActivityDetailScreen() {
                       ]}
                     />
                   </TouchableOpacity>
-                ))})
+                ))}
               </View>
               {activity.rating && (
                 <Text style={styles.ratingText}>{activity.rating} out of 5 stars</Text>

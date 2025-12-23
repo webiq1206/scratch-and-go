@@ -455,7 +455,7 @@ function ActivityCard({ activity, onPress, onMarkComplete, onMarkIncomplete, onD
                   ]}
                 />
               </TouchableOpacity>
-            ))})
+            ))}
           </View>
         </View>
       )}
