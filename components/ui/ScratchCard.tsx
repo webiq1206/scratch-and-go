@@ -104,6 +104,11 @@ const styles = StyleSheet.create({
     height: CARD_HEIGHT,
     borderRadius: BorderRadius.large,
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
   },
   revealLayer: {
     ...StyleSheet.absoluteFillObject,

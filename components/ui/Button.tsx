@@ -1,5 +1,6 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, ViewStyle, TextStyle } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import Colors from '@/constants/colors';
 import Typography from '@/constants/typography';
 import Spacing from '@/constants/spacing';
@@ -39,15 +40,43 @@ export default function Button({
     disabled && styles.disabledText,
   ];
 
+  if (variant === 'primary') {
+    return (
+      <TouchableOpacity 
+        onPress={onPress}
+        disabled={disabled || loading}
+        activeOpacity={0.8}
+        style={[style]}
+      >
+        <LinearGradient
+          colors={[Colors.primaryGradientStart, Colors.primaryGradientEnd]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={[
+            styles.base,
+            styles[`${size}Button` as keyof typeof styles] as ViewStyle,
+            disabled && styles.disabled,
+          ]}
+        >
+          {loading ? (
+            <ActivityIndicator color={Colors.backgroundDark} />
+          ) : (
+            <Text style={textStyle}>{title}</Text>
+          )}
+        </LinearGradient>
+      </TouchableOpacity>
+    );
+  }
+
   return (
     <TouchableOpacity 
       style={buttonStyle}
       onPress={onPress}
       disabled={disabled || loading}
-      activeOpacity={0.7}
+      activeOpacity={0.8}
     >
       {loading ? (
-        <ActivityIndicator color={variant === 'primary' ? Colors.backgroundDark : Colors.primary} />
+        <ActivityIndicator color={Colors.primary} />
       ) : (
         <Text style={textStyle}>{title}</Text>
       )}
@@ -62,7 +91,7 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.medium,
   },
   primaryButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: 'transparent',
   },
   secondaryButton: {
     backgroundColor: 'transparent',
@@ -73,7 +102,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   largeButton: {
-    height: 56,
+    height: 54,
     paddingHorizontal: Spacing.xl,
   },
   mediumButton: {

@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Animated, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Animated, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Menu, Sparkles } from 'lucide-react-native';
+import { Sparkles, Heart } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import Typography from '@/constants/typography';
 import Spacing from '@/constants/spacing';
+import { BorderRadius } from '@/constants/design';
 
 import ScratchCard from '@/components/ui/ScratchCard';
 import FilterPill from '@/components/ui/FilterPill';
@@ -112,15 +113,16 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.menuButton}>
-          <Menu size={24} color={Colors.text} />
-        </TouchableOpacity>
-        <View style={styles.headerRight}>
-          <LocationSelector />
-          <TouchableOpacity style={styles.modeIndicator}>
-            <Text style={styles.modeEmoji}>{mode === 'couples' ? '💑' : '👨‍👩‍👧‍👦'}</Text>
-          </TouchableOpacity>
+        <View style={styles.headerLeft}>
+          <View style={styles.logoContainer}>
+            <Heart size={28} color={Colors.primary} fill={Colors.primary} />
+          </View>
+          <View>
+            <Text style={styles.appName}>Scratch & Go</Text>
+            <Text style={styles.modeLabel}>{mode === 'couples' ? 'Couples Mode' : 'Family Mode'}</Text>
+          </View>
         </View>
+        <LocationSelector />
       </View>
 
       <ScrollView 
@@ -128,7 +130,10 @@ export default function HomeScreen() {
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.headline}>Ready for an adventure?</Text>
+        <View style={styles.titleSection}>
+          <Text style={styles.headline}>Scratch your next adventure</Text>
+          <Text style={styles.subheadline}>Choose your filters below and reveal something amazing</Text>
+        </View>
 
         <View style={styles.cardContainer}>
           <ScratchCard
@@ -266,21 +271,30 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
+    paddingVertical: Spacing.lg,
   },
-  menuButton: {
-    padding: Spacing.sm,
-  },
-  headerRight: {
+  headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
+    gap: Spacing.md,
   },
-  modeIndicator: {
-    padding: Spacing.sm,
+  logoContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: Colors.cardBackground,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  modeEmoji: {
-    fontSize: 24,
+  appName: {
+    fontSize: Typography.sizes.body,
+    fontWeight: Typography.weights.bold,
+    color: Colors.text,
+  },
+  modeLabel: {
+    fontSize: Typography.sizes.caption,
+    color: Colors.textLight,
+    marginTop: 2,
   },
   content: {
     flex: 1,
@@ -289,12 +303,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingBottom: Spacing.xl,
   },
+  titleSection: {
+    marginBottom: Spacing.xl,
+    paddingHorizontal: Spacing.sm,
+  },
   headline: {
     fontSize: Typography.sizes.hero,
     fontWeight: Typography.weights.bold,
     color: Colors.text,
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.sm,
     textAlign: 'center',
+  },
+  subheadline: {
+    fontSize: Typography.sizes.body,
+    color: Colors.textLight,
+    textAlign: 'center',
+    lineHeight: 22,
   },
   cardContainer: {
     marginBottom: Spacing.xl,
@@ -390,12 +414,17 @@ const styles = StyleSheet.create({
   },
   scratchCountContainer: {
     alignItems: 'center',
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.xl,
+    backgroundColor: Colors.cardBackground,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: BorderRadius.full,
+    alignSelf: 'center',
   },
   scratchCountText: {
     fontSize: Typography.sizes.caption,
     color: Colors.textLight,
-    fontWeight: Typography.weights.medium,
+    fontWeight: Typography.weights.semibold,
   },
   filtersSection: {
     gap: Spacing.lg,
@@ -404,10 +433,10 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   filterLabel: {
-    fontSize: Typography.sizes.caption,
+    fontSize: Typography.sizes.body,
     fontWeight: Typography.weights.semibold,
-    color: Colors.textLight,
-    marginLeft: Spacing.xs,
+    color: Colors.text,
+    marginBottom: Spacing.xs,
   },
   filterScroll: {
     paddingRight: Spacing.lg,

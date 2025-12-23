@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Dimensions
 import { Heart } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LinearGradient } from 'expo-linear-gradient';
 import Colors from '@/constants/colors';
 import Typography from '@/constants/typography';
 import Spacing from '@/constants/spacing';
@@ -158,14 +159,21 @@ export default function WelcomeScreen() {
         </Text>
 
         <TouchableOpacity
-          style={styles.nextButton}
           onPress={() => {
             setSelectedMode('couples');
             setStep('preferences');
           }}
           activeOpacity={0.8}
+          style={{ width: '100%' }}
         >
-          <Text style={styles.nextButtonText}>Next</Text>
+          <LinearGradient
+            colors={[Colors.primaryGradientStart, Colors.primaryGradientEnd]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.nextButton}
+          >
+            <Text style={styles.nextButtonText}>Next</Text>
+          </LinearGradient>
         </TouchableOpacity>
 
         <View style={styles.loginContainer}>
@@ -244,7 +252,6 @@ const styles = StyleSheet.create({
   },
   nextButton: {
     width: '100%',
-    backgroundColor: '#FFB3D9',
     paddingVertical: 16,
     borderRadius: BorderRadius.full,
     alignItems: 'center',
@@ -287,6 +294,7 @@ const styles = StyleSheet.create({
   progressFill: {
     height: '100%',
     backgroundColor: Colors.primary,
+    borderRadius: 2,
   },
   progressText: {
     fontSize: Typography.sizes.small,

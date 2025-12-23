@@ -25,11 +25,11 @@ export default function FilterPill({ label, selected, onPress }: FilterPillProps
 
 const styles = StyleSheet.create({
   pill: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm + 2,
     borderRadius: BorderRadius.full,
     backgroundColor: Colors.inputBackground,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: Colors.cardBorder,
     marginRight: Spacing.sm,
   },
@@ -39,10 +39,11 @@ const styles = StyleSheet.create({
   },
   text: {
     fontSize: Typography.sizes.caption,
-    fontWeight: Typography.weights.medium,
+    fontWeight: Typography.weights.semibold,
     color: Colors.textLight,
   },
   selectedText: {
     color: Colors.backgroundDark,
+    fontWeight: Typography.weights.bold,
   },
 });
