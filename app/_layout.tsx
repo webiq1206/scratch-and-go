@@ -56,6 +56,13 @@ function RootLayoutNav() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(main)" />
       <Stack.Screen name="welcome" />
+      <Stack.Screen 
+        name="paywall" 
+        options={{ 
+          presentation: 'modal',
+          animation: 'slide_from_bottom',
+        }} 
+      />
       <Stack.Screen name="+not-found" />
     </Stack>
   );
