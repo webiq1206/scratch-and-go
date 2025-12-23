@@ -231,15 +231,29 @@ export default function HomeScreen() {
               activeOpacity={0.9}
             >
               <View style={styles.modeCardImageContainer}>
-                <View style={styles.polaroidStack}>
-                  <View style={[styles.polaroidFrame, { transform: [{ rotate: '-8deg' }], zIndex: 2 }]}>
+                <View style={styles.polaroidGrid}>
+                  <View style={[styles.polaroidFrame, styles.polaroidCol1, { transform: [{ rotate: '-5deg' }] }]}>
                     <Image 
                       source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/projects/xz00xar8pn4xhtrdicpyk/generations/1735017775890_polaroid1.webp' }}
                       style={styles.polaroidPhoto}
                       resizeMode="cover"
                     />
                   </View>
-                  <View style={[styles.polaroidFrame, { transform: [{ rotate: '5deg' }], zIndex: 1, position: 'absolute' }]}>
+                  <View style={[styles.polaroidFrame, styles.polaroidCol2, { transform: [{ rotate: '3deg' }] }]}>
+                    <Image 
+                      source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/projects/xz00xar8pn4xhtrdicpyk/generations/1735017775908_polaroid2.webp' }}
+                      style={styles.polaroidPhoto}
+                      resizeMode="cover"
+                    />
+                  </View>
+                  <View style={[styles.polaroidFrame, styles.polaroidCol3, { transform: [{ rotate: '-4deg' }] }]}>
+                    <Image 
+                      source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/projects/xz00xar8pn4xhtrdicpyk/generations/1735017775890_polaroid1.webp' }}
+                      style={styles.polaroidPhoto}
+                      resizeMode="cover"
+                    />
+                  </View>
+                  <View style={[styles.polaroidFrame, styles.polaroidCol4, { transform: [{ rotate: '6deg' }] }]}>
                     <Image 
                       source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/projects/xz00xar8pn4xhtrdicpyk/generations/1735017775908_polaroid2.webp' }}
                       style={styles.polaroidPhoto}
@@ -258,15 +272,29 @@ export default function HomeScreen() {
               activeOpacity={0.9}
             >
               <View style={styles.modeCardImageContainer}>
-                <View style={styles.polaroidStack}>
-                  <View style={[styles.polaroidFrame, { transform: [{ rotate: '8deg' }], zIndex: 2 }]}>
+                <View style={styles.polaroidGrid}>
+                  <View style={[styles.polaroidFrame, styles.polaroidCol1, { transform: [{ rotate: '4deg' }] }]}>
                     <Image 
                       source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/projects/xz00xar8pn4xhtrdicpyk/generations/1735017775924_polaroid3.webp' }}
                       style={styles.polaroidPhoto}
                       resizeMode="cover"
                     />
                   </View>
-                  <View style={[styles.polaroidFrame, { transform: [{ rotate: '-5deg' }], zIndex: 1, position: 'absolute' }]}>
+                  <View style={[styles.polaroidFrame, styles.polaroidCol2, { transform: [{ rotate: '-3deg' }] }]}>
+                    <Image 
+                      source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/projects/xz00xar8pn4xhtrdicpyk/generations/1735017775941_polaroid4.webp' }}
+                      style={styles.polaroidPhoto}
+                      resizeMode="cover"
+                    />
+                  </View>
+                  <View style={[styles.polaroidFrame, styles.polaroidCol3, { transform: [{ rotate: '5deg' }] }]}>
+                    <Image 
+                      source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/projects/xz00xar8pn4xhtrdicpyk/generations/1735017775924_polaroid3.webp' }}
+                      style={styles.polaroidPhoto}
+                      resizeMode="cover"
+                    />
+                  </View>
+                  <View style={[styles.polaroidFrame, styles.polaroidCol4, { transform: [{ rotate: '-6deg' }] }]}>
                     <Image 
                       source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/projects/xz00xar8pn4xhtrdicpyk/generations/1735017775941_polaroid4.webp' }}
                       style={styles.polaroidPhoto}
@@ -782,29 +810,49 @@ const styles = StyleSheet.create({
   },
   modeCardImageContainer: {
     marginBottom: Spacing.lg,
-    height: 100,
-    width: 100,
+    height: 120,
+    width: '100%',
+    overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  polaroidStack: {
-    width: 100,
-    height: 100,
+  polaroidGrid: {
+    flexDirection: 'row',
+    width: 320,
+    height: 120,
     justifyContent: 'center',
     alignItems: 'center',
+    position: 'relative',
   },
   polaroidFrame: {
-    width: 70,
-    height: 85,
+    width: 60,
+    height: 75,
     backgroundColor: '#FFFFFF',
-    padding: 5,
-    paddingBottom: 15,
+    padding: 4,
+    paddingBottom: 12,
     borderRadius: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 5,
+    position: 'absolute',
+  },
+  polaroidCol1: {
+    left: -10,
+    top: 15,
+  },
+  polaroidCol2: {
+    left: 60,
+    top: 5,
+  },
+  polaroidCol3: {
+    left: 130,
+    top: 20,
+  },
+  polaroidCol4: {
+    left: 200,
+    top: 10,
   },
   polaroidPhoto: {
     width: '100%',
