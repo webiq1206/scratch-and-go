@@ -46,6 +46,17 @@ export const [PreferencesProvider, usePreferences] = createContextHook(() => {
     
     if (!preferences.includeReligious) {
       restrictions.push('Never suggest religious activities, churches, temples, or faith-based events');
+    } else if (preferences.religion && preferences.religion !== 'none') {
+      const religionNames: { [key: string]: string } = {
+        christianity: 'Christian',
+        islam: 'Islamic',
+        judaism: 'Jewish',
+        buddhism: 'Buddhist',
+        hinduism: 'Hindu',
+        other: 'interfaith or general spiritual',
+      };
+      const religionName = religionNames[preferences.religion] || 'their faith';
+      restrictions.push(`User is interested in ${religionName} activities. Suggest relevant places of worship, faith-based events, and religious celebrations that align with this faith.`);
     }
     
     if (!preferences.includeGambling) {

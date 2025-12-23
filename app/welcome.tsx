@@ -8,12 +8,12 @@ import Colors from '@/constants/colors';
 import Typography from '@/constants/typography';
 import Spacing from '@/constants/spacing';
 import { BorderRadius } from '@/constants/design';
-import { UserPreferences, DEFAULT_PREFERENCES, ONBOARDING_QUESTIONS } from '@/types/preferences';
+import { UserPreferences, DEFAULT_PREFERENCES, ONBOARDING_QUESTIONS, RELIGIONS } from '@/types/preferences';
 
 const MODE_KEY = 'scratch_and_go_mode';
 const PREFERENCES_KEY = 'scratch_and_go_preferences';
 
-type OnboardingStep = 'mode' | 'preferences';
+type OnboardingStep = 'mode' | 'preferences' | 'religion';
 
 export default function WelcomeScreen() {
   const router = useRouter();
@@ -48,8 +48,28 @@ export default function WelcomeScreen() {
     };
     setPreferences(updatedPreferences);
 
+    if (currentQuestion.id === 'includeReligious' && value === true) {
+      setStep('religion');
+      return;
+    }
+
     if (currentQuestionIndex < ONBOARDING_QUESTIONS.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
+    } else {
+      completeOnboarding(updatedPreferences);
+    }
+  };
+
+  const handleReligionSelection = (religionId: string) => {
+    const updatedPreferences = {
+      ...preferences,
+      religion: religionId,
+    };
+    setPreferences(updatedPreferences);
+
+    if (currentQuestionIndex < ONBOARDING_QUESTIONS.length - 1) {
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
+      setStep('preferences');
     } else {
       completeOnboarding(updatedPreferences);
     }
@@ -65,6 +85,50 @@ export default function WelcomeScreen() {
     await AsyncStorage.setItem(PREFERENCES_KEY, JSON.stringify(preferencesWithFlag));
     router.replace('/(main)/(home)');
   };
+
+  if (step === 'religion') {
+    const progress = ((currentQuestionIndex + 1) / ONBOARDING_QUESTIONS.length) * 100;
+
+    return (
+      <View style={styles.container}>
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.progressContainer}>
+            <View style={styles.progressBar}>
+              <View style={[styles.progressFill, { width: `${progress}%` }]} />
+            </View>
+            <Text style={styles.progressText}>
+              Question {currentQuestionIndex + 1} of {ONBOARDING_QUESTIONS.length}
+            </Text>
+          </View>
+
+          <View style={styles.questionContent}>
+            <Text style={styles.questionEmoji}>🙏</Text>
+            <Text style={styles.questionTitle}>What is your religion?</Text>
+            <Text style={styles.questionDescription}>
+              This helps us suggest relevant faith-based activities and places of worship
+            </Text>
+          </View>
+
+          <View style={styles.religionGrid}>
+            {RELIGIONS.map((religion) => (
+              <TouchableOpacity
+                key={religion.id}
+                style={styles.religionCard}
+                onPress={() => handleReligionSelection(religion.id)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.religionEmoji}>{religion.emoji}</Text>
+                <Text style={styles.religionLabel}>{religion.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </ScrollView>
+      </View>
+    );
+  }
 
   if (step === 'preferences') {
     const currentQuestion = ONBOARDING_QUESTIONS[currentQuestionIndex];
@@ -382,5 +446,30 @@ const styles = StyleSheet.create({
     color: '#B8B8B8',
     textAlign: 'center',
     fontStyle: 'italic',
+  },
+  religionGrid: {
+    width: '100%',
+    gap: Spacing.md,
+    marginBottom: Spacing.lg,
+  },
+  religionCard: {
+    width: '100%',
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+    borderRadius: BorderRadius.large,
+    backgroundColor: '#252525',
+    borderWidth: 1,
+    borderColor: '#333333',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  religionEmoji: {
+    fontSize: 32,
+  },
+  religionLabel: {
+    fontSize: Typography.sizes.h3,
+    fontWeight: '400' as const,
+    color: '#FFFFFF',
   },
 });

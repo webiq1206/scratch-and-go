@@ -1,6 +1,7 @@
 export interface UserPreferences {
   includeAlcohol: boolean;
   includeReligious: boolean;
+  religion?: string;
   includeGambling: boolean;
   includeWeapons: boolean;
   completedOnboarding: boolean;
@@ -9,6 +10,7 @@ export interface UserPreferences {
 export const DEFAULT_PREFERENCES: UserPreferences = {
   includeAlcohol: false,
   includeReligious: false,
+  religion: undefined,
   includeGambling: false,
   includeWeapons: false,
   completedOnboarding: false,
@@ -22,6 +24,16 @@ export interface OnboardingQuestion {
   noLabel: string;
   emoji: string;
 }
+
+export const RELIGIONS = [
+  { id: 'christianity', label: 'Christianity', emoji: '✝️' },
+  { id: 'islam', label: 'Islam', emoji: '☪️' },
+  { id: 'judaism', label: 'Judaism', emoji: '✡️' },
+  { id: 'buddhism', label: 'Buddhism', emoji: '☸️' },
+  { id: 'hinduism', label: 'Hinduism', emoji: '🕉️' },
+  { id: 'other', label: 'Other', emoji: '🙏' },
+  { id: 'none', label: 'Prefer not to specify', emoji: '⚪' },
+];
 
 export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
   {
