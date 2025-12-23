@@ -1,15 +1,17 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, TextInput, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, TextInput, Image, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import Typography from '@/constants/typography';
 import Spacing from '@/constants/spacing';
 import Colors from '@/constants/colors';
 import { BorderRadius } from '@/constants/design';
 import { useMemoryBook } from '@/contexts/MemoryBookContext';
 import { SavedActivity } from '@/types/activity';
-import { Heart, Clock, DollarSign, Calendar, CheckCircle, FileText, Search, X, Filter, ArrowUpDown } from 'lucide-react-native';
+import { Heart, Clock, DollarSign, Calendar, CheckCircle, FileText, Search, X, Filter, ArrowUpDown, CalendarPlus } from 'lucide-react-native';
 import FilterPill from '@/components/ui/FilterPill';
+import { addActivityToCalendar, calculateEndDate } from '@/utils/calendarUtils';
 
 type Tab = 'saved' | 'completed';
 
@@ -349,6 +351,49 @@ interface ActivityCardProps {
 }
 
 function ActivityCard({ activity, onPress, onMarkComplete, onMarkIncomplete, onDelete, onRatingChange, isCompleted }: ActivityCardProps) {
+  const [showCalendarModal, setShowCalendarModal] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [isAddingToCalendar, setIsAddingToCalendar] = useState(false);
+
+  const handleAddToCalendar = async () => {
+    if (isAddingToCalendar) return;
+    
+    setIsAddingToCalendar(true);
+    try {
+      const endDate = calculateEndDate(selectedDate, activity.duration);
+      const success = await addActivityToCalendar({
+        activity,
+        startDate: selectedDate,
+        endDate,
+        notes: activity.notes,
+      });
+      
+      if (success) {
+        setShowCalendarModal(false);
+        setSelectedDate(new Date());
+      }
+    } catch (error) {
+      console.error('Error adding to calendar:', error);
+    } finally {
+      setIsAddingToCalendar(false);
+    }
+  };
+
+  const onDateChange = (_event: any, date?: Date) => {
+    setShowDatePicker(false);
+    if (date) {
+      setSelectedDate(date);
+    }
+  };
+
+  const onTimeChange = (_event: any, date?: Date) => {
+    setShowTimePicker(false);
+    if (date) {
+      setSelectedDate(date);
+    }
+  };
   return (
     <TouchableOpacity
       style={styles.activityCard}
@@ -416,6 +461,18 @@ function ActivityCard({ activity, onPress, onMarkComplete, onMarkIncomplete, onD
       )}
 
       <View style={styles.activityActions}>
+        <TouchableOpacity
+          style={styles.calendarActionButton}
+          onPress={(e) => {
+            e.stopPropagation();
+            setShowCalendarModal(true);
+          }}
+          activeOpacity={0.7}
+        >
+          <CalendarPlus size={16} color={Colors.accent} />
+          <Text style={styles.calendarActionButtonText}>Schedule</Text>
+        </TouchableOpacity>
+
         {!activity.isCompleted ? (
           <TouchableOpacity
             style={styles.actionButton}
@@ -426,7 +483,7 @@ function ActivityCard({ activity, onPress, onMarkComplete, onMarkIncomplete, onD
             activeOpacity={0.7}
           >
             <CheckCircle size={16} color={Colors.primary} />
-            <Text style={styles.actionButtonText}>Mark Complete</Text>
+            <Text style={styles.actionButtonText}>Complete</Text>
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
@@ -438,7 +495,7 @@ function ActivityCard({ activity, onPress, onMarkComplete, onMarkIncomplete, onD
             activeOpacity={0.7}
           >
             <CheckCircle size={16} color={Colors.textLight} />
-            <Text style={styles.actionButtonText}>Mark Incomplete</Text>
+            <Text style={styles.actionButtonText}>Incomplete</Text>
           </TouchableOpacity>
         )}
         
@@ -453,6 +510,127 @@ function ActivityCard({ activity, onPress, onMarkComplete, onMarkIncomplete, onD
           <Text style={styles.deleteButtonText}>Delete</Text>
         </TouchableOpacity>
       </View>
+
+      {showCalendarModal && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Schedule Activity</Text>
+            <Text style={styles.modalSubtitle}>Pick a date and time</Text>
+            
+            <View style={styles.dateTimeSection}>
+              <TouchableOpacity
+                style={styles.dateTimeButton}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  setShowDatePicker(true);
+                }}
+                activeOpacity={0.8}
+              >
+                <Calendar size={16} color={Colors.primary} />
+                <Text style={styles.dateTimeButtonText}>
+                  {selectedDate.toLocaleDateString('en-US', { 
+                    weekday: 'short',
+                    month: 'short', 
+                    day: 'numeric',
+                    year: 'numeric'
+                  })}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.dateTimeButton}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  setShowTimePicker(true);
+                }}
+                activeOpacity={0.8}
+              >
+                <Clock size={16} color={Colors.primary} />
+                <Text style={styles.dateTimeButtonText}>
+                  {selectedDate.toLocaleTimeString('en-US', { 
+                    hour: 'numeric',
+                    minute: '2-digit'
+                  })}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {Platform.OS === 'ios' && showDatePicker && (
+              <View style={styles.pickerContainer}>
+                <DateTimePicker
+                  value={selectedDate}
+                  mode="date"
+                  display="spinner"
+                  onChange={onDateChange}
+                  textColor={Colors.text}
+                  minimumDate={new Date()}
+                />
+              </View>
+            )}
+
+            {Platform.OS === 'ios' && showTimePicker && (
+              <View style={styles.pickerContainer}>
+                <DateTimePicker
+                  value={selectedDate}
+                  mode="time"
+                  display="spinner"
+                  onChange={onTimeChange}
+                  textColor={Colors.text}
+                />
+              </View>
+            )}
+
+            {Platform.OS === 'android' && showDatePicker && (
+              <DateTimePicker
+                value={selectedDate}
+                mode="date"
+                display="default"
+                onChange={onDateChange}
+                minimumDate={new Date()}
+              />
+            )}
+
+            {Platform.OS === 'android' && showTimePicker && (
+              <DateTimePicker
+                value={selectedDate}
+                mode="time"
+                display="default"
+                onChange={onTimeChange}
+              />
+            )}
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  setShowCalendarModal(false);
+                  setSelectedDate(new Date());
+                  setShowDatePicker(false);
+                  setShowTimePicker(false);
+                }}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalConfirmButton, isAddingToCalendar && { opacity: 0.5 }]}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  handleAddToCalendar();
+                }}
+                disabled={isAddingToCalendar}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.modalConfirmText}>
+                  {isAddingToCalendar ? 'Adding...' : 'Add to Calendar'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
     </TouchableOpacity>
   );
 }
@@ -788,5 +966,111 @@ const styles = StyleSheet.create({
   starIcon: {
     width: 24,
     height: 24,
+  },
+  calendarActionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.xs,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    backgroundColor: Colors.background,
+    borderRadius: BorderRadius.small,
+    borderWidth: 1,
+    borderColor: Colors.accent,
+  },
+  calendarActionButtonText: {
+    fontSize: Typography.sizes.caption,
+    fontWeight: '400' as const,
+    color: Colors.accent,
+  },
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: Spacing.xl,
+    zIndex: 1000,
+  },
+  modalContent: {
+    backgroundColor: Colors.cardBackground,
+    borderRadius: BorderRadius.large,
+    padding: Spacing.xl,
+    width: '100%',
+    maxWidth: 350,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  modalTitle: {
+    fontSize: Typography.sizes.h3,
+    fontWeight: '400' as const,
+    color: Colors.text,
+    marginBottom: Spacing.xs,
+    textAlign: 'center',
+  },
+  modalSubtitle: {
+    fontSize: Typography.sizes.caption,
+    color: Colors.textLight,
+    marginBottom: Spacing.lg,
+    textAlign: 'center',
+  },
+  dateTimeSection: {
+    gap: Spacing.sm,
+    marginBottom: Spacing.lg,
+  },
+  dateTimeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    backgroundColor: Colors.backgroundDark,
+    padding: Spacing.md,
+    borderRadius: BorderRadius.medium,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  dateTimeButtonText: {
+    fontSize: Typography.sizes.caption,
+    color: Colors.text,
+    fontWeight: '400' as const,
+  },
+  pickerContainer: {
+    marginBottom: Spacing.lg,
+    borderRadius: BorderRadius.medium,
+    overflow: 'hidden',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+  },
+  modalCancelButton: {
+    flex: 1,
+    backgroundColor: Colors.backgroundDark,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.medium,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  modalCancelText: {
+    fontSize: Typography.sizes.caption,
+    fontWeight: '400' as const,
+    color: Colors.textLight,
+  },
+  modalConfirmButton: {
+    flex: 1,
+    backgroundColor: Colors.primary,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.medium,
+    alignItems: 'center',
+  },
+  modalConfirmText: {
+    fontSize: Typography.sizes.caption,
+    fontWeight: '400' as const,
+    color: Colors.text,
   },
 });

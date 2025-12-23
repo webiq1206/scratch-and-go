@@ -2,15 +2,17 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, KeyboardAvoidingView, Platform, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, Stack, router } from 'expo-router';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useMemoryBook } from '@/contexts/MemoryBookContext';
 import { useCollaborative } from '@/contexts/CollaborativeContext';
 import { useLocation } from '@/contexts/LocationContext';
 import { shareActivity } from '@/utils/shareActivity';
+import { addActivityToCalendar, calculateEndDate } from '@/utils/calendarUtils';
 import Colors from '@/constants/colors';
 import Typography from '@/constants/typography';
 import Spacing from '@/constants/spacing';
 import { BorderRadius } from '@/constants/design';
-import { Clock, DollarSign, Calendar, CheckCircle, Trash2, Edit3, Save, X, Share2, Users } from 'lucide-react-native';
+import { Clock, DollarSign, Calendar, CheckCircle, Trash2, Edit3, Save, X, Share2, Users, CalendarPlus } from 'lucide-react-native';
 
 export default function ActivityDetailScreen() {
   const { id } = useLocalSearchParams();
@@ -25,6 +27,11 @@ export default function ActivityDetailScreen() {
   const [isSharing, setIsSharing] = useState(false);
   const [showQueueModal, setShowQueueModal] = useState(false);
   const [queueNote, setQueueNote] = useState('');
+  const [showCalendarModal, setShowCalendarModal] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [isAddingToCalendar, setIsAddingToCalendar] = useState(false);
 
   if (!activity) {
     return (
@@ -111,6 +118,44 @@ export default function ActivityDetailScreen() {
     setShowQueueModal(false);
     setQueueNote('');
     Alert.alert('Added!', 'Activity added to collaborative queue');
+  };
+
+  const handleAddToCalendar = async () => {
+    if (isAddingToCalendar) return;
+    
+    setIsAddingToCalendar(true);
+    try {
+      const endDate = calculateEndDate(selectedDate, activity.duration);
+      const success = await addActivityToCalendar({
+        activity,
+        startDate: selectedDate,
+        endDate,
+        notes: activity.notes,
+      });
+      
+      if (success) {
+        setShowCalendarModal(false);
+        setSelectedDate(new Date());
+      }
+    } catch (error) {
+      console.error('Error adding to calendar:', error);
+    } finally {
+      setIsAddingToCalendar(false);
+    }
+  };
+
+  const onDateChange = (_event: any, date?: Date) => {
+    setShowDatePicker(false);
+    if (date) {
+      setSelectedDate(date);
+    }
+  };
+
+  const onTimeChange = (_event: any, date?: Date) => {
+    setShowTimePicker(false);
+    if (date) {
+      setSelectedDate(date);
+    }
   };
 
   return (
@@ -297,6 +342,15 @@ export default function ActivityDetailScreen() {
 
           <View style={styles.actionsSection}>
             <TouchableOpacity
+              style={styles.calendarButton}
+              onPress={() => setShowCalendarModal(true)}
+              activeOpacity={0.8}
+            >
+              <CalendarPlus size={20} color={Colors.text} />
+              <Text style={styles.calendarButtonText}>Add to Calendar</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
               style={styles.shareActivityButton}
               onPress={handleShareActivity}
               disabled={isSharing}
@@ -346,6 +400,117 @@ export default function ActivityDetailScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {showCalendarModal && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Schedule Activity</Text>
+            <Text style={styles.modalSubtitle}>Pick a date and time for this activity</Text>
+            
+            <View style={styles.dateTimeSection}>
+              <TouchableOpacity
+                style={styles.dateTimeButton}
+                onPress={() => setShowDatePicker(true)}
+                activeOpacity={0.8}
+              >
+                <Calendar size={18} color={Colors.primary} />
+                <Text style={styles.dateTimeButtonText}>
+                  {selectedDate.toLocaleDateString('en-US', { 
+                    weekday: 'short',
+                    month: 'short', 
+                    day: 'numeric',
+                    year: 'numeric'
+                  })}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.dateTimeButton}
+                onPress={() => setShowTimePicker(true)}
+                activeOpacity={0.8}
+              >
+                <Clock size={18} color={Colors.primary} />
+                <Text style={styles.dateTimeButtonText}>
+                  {selectedDate.toLocaleTimeString('en-US', { 
+                    hour: 'numeric',
+                    minute: '2-digit'
+                  })}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {Platform.OS === 'ios' && showDatePicker && (
+              <View style={styles.pickerContainer}>
+                <DateTimePicker
+                  value={selectedDate}
+                  mode="date"
+                  display="spinner"
+                  onChange={onDateChange}
+                  textColor={Colors.text}
+                  minimumDate={new Date()}
+                />
+              </View>
+            )}
+
+            {Platform.OS === 'ios' && showTimePicker && (
+              <View style={styles.pickerContainer}>
+                <DateTimePicker
+                  value={selectedDate}
+                  mode="time"
+                  display="spinner"
+                  onChange={onTimeChange}
+                  textColor={Colors.text}
+                />
+              </View>
+            )}
+
+            {Platform.OS === 'android' && showDatePicker && (
+              <DateTimePicker
+                value={selectedDate}
+                mode="date"
+                display="default"
+                onChange={onDateChange}
+                minimumDate={new Date()}
+              />
+            )}
+
+            {Platform.OS === 'android' && showTimePicker && (
+              <DateTimePicker
+                value={selectedDate}
+                mode="time"
+                display="default"
+                onChange={onTimeChange}
+              />
+            )}
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={() => {
+                  setShowCalendarModal(false);
+                  setSelectedDate(new Date());
+                  setShowDatePicker(false);
+                  setShowTimePicker(false);
+                }}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalConfirmButton, isAddingToCalendar && { opacity: 0.5 }]}
+                onPress={handleAddToCalendar}
+                disabled={isAddingToCalendar}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.modalConfirmText}>
+                  {isAddingToCalendar ? 'Adding...' : 'Add to Calendar'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
 
       {showQueueModal && (
         <View style={styles.modalOverlay}>
@@ -722,6 +887,45 @@ const styles = StyleSheet.create({
     fontSize: Typography.sizes.body,
     fontWeight: '400' as const,
     color: Colors.white,
+  },
+  calendarButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    backgroundColor: Colors.accent,
+    paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing.xl,
+    borderRadius: BorderRadius.medium,
+  },
+  calendarButtonText: {
+    fontSize: Typography.sizes.body,
+    fontWeight: '400' as const,
+    color: Colors.text,
+  },
+  dateTimeSection: {
+    gap: Spacing.md,
+    marginBottom: Spacing.lg,
+  },
+  dateTimeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    backgroundColor: Colors.backgroundDark,
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.medium,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  dateTimeButtonText: {
+    fontSize: Typography.sizes.body,
+    color: Colors.text,
+    fontWeight: '400' as const,
+  },
+  pickerContainer: {
+    marginBottom: Spacing.lg,
+    borderRadius: BorderRadius.medium,
+    overflow: 'hidden',
   },
   modalOverlay: {
     position: 'absolute',
