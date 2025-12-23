@@ -24,6 +24,17 @@ export interface SavedActivity extends Activity {
 
 export type Mode = 'couples' | 'family';
 
+export interface WeatherData {
+  temp: number;
+  feelsLike: number;
+  condition: string;
+  description: string;
+  icon: string;
+  humidity: number;
+  windSpeed: number;
+  timestamp: number;
+}
+
 export interface LocationData {
   city: string;
   region: string;
@@ -32,6 +43,7 @@ export interface LocationData {
     latitude: number;
     longitude: number;
   };
+  weather?: WeatherData;
 }
 
 export type Filters = {

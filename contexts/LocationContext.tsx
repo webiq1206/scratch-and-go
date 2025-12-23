@@ -2,9 +2,10 @@ import createContextHook from '@nkzw/create-context-hook';
 import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
-import { LocationData } from '@/types/activity';
+import { LocationData, WeatherData } from '@/types/activity';
 
 const LOCATION_KEY = 'scratch_and_go_location';
+const WEATHER_CACHE_DURATION = 30 * 60 * 1000;
 
 export const [LocationProvider, useLocation] = createContextHook(() => {
   const [location, setLocation] = useState<LocationData | null>(null);
@@ -106,11 +107,14 @@ export const [LocationProvider, useLocation] = createContextHook(() => {
 
       if (geocoded && geocoded.length > 0) {
         const place = geocoded[0];
+        const weather = await fetchWeather(latitude, longitude);
+
         const locationData: LocationData = {
           city: place.city || place.subregion || 'Unknown City',
           region: place.region || place.subregion || 'Unknown Region',
           country: place.country || 'Unknown Country',
           coords: { latitude, longitude },
+          weather: weather || undefined,
         };
 
         await saveLocation(locationData);
@@ -125,6 +129,40 @@ export const [LocationProvider, useLocation] = createContextHook(() => {
     }
   };
 
+  const fetchWeather = async (latitude: number, longitude: number): Promise<WeatherData | null> => {
+    try {
+      const response = await fetch(
+        `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,wind_speed_10m,weather_code&temperature_unit=fahrenheit&wind_speed_unit=mph`
+      );
+      const data = await response.json();
+
+      if (!data.current) {
+        console.error('No weather data available');
+        return null;
+      }
+
+      const weatherCode = data.current.weather_code;
+      const { condition, description, icon } = getWeatherInfo(weatherCode);
+
+      const weatherData: WeatherData = {
+        temp: Math.round(data.current.temperature_2m),
+        feelsLike: Math.round(data.current.apparent_temperature),
+        condition,
+        description,
+        icon,
+        humidity: data.current.relative_humidity_2m,
+        windSpeed: Math.round(data.current.wind_speed_10m),
+        timestamp: Date.now(),
+      };
+
+      console.log('Weather data fetched:', weatherData);
+      return weatherData;
+    } catch (error) {
+      console.error('Weather fetch failed:', error);
+      return null;
+    }
+  };
+
   const reverseGeocode = async (latitude: number, longitude: number): Promise<LocationData | null> => {
     try {
       const response = await fetch(
@@ -132,11 +170,14 @@ export const [LocationProvider, useLocation] = createContextHook(() => {
       );
       const data = await response.json();
 
+      const weather = await fetchWeather(latitude, longitude);
+
       const locationData: LocationData = {
         city: data.address.city || data.address.town || data.address.village || 'Unknown City',
         region: data.address.state || data.address.region || 'Unknown Region',
         country: data.address.country || 'Unknown Country',
         coords: { latitude, longitude },
+        weather: weather || undefined,
       };
 
       await saveLocation(locationData);
@@ -161,6 +202,29 @@ export const [LocationProvider, useLocation] = createContextHook(() => {
     await saveLocation(locationData);
   };
 
+  const refreshWeather = async () => {
+    if (!location?.coords) {
+      console.log('No location coordinates available for weather refresh');
+      return;
+    }
+
+    const { latitude, longitude } = location.coords;
+
+    if (location.weather && Date.now() - location.weather.timestamp < WEATHER_CACHE_DURATION) {
+      console.log('Weather data is still fresh, skipping refresh');
+      return;
+    }
+
+    console.log('Refreshing weather data...');
+    const weather = await fetchWeather(latitude, longitude);
+
+    if (weather) {
+      const updatedLocation = { ...location, weather };
+      setLocation(updatedLocation);
+      await saveLocation(updatedLocation);
+    }
+  };
+
   const clearLocation = async () => {
     setLocation(null);
     await AsyncStorage.removeItem(LOCATION_KEY);
@@ -173,6 +237,21 @@ export const [LocationProvider, useLocation] = createContextHook(() => {
     getCurrentLocation,
     setManualLocation,
     clearLocation,
+    refreshWeather,
     hasLocation: !!location,
+    hasWeather: !!location?.weather,
   };
 });
+
+function getWeatherInfo(weatherCode: number): { condition: string; description: string; icon: string } {
+  if (weatherCode === 0) return { condition: 'Clear', description: 'Clear sky', icon: '☀️' };
+  if (weatherCode <= 3) return { condition: 'Partly Cloudy', description: 'Partly cloudy', icon: '⛅' };
+  if (weatherCode <= 48) return { condition: 'Foggy', description: 'Fog', icon: '🌫️' };
+  if (weatherCode <= 57) return { condition: 'Drizzle', description: 'Drizzle', icon: '🌦️' };
+  if (weatherCode <= 67) return { condition: 'Rain', description: 'Rain', icon: '🌧️' };
+  if (weatherCode <= 77) return { condition: 'Snow', description: 'Snow', icon: '❄️' };
+  if (weatherCode <= 82) return { condition: 'Rain', description: 'Rain showers', icon: '🌧️' };
+  if (weatherCode <= 86) return { condition: 'Snow', description: 'Snow showers', icon: '🌨️' };
+  if (weatherCode <= 99) return { condition: 'Thunderstorm', description: 'Thunderstorm', icon: '⛈️' };
+  return { condition: 'Unknown', description: 'Weather unknown', icon: '🌡️' };
+}

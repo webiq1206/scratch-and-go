@@ -359,6 +359,15 @@ export default function HomeScreen() {
                     <Text style={styles.revealEmoji}>{currentActivity.emoji}</Text>
                     <Text style={styles.revealTitle}>{currentActivity.title}</Text>
                     <Text style={styles.revealDescription}>{currentActivity.description}</Text>
+                    {location?.weather && (
+                      <View style={styles.weatherBox}>
+                        <Text style={styles.weatherIcon}>{location.weather.icon}</Text>
+                        <View style={styles.weatherInfo}>
+                          <Text style={styles.weatherTemp}>{location.weather.temp}°F</Text>
+                          <Text style={styles.weatherCondition}>{location.weather.condition}</Text>
+                        </View>
+                      </View>
+                    )}
                     <View style={styles.statsRow}>
                       <View style={styles.statItem}>
                         <Text style={styles.statLabel}>Duration</Text>
@@ -680,6 +689,34 @@ const styles = StyleSheet.create({
     fontSize: Typography.sizes.caption,
     color: Colors.text,
     lineHeight: 18,
+  },
+  weatherBox: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.medium,
+    marginBottom: Spacing.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  weatherIcon: {
+    fontSize: 28,
+    marginRight: Spacing.sm,
+  },
+  weatherInfo: {
+    flex: 1,
+  },
+  weatherTemp: {
+    fontSize: Typography.sizes.h3,
+    color: Colors.text,
+    fontWeight: '400' as const,
+  },
+  weatherCondition: {
+    fontSize: Typography.sizes.caption,
+    color: Colors.textSecondary,
+    marginTop: 2,
   },
   scratchCountContainer: {
     alignItems: 'center',

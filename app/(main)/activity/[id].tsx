@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, Stack, router } from 'expo-router';
 import { useMemoryBook } from '@/contexts/MemoryBookContext';
 import { useCollaborative } from '@/contexts/CollaborativeContext';
+import { useLocation } from '@/contexts/LocationContext';
 import { shareActivity } from '@/utils/shareActivity';
 import Colors from '@/constants/colors';
 import Typography from '@/constants/typography';
@@ -15,6 +16,7 @@ export default function ActivityDetailScreen() {
   const { id } = useLocalSearchParams();
   const { getSavedActivity, markAsCompleted, markAsIncomplete, updateRating, updateNotes, unsaveActivity } = useMemoryBook();
   const { addToQueue } = useCollaborative();
+  const { location } = useLocation();
   
   const activity = getSavedActivity(id as string);
   
@@ -139,6 +141,17 @@ export default function ActivityDetailScreen() {
 
           <Text style={styles.title}>{activity.title}</Text>
           <Text style={styles.description}>{activity.description}</Text>
+
+          {location?.weather && (
+            <View style={styles.weatherSection}>
+              <Text style={styles.weatherIcon}>{location.weather.icon}</Text>
+              <View style={styles.weatherDetails}>
+                <Text style={styles.weatherTemp}>{location.weather.temp}°F</Text>
+                <Text style={styles.weatherCondition}>{location.weather.condition}</Text>
+                <Text style={styles.weatherSubtext}>Feels like {location.weather.feelsLike}°F • Wind {location.weather.windSpeed} mph</Text>
+              </View>
+            </View>
+          )}
 
           <View style={styles.metaContainer}>
             <View style={styles.metaRow}>
@@ -413,6 +426,38 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 24,
     marginBottom: Spacing.xl,
+  },
+  weatherSection: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    backgroundColor: Colors.cardBackground,
+    borderRadius: BorderRadius.medium,
+    padding: Spacing.lg,
+    marginBottom: Spacing.lg,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  weatherIcon: {
+    fontSize: 40,
+    marginRight: Spacing.md,
+  },
+  weatherDetails: {
+    flex: 1,
+  },
+  weatherTemp: {
+    fontSize: Typography.sizes.h2,
+    color: Colors.text,
+    fontWeight: '400' as const,
+  },
+  weatherCondition: {
+    fontSize: Typography.sizes.body,
+    color: Colors.primary,
+    marginTop: 2,
+  },
+  weatherSubtext: {
+    fontSize: Typography.sizes.caption,
+    color: Colors.textSecondary,
+    marginTop: 4,
   },
   metaContainer: {
     backgroundColor: Colors.cardBackground,

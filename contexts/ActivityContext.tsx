@@ -81,8 +81,10 @@ export const [ActivityProvider, useActivity] = createContextHook(() => {
       console.log('Generating activity with filters:', filters);
       
       const currentSeason = getCurrentSeason();
+      const currentTimeOfDay = getTimeOfDay();
       const historyTitles = activityHistory.map(a => a.title).join(', ');
       const currentLocation = filters.location || location;
+      const weather = currentLocation?.weather;
 
       const notInterestedActivities = activityInteractions
         .filter(a => a.interactionType === 'not_interested')
@@ -103,6 +105,22 @@ Suggest activities that take advantage of what makes this location unique.
 Mention specific places or areas when relevant (but keep suggestions flexible).
 ` : ''}
 
+${weather ? `CURRENT WEATHER:
+- Temperature: ${weather.temp}°F (feels like ${weather.feelsLike}°F)
+- Conditions: ${weather.condition} - ${weather.description}
+- Wind: ${weather.windSpeed} mph
+- Humidity: ${weather.humidity}%
+
+IMPORTANT WEATHER CONSIDERATIONS:
+${weather.condition === 'Rain' || weather.condition === 'Thunderstorm' ? '- Weather is WET/RAINY: Strongly prioritize INDOOR activities or covered venues. Avoid outdoor activities unless they work in rain (museums, indoor entertainment, cooking, etc.).' : ''}${weather.condition === 'Snow' ? '- Weather is SNOWY: Consider winter activities (skiing, ice skating, cozy indoor activities). Outdoor activities should embrace the snow or be indoors.' : ''}${weather.temp < 32 ? '- Temperature is FREEZING: Prioritize indoor activities or brief outdoor activities with warm destinations.' : ''}${weather.temp < 50 && weather.temp >= 32 ? '- Temperature is COLD: Indoor activities preferred, or outdoor with warm clothing considerations.' : ''}${weather.temp > 85 ? '- Temperature is HOT: Consider indoor AC activities, water activities, or evening outdoor activities.' : ''}${weather.condition === 'Clear' && weather.temp >= 60 && weather.temp <= 85 ? '- Perfect weather for OUTDOOR activities! Take advantage of the beautiful conditions.' : ''}
+` : ''}
+
+TIME OF DAY: ${currentTimeOfDay}
+${currentTimeOfDay === 'Morning' ? 'Consider breakfast spots, brunch activities, morning outdoor activities, farmers markets.' : ''}
+${currentTimeOfDay === 'Afternoon' ? 'Consider lunch spots, daytime activities, matinee shows, afternoon adventures.' : ''}
+${currentTimeOfDay === 'Evening' ? 'Consider dinner spots, sunset activities, evening entertainment, nighttime experiences.' : ''}
+${currentTimeOfDay === 'Night' ? 'Consider late-night activities, stargazing, 24-hour venues, nighttime entertainment.' : ''}
+
 CRITICAL CONTENT RESTRICTIONS:
 ${contentRestrictions.map(r => `- ${r}`).join('\n')}
 
@@ -114,7 +132,9 @@ Generate a personalized activity with these parameters:
 ${filters.setting && filters.setting !== 'either' ? `- Setting: ${filters.setting}` : ''}
 ${filters.kidAges ? `- Kid ages: ${filters.kidAges}` : ''}
 - Current season: ${currentSeason}
+- Time of day: ${currentTimeOfDay}
 ${currentLocation ? `- Location: ${currentLocation.city}, ${currentLocation.region}` : ''}
+${weather ? `- Current weather: ${weather.temp}°F, ${weather.condition}` : ''}
 
 Previously generated activities (avoid repeating): ${historyTitles || 'None'}
 
@@ -126,12 +146,14 @@ ${completedAndRatedActivities.length > 0 ? `SUCCESSFUL ACTIVITIES (user enjoyed 
 ${completedAndRatedActivities.map(a => `${a.title} - ${a.category}`).join(', ')}
 Consider suggesting activities with similar themes or styles.` : ''}
 
-IMPORTANT: Make this suggestion highly relevant to the local area. Consider:
-- Local weather and seasonal activities typical for this region
+IMPORTANT: Make this suggestion highly relevant to the local area and current conditions. Consider:
+- Current ACTUAL weather conditions (not just typical weather)
+${weather && (weather.condition === 'Rain' || weather.condition === 'Thunderstorm' || weather.condition === 'Snow') ? '- WEATHER ALERT: Adjust for current precipitation - indoor activities are STRONGLY preferred' : ''}
 - Popular attractions and hidden gems in ${currentLocation?.city || 'the area'}
 - Cultural events and local experiences
-- Indoor/outdoor options based on typical weather
+- Time-appropriate activities for ${currentTimeOfDay.toLowerCase()}
 - Nearby natural features (beaches, mountains, parks, etc.)
+${weather && weather.condition === 'Clear' && weather.temp >= 60 && weather.temp <= 85 ? '- BEAUTIFUL WEATHER: Take advantage of perfect outdoor conditions!' : ''}
 
 Create something unique, exciting, and memorable. Use inclusive language ("your partner" not gendered terms).`;
 
@@ -232,4 +254,12 @@ function getCurrentSeason(): string {
   if (month >= 5 && month <= 7) return 'Summer';
   if (month >= 8 && month <= 10) return 'Fall';
   return 'Winter';
+}
+
+function getTimeOfDay(): string {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 12) return 'Morning';
+  if (hour >= 12 && hour < 17) return 'Afternoon';
+  if (hour >= 17 && hour < 21) return 'Evening';
+  return 'Night';
 }
