@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Animated, ActivityIndicator, Alert, TouchableOpacity, Image } from 'react-native';
+import { Share2 } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -17,6 +18,7 @@ import { useLocation } from '@/contexts/LocationContext';
 import { useMemoryBook } from '@/contexts/MemoryBookContext';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { Filters } from '@/types/activity';
+import { shareActivity } from '@/utils/shareActivity';
 
 const MODE_KEY = 'scratch_and_go_mode';
 
@@ -43,6 +45,7 @@ export default function HomeScreen() {
   const { saveActivity, isActivitySaved } = useMemoryBook();
   const { isPremium } = useSubscription();
   const [isSaved, setIsSaved] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
 
   useEffect(() => {
     const init = async () => {
@@ -145,6 +148,24 @@ export default function HomeScreen() {
       'Activity added to your Memory Book',
       [{ text: 'OK' }]
     );
+  };
+
+  const handleShareActivity = async () => {
+    if (!currentActivity || isSharing) return;
+    
+    setIsSharing(true);
+    try {
+      await shareActivity(currentActivity);
+    } catch (error) {
+      console.error('Error sharing activity:', error);
+      Alert.alert(
+        'Share Failed',
+        'Unable to share activity. Please try again.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsSharing(false);
+    }
   };
 
   const handleScratchComplete = () => {
@@ -323,30 +344,41 @@ export default function HomeScreen() {
                         <Text style={styles.proTipText}>{currentActivity.proTip}</Text>
                       </View>
                     )}
-                    <TouchableOpacity
-                      style={[
-                        styles.saveButton,
-                        (isSaved || isActivitySaved(currentActivity.title)) && styles.saveButtonDisabled
-                      ]}
-                      onPress={handleSaveActivity}
-                      disabled={isSaved || isActivitySaved(currentActivity.title)}
-                      activeOpacity={0.7}
-                    >
-                      <View style={styles.saveButtonContent}>
-                        {(isSaved || isActivitySaved(currentActivity.title)) ? (
-                          <Text style={styles.saveButtonText}>✓ Saved to Memory Book</Text>
-                        ) : (
-                          <>
-                            <Image 
-                              source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/attachments/1n8u08ei0gt3gyiihcy40' }}
-                              style={styles.heartIcon}
-                              resizeMode="contain"
-                            />
-                            <Text style={styles.saveButtonText}>Save to Memory Book</Text>
-                          </>
-                        )}
-                      </View>
-                    </TouchableOpacity>
+                    <View style={styles.actionButtons}>
+                      <TouchableOpacity
+                        style={[
+                          styles.saveButton,
+                          (isSaved || isActivitySaved(currentActivity.title)) && styles.saveButtonDisabled
+                        ]}
+                        onPress={handleSaveActivity}
+                        disabled={isSaved || isActivitySaved(currentActivity.title)}
+                        activeOpacity={0.7}
+                      >
+                        <View style={styles.saveButtonContent}>
+                          {(isSaved || isActivitySaved(currentActivity.title)) ? (
+                            <Text style={styles.saveButtonText}>✓ Saved to Memory Book</Text>
+                          ) : (
+                            <>
+                              <Image 
+                                source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/attachments/1n8u08ei0gt3gyiihcy40' }}
+                                style={styles.heartIcon}
+                                resizeMode="contain"
+                              />
+                              <Text style={styles.saveButtonText}>Save to Memory Book</Text>
+                            </>
+                          )}
+                        </View>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.shareButton}
+                        onPress={handleShareActivity}
+                        disabled={isSharing}
+                        activeOpacity={0.7}
+                      >
+                        <Share2 size={20} color={Colors.text} />
+                        <Text style={styles.shareButtonText}>Share</Text>
+                      </TouchableOpacity>
+                    </View>
                   </>
                 )}
               </View>
@@ -709,13 +741,19 @@ const styles = StyleSheet.create({
     color: '#666666',
     textAlign: 'center',
   },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+    marginTop: Spacing.lg,
+    width: '100%',
+    paddingHorizontal: Spacing.lg,
+  },
   saveButton: {
+    flex: 1,
     backgroundColor: Colors.primary,
     paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.xl,
+    paddingHorizontal: Spacing.lg,
     borderRadius: BorderRadius.medium,
-    marginTop: Spacing.lg,
-    minWidth: 200,
   },
   saveButtonDisabled: {
     backgroundColor: Colors.cardBackground,
@@ -736,5 +774,22 @@ const styles = StyleSheet.create({
   heartIcon: {
     width: 18,
     height: 18,
+  },
+  shareButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.xs,
+    backgroundColor: Colors.cardBackground,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: BorderRadius.medium,
+  },
+  shareButtonText: {
+    fontSize: Typography.sizes.body,
+    fontWeight: '400' as const,
+    color: Colors.text,
   },
 });

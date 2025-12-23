@@ -3,11 +3,12 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert,
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, Stack, router } from 'expo-router';
 import { useMemoryBook } from '@/contexts/MemoryBookContext';
+import { shareActivity } from '@/utils/shareActivity';
 import Colors from '@/constants/colors';
 import Typography from '@/constants/typography';
 import Spacing from '@/constants/spacing';
 import { BorderRadius } from '@/constants/design';
-import { Clock, DollarSign, Calendar, CheckCircle, Trash2, Edit3, Save, X } from 'lucide-react-native';
+import { Clock, DollarSign, Calendar, CheckCircle, Trash2, Edit3, Save, X, Share2 } from 'lucide-react-native';
 
 export default function ActivityDetailScreen() {
   const { id } = useLocalSearchParams();
@@ -17,6 +18,7 @@ export default function ActivityDetailScreen() {
   
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [notesText, setNotesText] = useState(activity?.notes || '');
+  const [isSharing, setIsSharing] = useState(false);
 
   if (!activity) {
     return (
@@ -78,6 +80,24 @@ export default function ActivityDetailScreen() {
 
   const handleRatingPress = (rating: number) => {
     updateRating(activity.id, rating);
+  };
+
+  const handleShareActivity = async () => {
+    if (isSharing) return;
+    
+    setIsSharing(true);
+    try {
+      await shareActivity(activity);
+    } catch (error) {
+      console.error('Error sharing activity:', error);
+      Alert.alert(
+        'Share Failed',
+        'Unable to share activity. Please try again.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsSharing(false);
+    }
   };
 
   return (
@@ -252,6 +272,16 @@ export default function ActivityDetailScreen() {
           </View>
 
           <View style={styles.actionsSection}>
+            <TouchableOpacity
+              style={styles.shareActivityButton}
+              onPress={handleShareActivity}
+              disabled={isSharing}
+              activeOpacity={0.8}
+            >
+              <Share2 size={20} color={Colors.text} />
+              <Text style={styles.shareActivityButtonText}>Share Activity</Text>
+            </TouchableOpacity>
+
             {!activity.isCompleted ? (
               <TouchableOpacity
                 style={styles.completeButton}
@@ -479,6 +509,21 @@ const styles = StyleSheet.create({
   },
   actionsSection: {
     gap: Spacing.md,
+  },
+  shareActivityButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    backgroundColor: Colors.primary,
+    paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing.xl,
+    borderRadius: BorderRadius.medium,
+  },
+  shareActivityButtonText: {
+    fontSize: Typography.sizes.body,
+    fontWeight: '400' as const,
+    color: Colors.text,
   },
   completeButton: {
     flexDirection: 'row',
