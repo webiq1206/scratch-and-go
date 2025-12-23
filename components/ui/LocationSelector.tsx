@@ -66,8 +66,16 @@ export default function LocationSelector() {
               </TouchableOpacity>
             </View>
 
+            <View style={styles.optionalBadge}>
+              <Text style={styles.optionalBadgeText}>Optional</Text>
+            </View>
+
             <Text style={styles.modalDescription}>
               Get personalized activities based on your location, local weather, and nearby attractions.
+            </Text>
+
+            <Text style={styles.modalNote}>
+              💡 You can still generate great activities without setting a location — they just won&apos;t be as locally tailored.
             </Text>
 
             <TouchableOpacity
@@ -118,6 +126,13 @@ export default function LocationSelector() {
               onPress={handleManualSubmit}
             >
               <Text style={styles.submitButtonText}>Set Location</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.skipButton}
+              onPress={() => setModalVisible(false)}
+            >
+              <Text style={styles.skipButtonText}>Skip for Now</Text>
             </TouchableOpacity>
 
             {location && (
@@ -246,5 +261,39 @@ const styles = StyleSheet.create({
     color: Colors.textLight,
     textAlign: 'center',
     marginTop: Spacing.lg,
+  },
+  optionalBadge: {
+    alignSelf: 'center',
+    backgroundColor: Colors.accent,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: 20,
+    marginBottom: Spacing.md,
+  },
+  optionalBadgeText: {
+    fontSize: Typography.sizes.caption,
+    fontWeight: Typography.weights.bold,
+    color: Colors.background,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  modalNote: {
+    fontSize: Typography.sizes.small,
+    color: Colors.textLight,
+    backgroundColor: Colors.cardBackground,
+    padding: Spacing.md,
+    borderRadius: 12,
+    marginBottom: Spacing.lg,
+    lineHeight: 20,
+  },
+  skipButton: {
+    paddingVertical: Spacing.md,
+    alignItems: 'center',
+    marginTop: Spacing.sm,
+  },
+  skipButtonText: {
+    fontSize: Typography.sizes.body,
+    fontWeight: Typography.weights.medium,
+    color: Colors.textLight,
   },
 });
