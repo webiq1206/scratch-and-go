@@ -117,12 +117,12 @@ export default function WelcomeScreen() {
   }
 
   const polaroidImages = [
-    { uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/projects/xz00xar8pn4xhtrdicpyk/generations/1735017775890_polaroid1.webp', rotation: '-8deg', top: 20, left: 10, zIndex: 3 },
-    { uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/projects/xz00xar8pn4xhtrdicpyk/generations/1735017775908_polaroid2.webp', rotation: '5deg', top: 50, right: 20, zIndex: 5 },
-    { uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/projects/xz00xar8pn4xhtrdicpyk/generations/1735017775924_polaroid3.webp', rotation: '12deg', top: 180, left: 30, zIndex: 2 },
-    { uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/projects/xz00xar8pn4xhtrdicpyk/generations/1735017775941_polaroid4.webp', rotation: '-5deg', top: 140, right: 10, zIndex: 4 },
-    { uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/projects/xz00xar8pn4xhtrdicpyk/generations/1735017775957_polaroid5.webp', rotation: '3deg', top: 280, left: 50, zIndex: 1 },
-    { uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/projects/xz00xar8pn4xhtrdicpyk/generations/1735017775973_polaroid6.webp', rotation: '-10deg', top: 260, right: 40, zIndex: 6 },
+    { uri: 'https://r2-pub.rork.com/generated-images/607ff251-9133-410d-ace6-05dca7cff93b.png', rotation: '-8deg', top: 20, left: 10, zIndex: 3 },
+    { uri: 'https://r2-pub.rork.com/generated-images/048f8fae-5bc5-4aed-9540-052c641f597e.png', rotation: '5deg', top: 50, right: 20, zIndex: 5 },
+    { uri: 'https://r2-pub.rork.com/generated-images/07d8a70f-801b-4db1-9df0-f279c96f76a5.png', rotation: '12deg', top: 180, left: 30, zIndex: 2 },
+    { uri: 'https://r2-pub.rork.com/generated-images/2ab872a7-455c-4c34-a695-a732c39bf7ab.png', rotation: '-5deg', top: 140, right: 10, zIndex: 4 },
+    { uri: 'https://r2-pub.rork.com/generated-images/095b3f39-4b79-4885-9987-db534bfa986c.png', rotation: '3deg', top: 280, left: 50, zIndex: 1 },
+    { uri: 'https://r2-pub.rork.com/generated-images/edd5ca88-9972-49cb-8976-6c43c0717761.png', rotation: '-10deg', top: 260, right: 40, zIndex: 6 },
   ];
 
   return (
@@ -153,9 +153,9 @@ export default function WelcomeScreen() {
           <Heart size={48} color="#FF6B9D" strokeWidth={2.5} fill="#FF6B9D" />
         </View>
 
-        <Text style={styles.mainTagline}>Inclusive, reliable, safe.</Text>
+        <Text style={styles.mainTagline}>Make every moment count.</Text>
         <Text style={styles.subTagline}>
-          Go beyond your social circle & connect{'\n'}with people near and far.
+          Discover personalized date ideas and{'\n'}family activities tailored just for you.
         </Text>
 
         <TouchableOpacity
@@ -225,7 +225,8 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    zIndex: 10,
   },
   contentContainer: {
     flex: 1,
