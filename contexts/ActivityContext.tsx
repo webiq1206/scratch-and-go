@@ -5,6 +5,7 @@ import { Activity, ActivitySchema, Filters } from '@/types/activity';
 import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { usePreferences } from './PreferencesContext';
+import { useLocation } from './LocationContext';
 
 const HISTORY_KEY = 'scratch_and_go_history';
 const SCRATCH_COUNT_KEY = 'scratch_and_go_count';
@@ -12,6 +13,7 @@ const SCRATCH_MONTH_KEY = 'scratch_and_go_month';
 
 export const [ActivityProvider, useActivity] = createContextHook(() => {
   const { getContentRestrictions } = usePreferences();
+  const { location } = useLocation();
   const [currentActivity, setCurrentActivity] = useState<Activity | null>(null);
   const [activityHistory, setActivityHistory] = useState<Activity[]>([]);
   const [scratchCount, setScratchCount] = useState(0);
@@ -64,9 +66,17 @@ export const [ActivityProvider, useActivity] = createContextHook(() => {
       
       const currentSeason = getCurrentSeason();
       const historyTitles = activityHistory.map(a => a.title).join(', ');
+      const currentLocation = filters.location || location;
 
       const contentRestrictions = getContentRestrictions();
       const systemPrompt = `You are an expert at creating unique, engaging ${filters.mode === 'couples' ? 'date night' : 'family'} activity ideas.
+
+${currentLocation ? `LOCATION CONTEXT:
+The user is in ${currentLocation.city}, ${currentLocation.region}, ${currentLocation.country}.
+Consider local attractions, landmarks, venues, and region-specific activities.
+Suggest activities that take advantage of what makes this location unique.
+Mention specific places or areas when relevant (but keep suggestions flexible).
+` : ''}
 
 CRITICAL CONTENT RESTRICTIONS:
 ${contentRestrictions.map(r => `- ${r}`).join('\n')}
@@ -79,8 +89,16 @@ Generate a personalized activity with these parameters:
 ${filters.setting && filters.setting !== 'either' ? `- Setting: ${filters.setting}` : ''}
 ${filters.kidAges ? `- Kid ages: ${filters.kidAges}` : ''}
 - Current season: ${currentSeason}
+${currentLocation ? `- Location: ${currentLocation.city}, ${currentLocation.region}` : ''}
 
 Previously generated activities (avoid repeating): ${historyTitles || 'None'}
+
+IMPORTANT: Make this suggestion highly relevant to the local area. Consider:
+- Local weather and seasonal activities typical for this region
+- Popular attractions and hidden gems in ${currentLocation?.city || 'the area'}
+- Cultural events and local experiences
+- Indoor/outdoor options based on typical weather
+- Nearby natural features (beaches, mountains, parks, etc.)
 
 Create something unique, exciting, and memorable. Use inclusive language ("your partner" not gendered terms).`;
 

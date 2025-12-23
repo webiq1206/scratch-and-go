@@ -15,6 +15,16 @@ export type Activity = z.infer<typeof ActivitySchema>;
 
 export type Mode = 'couples' | 'family';
 
+export interface LocationData {
+  city: string;
+  region: string;
+  country: string;
+  coords?: {
+    latitude: number;
+    longitude: number;
+  };
+}
+
 export type Filters = {
   mode: Mode;
   category: string;
@@ -22,4 +32,5 @@ export type Filters = {
   timing: string;
   kidAges?: string;
   setting?: 'indoor' | 'outdoor' | 'either';
+  location?: LocationData;
 };

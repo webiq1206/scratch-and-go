@@ -1,0 +1,250 @@
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, ActivityIndicator, Alert } from 'react-native';
+import { MapPin, X, Navigation } from 'lucide-react-native';
+import Colors from '@/constants/colors';
+import Typography from '@/constants/typography';
+import Spacing from '@/constants/spacing';
+import { useLocation } from '@/contexts/LocationContext';
+
+export default function LocationSelector() {
+  const { location, getCurrentLocation, setManualLocation, isLoading } = useLocation();
+  const [modalVisible, setModalVisible] = useState(false);
+  const [manualCity, setManualCity] = useState('');
+  const [manualRegion, setManualRegion] = useState('');
+
+  const handleDetectLocation = async () => {
+    const result = await getCurrentLocation();
+    if (result) {
+      setModalVisible(false);
+      Alert.alert('Location Detected', `We found you in ${result.city}, ${result.region}!`);
+    } else {
+      Alert.alert('Location Error', 'Unable to detect your location. Please enter it manually.');
+    }
+  };
+
+  const handleManualSubmit = () => {
+    if (!manualCity.trim() || !manualRegion.trim()) {
+      Alert.alert('Missing Information', 'Please enter both city and region.');
+      return;
+    }
+
+    setManualLocation({
+      city: manualCity.trim(),
+      region: manualRegion.trim(),
+      country: 'USA',
+    });
+
+    setModalVisible(false);
+    setManualCity('');
+    setManualRegion('');
+  };
+
+  return (
+    <>
+      <TouchableOpacity 
+        style={styles.locationButton}
+        onPress={() => setModalVisible(true)}
+      >
+        <MapPin size={20} color={location ? Colors.primary : Colors.textLight} />
+        <Text style={[styles.locationText, location && styles.locationTextActive]}>
+          {location ? `${location.city}, ${location.region}` : 'Set Location'}
+        </Text>
+      </TouchableOpacity>
+
+      <Modal
+        visible={modalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Your Location</Text>
+              <TouchableOpacity onPress={() => setModalVisible(false)}>
+                <X size={24} color={Colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.modalDescription}>
+              Get personalized activities based on your location, local weather, and nearby attractions.
+            </Text>
+
+            <TouchableOpacity
+              style={styles.detectButton}
+              onPress={handleDetectLocation}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <ActivityIndicator color={Colors.background} />
+              ) : (
+                <>
+                  <Navigation size={20} color={Colors.background} />
+                  <Text style={styles.detectButtonText}>Detect My Location</Text>
+                </>
+              )}
+            </TouchableOpacity>
+
+            <View style={styles.divider}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>or enter manually</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>City</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g., San Francisco"
+                placeholderTextColor={Colors.textLight}
+                value={manualCity}
+                onChangeText={setManualCity}
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>State/Region</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g., California"
+                placeholderTextColor={Colors.textLight}
+                value={manualRegion}
+                onChangeText={setManualRegion}
+              />
+            </View>
+
+            <TouchableOpacity
+              style={styles.submitButton}
+              onPress={handleManualSubmit}
+            >
+              <Text style={styles.submitButtonText}>Set Location</Text>
+            </TouchableOpacity>
+
+            {location && (
+              <Text style={styles.currentLocationText}>
+                Current: {location.city}, {location.region}
+              </Text>
+            )}
+          </View>
+        </View>
+      </Modal>
+    </>
+  );
+}
+
+const styles = StyleSheet.create({
+  locationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+    borderRadius: 20,
+    backgroundColor: Colors.cardBackground,
+  },
+  locationText: {
+    fontSize: Typography.sizes.caption,
+    color: Colors.textLight,
+    fontWeight: Typography.weights.medium,
+  },
+  locationTextActive: {
+    color: Colors.primary,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: Colors.background,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: Spacing.xl,
+    paddingBottom: Spacing.xxl,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+  },
+  modalTitle: {
+    fontSize: Typography.sizes.h2,
+    fontWeight: Typography.weights.bold,
+    color: Colors.text,
+  },
+  modalDescription: {
+    fontSize: Typography.sizes.body,
+    color: Colors.textLight,
+    marginBottom: Spacing.xl,
+    lineHeight: 22,
+  },
+  detectButton: {
+    backgroundColor: Colors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    paddingVertical: Spacing.md,
+    borderRadius: 12,
+    marginBottom: Spacing.lg,
+  },
+  detectButtonText: {
+    fontSize: Typography.sizes.body,
+    fontWeight: Typography.weights.semibold,
+    color: Colors.background,
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: Spacing.lg,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: Colors.divider,
+  },
+  dividerText: {
+    fontSize: Typography.sizes.caption,
+    color: Colors.textLight,
+    marginHorizontal: Spacing.md,
+  },
+  inputContainer: {
+    marginBottom: Spacing.md,
+  },
+  inputLabel: {
+    fontSize: Typography.sizes.caption,
+    fontWeight: Typography.weights.semibold,
+    color: Colors.text,
+    marginBottom: Spacing.xs,
+  },
+  input: {
+    backgroundColor: Colors.cardBackground,
+    borderRadius: 12,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.md,
+    fontSize: Typography.sizes.body,
+    color: Colors.text,
+    borderWidth: 1,
+    borderColor: Colors.divider,
+  },
+  submitButton: {
+    backgroundColor: Colors.secondary,
+    paddingVertical: Spacing.md,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: Spacing.sm,
+  },
+  submitButtonText: {
+    fontSize: Typography.sizes.body,
+    fontWeight: Typography.weights.semibold,
+    color: Colors.background,
+  },
+  currentLocationText: {
+    fontSize: Typography.sizes.caption,
+    color: Colors.textLight,
+    textAlign: 'center',
+    marginTop: Spacing.lg,
+  },
+});

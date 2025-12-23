@@ -10,7 +10,9 @@ import Spacing from '@/constants/spacing';
 
 import ScratchCard from '@/components/ui/ScratchCard';
 import FilterPill from '@/components/ui/FilterPill';
+import LocationSelector from '@/components/ui/LocationSelector';
 import { useActivity } from '@/contexts/ActivityContext';
+import { useLocation } from '@/contexts/LocationContext';
 import { Filters } from '@/types/activity';
 
 const MODE_KEY = 'scratch_and_go_mode';
@@ -32,6 +34,8 @@ export default function HomeScreen() {
     isLimitReached, 
     remainingScratches 
   } = useActivity();
+
+  const { location } = useLocation();
 
   useEffect(() => {
     const init = async () => {
@@ -83,6 +87,7 @@ export default function HomeScreen() {
       category: categoryFilter,
       budget: budgetFilter,
       timing: timingFilter,
+      location: location || undefined,
     };
     
     await generateActivity(filters);
@@ -110,9 +115,12 @@ export default function HomeScreen() {
         <TouchableOpacity style={styles.menuButton}>
           <Menu size={24} color={Colors.text} />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.modeIndicator}>
-          <Text style={styles.modeEmoji}>{mode === 'couples' ? '💑' : '👨‍👩‍👧‍👦'}</Text>
-        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          <LocationSelector />
+          <TouchableOpacity style={styles.modeIndicator}>
+            <Text style={styles.modeEmoji}>{mode === 'couples' ? '💑' : '👨‍👩‍👧‍👦'}</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView 
@@ -262,6 +270,11 @@ const styles = StyleSheet.create({
   },
   menuButton: {
     padding: Spacing.sm,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
   },
   modeIndicator: {
     padding: Spacing.sm,

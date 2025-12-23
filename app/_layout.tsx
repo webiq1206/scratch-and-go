@@ -5,6 +5,7 @@ import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ActivityProvider } from "@/contexts/ActivityContext";
 import { PreferencesProvider } from "@/contexts/PreferencesContext";
+import { LocationProvider } from "@/contexts/LocationContext";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -28,11 +29,13 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <PreferencesProvider>
-        <ActivityProvider>
-          <GestureHandlerRootView style={{ flex: 1 }}>
-            <RootLayoutNav />
-          </GestureHandlerRootView>
-        </ActivityProvider>
+        <LocationProvider>
+          <ActivityProvider>
+            <GestureHandlerRootView style={{ flex: 1 }}>
+              <RootLayoutNav />
+            </GestureHandlerRootView>
+          </ActivityProvider>
+        </LocationProvider>
       </PreferencesProvider>
     </QueryClientProvider>
   );
