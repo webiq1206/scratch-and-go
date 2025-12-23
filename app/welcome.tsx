@@ -104,7 +104,6 @@ export default function WelcomeScreen() {
           </View>
 
           <View style={styles.questionContent}>
-            <Text style={styles.questionEmoji}>🙏</Text>
             <Text style={styles.questionTitle}>What is your religion?</Text>
             <Text style={styles.questionDescription}>
               This helps us suggest relevant faith-based activities and places of worship
@@ -119,7 +118,6 @@ export default function WelcomeScreen() {
                 onPress={() => handleReligionSelection(religion.id)}
                 activeOpacity={0.7}
               >
-                <Text style={styles.religionEmoji}>{religion.emoji}</Text>
                 <Text style={styles.religionLabel}>{religion.label}</Text>
               </TouchableOpacity>
             ))}
@@ -149,7 +147,6 @@ export default function WelcomeScreen() {
           </View>
 
           <View style={styles.questionContent}>
-            <Text style={styles.questionEmoji}>{currentQuestion.emoji}</Text>
             <Text style={styles.questionTitle}>{currentQuestion.question}</Text>
             <Text style={styles.questionDescription}>{currentQuestion.description}</Text>
           </View>
@@ -384,10 +381,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: Spacing.xxl,
   },
-  questionEmoji: {
-    fontSize: 64,
-    marginBottom: Spacing.lg,
-  },
+
   questionTitle: {
     fontSize: Typography.sizes.h1,
     fontWeight: '400' as const,
@@ -457,9 +451,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.md,
   },
-  religionEmoji: {
-    fontSize: 32,
-  },
+
   religionLabel: {
     fontSize: Typography.sizes.h3,
     fontWeight: '400' as const,
