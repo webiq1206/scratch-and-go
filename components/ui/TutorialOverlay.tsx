@@ -74,7 +74,7 @@ export default function TutorialOverlay({
             onPress={onDismiss}
             activeOpacity={0.8}
           >
-            <Text style={styles.buttonText}>Got it!</Text>
+            <Text style={styles.buttonText}>Let&apos;s create memories!</Text>
           </TouchableOpacity>
 
           <TouchableOpacity

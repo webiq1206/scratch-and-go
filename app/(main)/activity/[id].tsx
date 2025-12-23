@@ -70,15 +70,15 @@ export default function ActivityDetailScreen() {
     
     if (!activity.photos || activity.photos.length === 0) {
       Alert.alert(
-        '🎉 Completed!',
-        'Don\'t forget to capture this memory! Add photos to remember this moment forever.',
+        '🎉 Memory Made!',
+        'Don\'t forget to capture this special moment with your loved ones! Add photos to preserve this memory forever.',
         [
           { text: 'Add Photos Now', onPress: () => handleTakePhoto() },
           { text: 'Maybe Later', style: 'cancel' }
         ]
       );
     } else {
-      Alert.alert('🎉 Completed!', 'Another amazing memory created!');
+      Alert.alert('🎉 Memory Complete!', 'Another beautiful moment captured with loved ones!');
     }
   };
 
@@ -455,7 +455,7 @@ export default function ActivityDetailScreen() {
                 style={styles.notesInput}
                 value={notesText}
                 onChangeText={setNotesText}
-                placeholder="Share your story... What made this moment special? 💭"
+                placeholder="Capture this memory... What made this moment special with your loved ones? 💭"
                 placeholderTextColor={Colors.textLight}
                 multiline
                 numberOfLines={6}
@@ -467,7 +467,7 @@ export default function ActivityDetailScreen() {
                 {activity.notes ? (
                   <Text style={styles.notesText}>{activity.notes}</Text>
                 ) : (
-                  <Text style={styles.notesPlaceholder}>✍️ Share your experience! What made this special?</Text>
+                  <Text style={styles.notesPlaceholder}>✍️ Capture the memory! What made this moment with loved ones special?</Text>
                 )}
               </View>
             )}
@@ -475,7 +475,7 @@ export default function ActivityDetailScreen() {
 
           <View style={styles.photosSection}>
             <View style={styles.photosSectionHeader}>
-              <Text style={styles.sectionLabel}>📷 Your Memories</Text>
+              <Text style={styles.sectionLabel}>📷 Moments with Loved Ones</Text>
               <View style={styles.photoButtons}>
                 {Platform.OS !== 'web' && (
                   <TouchableOpacity
@@ -521,8 +521,8 @@ export default function ActivityDetailScreen() {
             ) : (
               <View style={styles.noPhotosContainer}>
                 <Camera size={40} color={Colors.primary} />
-                <Text style={styles.noPhotosText}>📸 Capture the Memory!</Text>
-                <Text style={styles.noPhotosSubtext}>Take a photo to remember this moment forever</Text>
+                <Text style={styles.noPhotosText}>📸 Capture This Moment!</Text>
+                <Text style={styles.noPhotosSubtext}>Take a photo with your loved ones to remember this moment forever</Text>
                 <TouchableOpacity
                   style={styles.addPhotoPromptButton}
                   onPress={handleTakePhoto}

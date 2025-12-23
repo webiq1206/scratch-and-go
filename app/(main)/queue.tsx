@@ -193,7 +193,7 @@ export default function QueueScreen() {
         </View>
         <Text style={styles.headerTitle}>Collaborative Queue</Text>
         <Text style={styles.headerSubtitle}>
-          Vote on activities with your partner
+          Plan special moments together with your loved ones
         </Text>
       </View>
 
@@ -232,8 +232,8 @@ export default function QueueScreen() {
           </Text>
           <Text style={styles.emptyText}>
             {activeTab === 'pending'
-              ? 'Share activities with your partner to vote on together!'
-              : 'Approved activities will appear here once both partners vote yes.'}
+              ? 'Share activities with your loved ones to create memories together!'
+              : 'Approved activities will appear here - ready to become beautiful memories!'}
           </Text>
         </ScrollView>
       ) : (

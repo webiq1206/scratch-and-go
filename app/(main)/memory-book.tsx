@@ -121,11 +121,11 @@ export default function MemoryBookScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.title}>📖 Your Adventures</Text>
+        <Text style={styles.title}>📖 Your Memory Book</Text>
         <Text style={styles.subtitle}>
           {activeTab === 'saved' 
-            ? '✨ Activities waiting for you - capture every moment!'
-            : '📸 Memories you\'ve created - relive the moments'
+            ? '💝 Moments waiting to be made with loved ones'
+            : '📸 Beautiful memories you\'ve created together'
           }
         </Text>
       </View>
@@ -295,15 +295,15 @@ export default function MemoryBookScreen() {
           <Text style={styles.emptyTitle}>
             {hasActiveFilters
               ? 'No matching activities'
-              : (activeTab === 'saved' ? 'No saved adventures' : 'No completed adventures')
+              : (activeTab === 'saved' ? 'No saved moments yet' : 'No memories captured yet')
             }
           </Text>
           <Text style={styles.emptyText}>
             {hasActiveFilters
               ? 'Try adjusting your search or filters'
               : (activeTab === 'saved'
-                ? 'Start scratching cards and save activities\nyou want to try'
-                : 'Mark activities as complete to see\nthem appear here'
+                ? 'Start creating memories! Save activities\nyou want to experience with loved ones'
+                : 'Complete activities and capture photos\nto preserve your special moments together'
               )
             }
           </Text>

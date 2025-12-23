@@ -147,7 +147,7 @@ export default function HomeScreen() {
     
     Alert.alert(
       '💝 Saved!',
-      'Activity added to your Memory Book! Don\'t forget to capture photos when you do this activity to preserve the memories.',
+      'Activity saved to your Memory Book! Remember to capture photos during this special moment with your loved ones to preserve the memory forever.',
       [
         { text: 'Got it!', style: 'default' }
       ]
@@ -304,7 +304,7 @@ export default function HomeScreen() {
                 </View>
               </View>
               <Text style={styles.modeCardTitle}>Couples Mode</Text>
-              <Text style={styles.modeCardDescription}>Date night ideas for two</Text>
+              <Text style={styles.modeCardDescription}>Cherish moments together</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
@@ -384,7 +384,7 @@ export default function HomeScreen() {
                 </View>
               </View>
               <Text style={styles.modeCardTitle}>Family Mode</Text>
-              <Text style={styles.modeCardDescription}>Fun activities for everyone</Text>
+              <Text style={styles.modeCardDescription}>Build lasting family memories</Text>
             </TouchableOpacity>
           </View>
 
@@ -426,8 +426,8 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.titleSection}>
-          <Text style={styles.headline}>Scratch your next adventure</Text>
-          <Text style={styles.subheadline}>Choose your filters below and reveal something amazing</Text>
+          <Text style={styles.headline}>Create moments together</Text>
+          <Text style={styles.subheadline}>Discover your next memory with loved ones</Text>
         </View>
 
         <View style={styles.cardContainer}>

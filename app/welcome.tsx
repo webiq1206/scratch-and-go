@@ -219,9 +219,9 @@ export default function WelcomeScreen() {
       </View>
 
       <View style={styles.contentContainer}>
-        <Text style={styles.mainTagline}>Make every moment count.</Text>
+        <Text style={styles.mainTagline}>Create memories that last forever.</Text>
         <Text style={styles.subTagline}>
-          Discover personalized date ideas and{'\n'}family activities tailored just for you.
+          Discover meaningful moments to share{('\n')}with the people you love most.
         </Text>
 
         <TouchableOpacity
