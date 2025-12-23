@@ -27,7 +27,9 @@ export default function ScratchCard({
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
+      onStartShouldSetPanResponderCapture: () => true,
       onMoveShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponderCapture: () => true,
       onPanResponderGrant: (evt) => {
         const { locationX, locationY } = evt.nativeEvent;
         if (scratches.length === 0 && onScratchStart) {
@@ -39,6 +41,9 @@ export default function ScratchCard({
       onPanResponderMove: (evt) => {
         const { locationX, locationY } = evt.nativeEvent;
         addScratch(locationX, locationY);
+        if (scratches.length % 3 === 0) {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        }
       },
       onPanResponderRelease: () => {
         checkScratchProgress();
@@ -51,9 +56,9 @@ export default function ScratchCard({
   };
 
   const checkScratchProgress = () => {
-    const scratchPercentage = (scratches.length * 100) / 150;
+    const scratchPercentage = (scratches.length * 100) / 200;
     
-    if (scratchPercentage >= 60 && !isRevealed) {
+    if (scratchPercentage >= 50 && !isRevealed) {
       setIsRevealed(true);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       
@@ -118,9 +123,9 @@ const styles = StyleSheet.create({
   },
   scratchMark: {
     position: 'absolute',
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'transparent',
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
   },
 });

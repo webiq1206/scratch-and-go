@@ -213,7 +213,7 @@ export default function HomeScreen() {
             onScratchComplete={handleScratchComplete}
             scratchLayer={
               <LinearGradient
-                colors={['#FFD700', '#FFA500', '#FF8C00', '#FFD700']}
+                colors={[Colors.primaryGradientStart, Colors.primary, Colors.primaryDark, Colors.primaryGradientEnd]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.scratchLayer}
@@ -228,6 +228,7 @@ export default function HomeScreen() {
                 />
                 <View style={styles.scratchContent}>
                   <Text style={styles.scratchText}>Scratch Me</Text>
+                  <Text style={styles.scratchSubtext}>Drag to reveal</Text>
                 </View>
               </LinearGradient>
             }
@@ -421,6 +422,12 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0, 0, 0, 0.1)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
+  },
+  scratchSubtext: {
+    fontSize: Typography.sizes.body,
+    fontWeight: '400' as const,
+    color: Colors.backgroundDark,
+    opacity: 0.8,
   },
   revealContent: {
     flex: 1,
