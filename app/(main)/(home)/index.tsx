@@ -233,16 +233,16 @@ export default function HomeScreen() {
               <View style={styles.modeCardImageContainer}>
                 <View style={styles.polaroidGrid}>
                   <View style={[styles.polaroidColumn, styles.column1]}>
-                    <View style={[styles.polaroidFrame, { transform: [{ rotate: '-8deg' }] }]}>
+                    <View style={[styles.polaroidFrame, { transform: [{ rotate: '-12deg' }], marginTop: 5 }]}>
                       <Image 
-                        source={{ uri: 'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?w=400' }}
+                        source={{ uri: 'https://images.unsplash.com/photo-1522673607200-164d1b6ce486?w=400&q=80' }}
                         style={styles.polaroidPhoto}
                         resizeMode="cover"
                       />
                     </View>
-                    <View style={[styles.polaroidFrame, { transform: [{ rotate: '5deg' }] }]}>
+                    <View style={[styles.polaroidFrame, { transform: [{ rotate: '8deg' }], marginTop: -5 }]}>
                       <Image 
-                        source={{ uri: 'https://images.unsplash.com/photo-1511895426328-dc8714191300?w=400' }}
+                        source={{ uri: 'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?w=400&q=80' }}
                         style={styles.polaroidPhoto}
                         resizeMode="cover"
                       />
@@ -250,16 +250,16 @@ export default function HomeScreen() {
                   </View>
                   
                   <View style={[styles.polaroidColumn, styles.column2]}>
-                    <View style={[styles.polaroidFrame, { transform: [{ rotate: '4deg' }], marginTop: 30 }]}>
+                    <View style={[styles.polaroidFrame, { transform: [{ rotate: '6deg' }], marginTop: 40 }]}>
                       <Image 
-                        source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/projects/xz00xar8pn4xhtrdicpyk/generations/1735017775890_polaroid1.webp' }}
+                        source={{ uri: 'https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?w=400&q=80' }}
                         style={styles.polaroidPhoto}
                         resizeMode="cover"
                       />
                     </View>
-                    <View style={[styles.polaroidFrame, { transform: [{ rotate: '-3deg' }] }]}>
+                    <View style={[styles.polaroidFrame, { transform: [{ rotate: '-7deg' }], marginTop: 8 }]}>
                       <Image 
-                        source={{ uri: 'https://images.unsplash.com/photo-1495754149329-98d6f0b4f315?w=400' }}
+                        source={{ uri: 'https://images.unsplash.com/photo-1474552226712-ac0f0961a954?w=400&q=80' }}
                         style={styles.polaroidPhoto}
                         resizeMode="cover"
                       />
@@ -267,16 +267,16 @@ export default function HomeScreen() {
                   </View>
                   
                   <View style={[styles.polaroidColumn, styles.column3]}>
-                    <View style={[styles.polaroidFrame, { transform: [{ rotate: '-5deg' }], marginTop: 10 }]}>
+                    <View style={[styles.polaroidFrame, { transform: [{ rotate: '-9deg' }], marginTop: 18 }]}>
                       <Image 
-                        source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/projects/xz00xar8pn4xhtrdicpyk/generations/1735017775908_polaroid2.webp' }}
+                        source={{ uri: 'https://images.unsplash.com/photo-1518568814500-bf0f8d125f46?w=400&q=80' }}
                         style={styles.polaroidPhoto}
                         resizeMode="cover"
                       />
                     </View>
-                    <View style={[styles.polaroidFrame, { transform: [{ rotate: '6deg' }] }]}>
+                    <View style={[styles.polaroidFrame, { transform: [{ rotate: '5deg' }], marginTop: -3 }]}>
                       <Image 
-                        source={{ uri: 'https://images.unsplash.com/photo-1502086223501-7ea6ecd79368?w=400' }}
+                        source={{ uri: 'https://images.unsplash.com/photo-1530047625168-4b29bfbbe1fc?w=400&q=80' }}
                         style={styles.polaroidPhoto}
                         resizeMode="cover"
                       />
@@ -284,16 +284,16 @@ export default function HomeScreen() {
                   </View>
                   
                   <View style={[styles.polaroidColumn, styles.column4]}>
-                    <View style={[styles.polaroidFrame, { transform: [{ rotate: '7deg' }], marginTop: 45 }]}>
+                    <View style={[styles.polaroidFrame, { transform: [{ rotate: '11deg' }], marginTop: 52 }]}>
                       <Image 
-                        source={{ uri: 'https://images.unsplash.com/photo-1516589091380-5d8e87df6999?w=400' }}
+                        source={{ uri: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=400&q=80' }}
                         style={styles.polaroidPhoto}
                         resizeMode="cover"
                       />
                     </View>
-                    <View style={[styles.polaroidFrame, { transform: [{ rotate: '-4deg' }] }]}>
+                    <View style={[styles.polaroidFrame, { transform: [{ rotate: '-6deg' }], marginTop: 10 }]}>
                       <Image 
-                        source={{ uri: 'https://images.unsplash.com/photo-1532635241-17e820acc59f?w=400' }}
+                        source={{ uri: 'https://images.unsplash.com/photo-1502086223501-7ea6ecd79368?w=400&q=80' }}
                         style={styles.polaroidPhoto}
                         resizeMode="cover"
                       />
@@ -313,16 +313,16 @@ export default function HomeScreen() {
               <View style={styles.modeCardImageContainer}>
                 <View style={styles.polaroidGrid}>
                   <View style={[styles.polaroidColumn, styles.column1]}>
-                    <View style={[styles.polaroidFrame, { transform: [{ rotate: '6deg' }] }]}>
+                    <View style={[styles.polaroidFrame, { transform: [{ rotate: '10deg' }], marginTop: 8 }]}>
                       <Image 
-                        source={{ uri: 'https://images.unsplash.com/photo-1511895426328-dc8714191300?w=400' }}
+                        source={{ uri: 'https://images.unsplash.com/photo-1542831371-29b0f74f9713?w=400&q=80' }}
                         style={styles.polaroidPhoto}
                         resizeMode="cover"
                       />
                     </View>
-                    <View style={[styles.polaroidFrame, { transform: [{ rotate: '-7deg' }] }]}>
+                    <View style={[styles.polaroidFrame, { transform: [{ rotate: '-9deg' }], marginTop: -2 }]}>
                       <Image 
-                        source={{ uri: 'https://images.unsplash.com/photo-1542810634-71277d95dcbb?w=400' }}
+                        source={{ uri: 'https://images.unsplash.com/photo-1609220136736-443140cffec6?w=400&q=80' }}
                         style={styles.polaroidPhoto}
                         resizeMode="cover"
                       />
@@ -330,16 +330,16 @@ export default function HomeScreen() {
                   </View>
                   
                   <View style={[styles.polaroidColumn, styles.column2]}>
-                    <View style={[styles.polaroidFrame, { transform: [{ rotate: '-4deg' }], marginTop: 35 }]}>
+                    <View style={[styles.polaroidFrame, { transform: [{ rotate: '-5deg' }], marginTop: 45 }]}>
                       <Image 
-                        source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/projects/xz00xar8pn4xhtrdicpyk/generations/1735017775924_polaroid3.webp' }}
+                        source={{ uri: 'https://images.unsplash.com/photo-1476234251651-f353703a034d?w=400&q=80' }}
                         style={styles.polaroidPhoto}
                         resizeMode="cover"
                       />
                     </View>
-                    <View style={[styles.polaroidFrame, { transform: [{ rotate: '5deg' }] }]}>
+                    <View style={[styles.polaroidFrame, { transform: [{ rotate: '7deg' }], marginTop: 5 }]}>
                       <Image 
-                        source={{ uri: 'https://images.unsplash.com/photo-1511895426328-dc8714191300?w=400' }}
+                        source={{ uri: 'https://images.unsplash.com/photo-1511895426328-dc8714191300?w=400&q=80' }}
                         style={styles.polaroidPhoto}
                         resizeMode="cover"
                       />
@@ -347,16 +347,16 @@ export default function HomeScreen() {
                   </View>
                   
                   <View style={[styles.polaroidColumn, styles.column3]}>
-                    <View style={[styles.polaroidFrame, { transform: [{ rotate: '3deg' }], marginTop: 15 }]}>
+                    <View style={[styles.polaroidFrame, { transform: [{ rotate: '4deg' }], marginTop: 22 }]}>
                       <Image 
-                        source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/projects/xz00xar8pn4xhtrdicpyk/generations/1735017775941_polaroid4.webp' }}
+                        source={{ uri: 'https://images.unsplash.com/photo-1581625875194-dfd0f5008028?w=400&q=80' }}
                         style={styles.polaroidPhoto}
                         resizeMode="cover"
                       />
                     </View>
-                    <View style={[styles.polaroidFrame, { transform: [{ rotate: '-6deg' }] }]}>
+                    <View style={[styles.polaroidFrame, { transform: [{ rotate: '-8deg' }], marginTop: -5 }]}>
                       <Image 
-                        source={{ uri: 'https://images.unsplash.com/photo-1476234251651-f353703a034d?w=400' }}
+                        source={{ uri: 'https://images.unsplash.com/photo-1542810634-71277d95dcbb?w=400&q=80' }}
                         style={styles.polaroidPhoto}
                         resizeMode="cover"
                       />
@@ -364,16 +364,16 @@ export default function HomeScreen() {
                   </View>
                   
                   <View style={[styles.polaroidColumn, styles.column4]}>
-                    <View style={[styles.polaroidFrame, { transform: [{ rotate: '-5deg' }], marginTop: 50 }]}>
+                    <View style={[styles.polaroidFrame, { transform: [{ rotate: '-7deg' }], marginTop: 58 }]}>
                       <Image 
-                        source={{ uri: 'https://images.unsplash.com/photo-1609220136736-443140cffec6?w=400' }}
+                        source={{ uri: 'https://images.unsplash.com/photo-1587362195166-44e3e3f8e5d3?w=400&q=80' }}
                         style={styles.polaroidPhoto}
                         resizeMode="cover"
                       />
                     </View>
-                    <View style={[styles.polaroidFrame, { transform: [{ rotate: '8deg' }] }]}>
+                    <View style={[styles.polaroidFrame, { transform: [{ rotate: '9deg' }], marginTop: 8 }]}>
                       <Image 
-                        source={{ uri: 'https://images.unsplash.com/photo-1587362195166-44e3e3f8e5d3?w=400' }}
+                        source={{ uri: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&q=80' }}
                         style={styles.polaroidPhoto}
                         resizeMode="cover"
                       />
