@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Animated, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Animated, ActivityIndicator, Alert, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -21,7 +21,7 @@ const MODE_KEY = 'scratch_and_go_mode';
 type Mode = 'couples' | 'family';
 
 export default function HomeScreen() {
-  const [mode, setMode] = useState<Mode>('couples');
+  const [mode, setMode] = useState<Mode | null>(null);
   const [categoryFilter, setCategoryFilter] = useState('Any');
   const [budgetFilter, setBudgetFilter] = useState('Any');
   const [timingFilter, setTimingFilter] = useState('Anytime');
@@ -69,8 +69,13 @@ export default function HomeScreen() {
     }
   };
 
+  const handleModeSelection = async (selectedMode: Mode) => {
+    await AsyncStorage.setItem(MODE_KEY, selectedMode);
+    setMode(selectedMode);
+  };
+
   const handleScratchStart = async () => {
-    if (hasStartedScratch) return;
+    if (hasStartedScratch || !mode) return;
     
     if (isLimitReached) {
       Alert.alert(
@@ -109,6 +114,78 @@ export default function HomeScreen() {
     inputRange: [0, 1],
     outputRange: [-100, 100],
   });
+
+  if (!mode) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+        <View style={styles.modeSelectionContainer}>
+          <View style={styles.modeHeader}>
+            <Sparkles size={40} color="#FFD700" fill="#FFD700" />
+            <Text style={styles.modeTitle}>Scratch & Go</Text>
+            <Text style={styles.modeSubtitle}>Scratch your next adventure</Text>
+          </View>
+
+          <View style={styles.modeCardsContainer}>
+            <TouchableOpacity 
+              style={styles.modeCard}
+              onPress={() => handleModeSelection('couples')}
+              activeOpacity={0.9}
+            >
+              <View style={styles.modeCardImageContainer}>
+                <View style={styles.polaroidStack}>
+                  <View style={[styles.polaroidFrame, { transform: [{ rotate: '-8deg' }], zIndex: 2 }]}>
+                    <Image 
+                      source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/projects/xz00xar8pn4xhtrdicpyk/generations/1735017775890_polaroid1.webp' }}
+                      style={styles.polaroidPhoto}
+                      resizeMode="cover"
+                    />
+                  </View>
+                  <View style={[styles.polaroidFrame, { transform: [{ rotate: '5deg' }], zIndex: 1, position: 'absolute' }]}>
+                    <Image 
+                      source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/projects/xz00xar8pn4xhtrdicpyk/generations/1735017775908_polaroid2.webp' }}
+                      style={styles.polaroidPhoto}
+                      resizeMode="cover"
+                    />
+                  </View>
+                </View>
+              </View>
+              <Text style={styles.modeCardTitle}>Couples Mode</Text>
+              <Text style={styles.modeCardDescription}>Date night ideas for two</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.modeCard}
+              onPress={() => handleModeSelection('family')}
+              activeOpacity={0.9}
+            >
+              <View style={styles.modeCardImageContainer}>
+                <View style={styles.polaroidStack}>
+                  <View style={[styles.polaroidFrame, { transform: [{ rotate: '8deg' }], zIndex: 2 }]}>
+                    <Image 
+                      source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/projects/xz00xar8pn4xhtrdicpyk/generations/1735017775924_polaroid3.webp' }}
+                      style={styles.polaroidPhoto}
+                      resizeMode="cover"
+                    />
+                  </View>
+                  <View style={[styles.polaroidFrame, { transform: [{ rotate: '-5deg' }], zIndex: 1, position: 'absolute' }]}>
+                    <Image 
+                      source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/projects/xz00xar8pn4xhtrdicpyk/generations/1735017775941_polaroid4.webp' }}
+                      style={styles.polaroidPhoto}
+                      resizeMode="cover"
+                    />
+                  </View>
+                </View>
+              </View>
+              <Text style={styles.modeCardTitle}>Family Mode</Text>
+              <Text style={styles.modeCardDescription}>Fun activities for everyone</Text>
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.switchNote}>You can switch anytime</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -440,5 +517,85 @@ const styles = StyleSheet.create({
   },
   filterScroll: {
     paddingRight: Spacing.lg,
+  },
+  modeSelectionContainer: {
+    flex: 1,
+    backgroundColor: '#1A1A1A',
+    paddingHorizontal: Spacing.xl,
+    justifyContent: 'center',
+  },
+  modeHeader: {
+    alignItems: 'center',
+    marginBottom: Spacing.xxl * 2,
+  },
+  modeTitle: {
+    fontSize: 32,
+    fontWeight: Typography.weights.bold,
+    color: '#FFFFFF',
+    marginTop: Spacing.md,
+    marginBottom: Spacing.xs,
+  },
+  modeSubtitle: {
+    fontSize: Typography.sizes.body,
+    color: '#B8B8B8',
+  },
+  modeCardsContainer: {
+    gap: Spacing.lg,
+    marginBottom: Spacing.xl,
+  },
+  modeCard: {
+    backgroundColor: '#252525',
+    borderRadius: BorderRadius.large,
+    padding: Spacing.xl,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#333333',
+  },
+  modeCardImageContainer: {
+    marginBottom: Spacing.lg,
+    height: 100,
+    width: 100,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  polaroidStack: {
+    width: 100,
+    height: 100,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  polaroidFrame: {
+    width: 70,
+    height: 85,
+    backgroundColor: '#FFFFFF',
+    padding: 5,
+    paddingBottom: 15,
+    borderRadius: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  polaroidPhoto: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 2,
+  },
+  modeCardTitle: {
+    fontSize: Typography.sizes.h2,
+    fontWeight: Typography.weights.bold,
+    color: '#FFFFFF',
+    marginBottom: Spacing.xs,
+  },
+  modeCardDescription: {
+    fontSize: Typography.sizes.body,
+    color: '#B8B8B8',
+    textAlign: 'center',
+  },
+  switchNote: {
+    fontSize: Typography.sizes.small,
+    color: '#666666',
+    textAlign: 'center',
   },
 });
