@@ -16,20 +16,39 @@ function RootLayoutNav() {
   const { preferences, isLoading } = usePreferences();
   const segments = useSegments();
   const router = useRouter();
+  const hasNavigated = React.useRef(false);
 
   useEffect(() => {
+    console.log('[Navigation] isLoading:', isLoading, 'completedOnboarding:', preferences.completedOnboarding, 'segments:', segments);
+    
     if (isLoading) return;
+    if (hasNavigated.current) return;
 
-    const inMain = segments[0] === '(main)';
-    const inWelcome = segments[0] === 'welcome';
+    const handleNavigation = async () => {
+      try {
+        const inMain = segments[0] === '(main)';
+        const inWelcome = segments[0] === 'welcome';
 
-    if (!preferences.completedOnboarding && !inWelcome) {
-      router.replace('/welcome');
-    } else if (preferences.completedOnboarding && !inMain) {
-      router.replace('/(main)/(home)');
-    }
+        console.log('[Navigation] inMain:', inMain, 'inWelcome:', inWelcome);
 
-    SplashScreen.hideAsync();
+        if (!preferences.completedOnboarding && !inWelcome) {
+          console.log('[Navigation] Navigating to welcome');
+          router.replace('/welcome');
+        } else if (preferences.completedOnboarding && !inMain) {
+          console.log('[Navigation] Navigating to main');
+          router.replace('/(main)/(home)');
+        }
+
+        hasNavigated.current = true;
+        await SplashScreen.hideAsync();
+        console.log('[Navigation] Splash screen hidden');
+      } catch (error) {
+        console.error('[Navigation] Error:', error);
+        await SplashScreen.hideAsync();
+      }
+    };
+
+    handleNavigation();
   }, [isLoading, preferences.completedOnboarding, segments, router]);
 
   return (
