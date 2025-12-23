@@ -13,6 +13,7 @@ import FilterPill from '@/components/ui/FilterPill';
 import LocationSelector from '@/components/ui/LocationSelector';
 import { useActivity } from '@/contexts/ActivityContext';
 import { useLocation } from '@/contexts/LocationContext';
+import { useMemoryBook } from '@/contexts/MemoryBookContext';
 import { Filters } from '@/types/activity';
 
 const MODE_KEY = 'scratch_and_go_mode';
@@ -36,6 +37,8 @@ export default function HomeScreen() {
   } = useActivity();
 
   const { location } = useLocation();
+  const { saveActivity, isActivitySaved } = useMemoryBook();
+  const [isSaved, setIsSaved] = useState(false);
 
   useEffect(() => {
     const init = async () => {
@@ -86,6 +89,7 @@ export default function HomeScreen() {
     }
     
     setHasStartedScratch(true);
+    setIsSaved(false);
     
     const filters: Filters = {
       mode,
@@ -96,6 +100,19 @@ export default function HomeScreen() {
     };
     
     await generateActivity(filters);
+  };
+
+  const handleSaveActivity = () => {
+    if (!currentActivity || isSaved) return;
+    
+    saveActivity(currentActivity);
+    setIsSaved(true);
+    
+    Alert.alert(
+      '💖 Saved!',
+      'Activity added to your Memory Book',
+      [{ text: 'OK' }]
+    );
   };
 
   const handleScratchComplete = () => {
@@ -260,6 +277,19 @@ export default function HomeScreen() {
                         <Text style={styles.proTipText}>{currentActivity.proTip}</Text>
                       </View>
                     )}
+                    <TouchableOpacity
+                      style={[
+                        styles.saveButton,
+                        (isSaved || isActivitySaved(currentActivity.title)) && styles.saveButtonDisabled
+                      ]}
+                      onPress={handleSaveActivity}
+                      disabled={isSaved || isActivitySaved(currentActivity.title)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.saveButtonText}>
+                        {(isSaved || isActivitySaved(currentActivity.title)) ? '✓ Saved to Memory Book' : '💖 Save to Memory Book'}
+                      </Text>
+                    </TouchableOpacity>
                   </>
                 )}
               </View>
@@ -597,6 +627,25 @@ const styles = StyleSheet.create({
   switchNote: {
     fontSize: Typography.sizes.small,
     color: '#666666',
+    textAlign: 'center',
+  },
+  saveButton: {
+    backgroundColor: Colors.primary,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.xl,
+    borderRadius: BorderRadius.medium,
+    marginTop: Spacing.lg,
+    minWidth: 200,
+  },
+  saveButtonDisabled: {
+    backgroundColor: Colors.cardBackground,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  saveButtonText: {
+    fontSize: Typography.sizes.body,
+    fontWeight: '400' as const,
+    color: Colors.text,
     textAlign: 'center',
   },
 });
