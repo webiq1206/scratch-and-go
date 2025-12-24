@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, Animated, ActivityIndicator, Alert, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Animated, ActivityIndicator, Alert, TouchableOpacity, Image, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -10,29 +10,38 @@ import Spacing from '@/constants/spacing';
 import { BorderRadius } from '@/constants/design';
 
 import ScratchCard from '@/components/ui/ScratchCard';
-import FilterPill from '@/components/ui/FilterPill';
 import LocationSelector from '@/components/ui/LocationSelector';
 import { useActivity } from '@/contexts/ActivityContext';
 import { useLocation } from '@/contexts/LocationContext';
 import { useMemoryBook } from '@/contexts/MemoryBookContext';
 import { useSubscription } from '@/contexts/SubscriptionContext';
+
 import { Filters } from '@/types/activity';
 import { shareActivity } from '@/utils/shareActivity';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const MODE_KEY = 'scratch_and_go_mode';
 
 type Mode = 'couples' | 'family';
 
+type WizardStep = 'welcome' | 'category' | 'budget' | 'timing' | 'setting' | 'summary';
+
+interface WizardAnswers {
+  category?: string;
+  budget?: string;
+  timing?: string;
+  setting?: 'indoor' | 'outdoor' | 'either';
+}
+
 export default function HomeScreen() {
   const router = useRouter();
   const [mode, setMode] = useState<Mode | null>(null);
-  const [categoryFilter, setCategoryFilter] = useState('Any');
-  const [budgetFilter, setBudgetFilter] = useState('Any');
-  const [timingFilter, setTimingFilter] = useState('Anytime');
+  const [wizardStep, setWizardStep] = useState<WizardStep>('welcome');
+  const [wizardAnswers, setWizardAnswers] = useState<WizardAnswers>({});
   const [hasStartedScratch, setHasStartedScratch] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
   const shimmerAnim = useState(new Animated.Value(0))[0];
-  const fadeAnim = useState(new Animated.Value(0))[0];
+  const slideAnim = useState(new Animated.Value(0))[0];
   const scrollViewRef = useRef<ScrollView>(null);
   const [scrollEnabled, setScrollEnabled] = useState(true);
   
@@ -60,17 +69,13 @@ export default function HomeScreen() {
   }, []);
 
   useEffect(() => {
-    if (mode && !showFilters) {
-      setTimeout(() => {
-        setShowFilters(true);
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 600,
-          useNativeDriver: true,
-        }).start();
-      }, 300);
-    }
-  }, [mode, showFilters, fadeAnim]);
+    Animated.spring(slideAnim, {
+      toValue: 0,
+      friction: 8,
+      tension: 40,
+      useNativeDriver: true,
+    }).start();
+  }, [wizardStep, slideAnim]);
 
   useEffect(() => {
     Animated.loop(
@@ -111,11 +116,11 @@ export default function HomeScreen() {
     return getPremiumCategories().includes(category);
   };
 
-  const handleCategorySelect = (category: string) => {
-    if (isCategoryPremium(category) && !isPremium) {
+  const handleWizardAnswer = (key: keyof WizardAnswers, value: string | 'indoor' | 'outdoor' | 'either') => {
+    if (key === 'category' && isCategoryPremium(value as string) && !isPremium) {
       Alert.alert(
         'Premium Category',
-        `'${category}' is a premium category. Upgrade to unlock exclusive activity categories!`,
+        `'${value}' is a premium category. Upgrade to unlock exclusive activity categories!`,
         [
           { text: 'Not Now', style: 'cancel' },
           { text: 'Upgrade', onPress: () => router.push('/paywall') }
@@ -123,21 +128,44 @@ export default function HomeScreen() {
       );
       return;
     }
-    setCategoryFilter(category);
+
+    slideAnim.setValue(SCREEN_WIDTH);
+    setWizardAnswers(prev => ({ ...prev, [key]: value }));
+    
+    const stepOrder: WizardStep[] = ['welcome', 'category', 'budget', 'timing', 'setting', 'summary'];
+    const currentIndex = stepOrder.indexOf(wizardStep);
+    if (currentIndex < stepOrder.length - 1) {
+      setWizardStep(stepOrder[currentIndex + 1]);
+    }
   };
 
-  const getPersonalizedPrompt = () => {
-    if (!hasSelectedFilters) {
-      return "Ready to discover something amazing? Let's personalize your adventure! 🎯";
+  const handleWizardBack = () => {
+    const stepOrder: WizardStep[] = ['welcome', 'category', 'budget', 'timing', 'setting', 'summary'];
+    const currentIndex = stepOrder.indexOf(wizardStep);
+    if (currentIndex > 0) {
+      slideAnim.setValue(-SCREEN_WIDTH);
+      setWizardStep(stepOrder[currentIndex - 1]);
     }
-    
-    const prompts = [
-      `Perfect choice! This is going to be amazing 💫`,
-      `Love it! Your next memory is just a scratch away ✨`,
-      `Great selection! Time to reveal something special 🎉`,
-      `Awesome! Let's make this moment unforgettable 💝`,
-    ];
-    return prompts[Math.floor(Math.random() * prompts.length)];
+  };
+
+  const handleStartWizard = () => {
+    setWizardAnswers({});
+    setWizardStep('category');
+    slideAnim.setValue(SCREEN_WIDTH);
+  };
+
+  const handleRestartWizard = () => {
+    setWizardAnswers({});
+    setWizardStep('welcome');
+    setHasStartedScratch(false);
+    clearCurrentActivity();
+  };
+
+  const getWizardProgress = () => {
+    const steps = ['category', 'budget', 'timing', 'setting'];
+    const currentIndex = steps.indexOf(wizardStep);
+    if (currentIndex === -1) return 0;
+    return ((currentIndex + 1) / steps.length) * 100;
   };
 
   const handleScratchStart = async () => {
@@ -161,9 +189,10 @@ export default function HomeScreen() {
     
     const filters: Filters = {
       mode,
-      category: categoryFilter,
-      budget: budgetFilter,
-      timing: timingFilter,
+      category: wizardAnswers.category || 'Any',
+      budget: wizardAnswers.budget || 'Any',
+      timing: wizardAnswers.timing || 'Anytime',
+      setting: wizardAnswers.setting,
       location: location || undefined,
     };
     
@@ -213,7 +242,7 @@ export default function HomeScreen() {
     
     Alert.alert(
       'Not Interested',
-      'This helps us learn your preferences. We\'ll avoid suggesting similar activities in the future.',
+      'This helps us learn your preferences. We&apos;ll avoid suggesting similar activities in the future.',
       [
         { text: 'Cancel', style: 'cancel' },
         { 
@@ -237,48 +266,370 @@ export default function HomeScreen() {
     setHasStartedScratch(false);
     setIsSaved(false);
     setScrollEnabled(true);
+    setWizardStep('welcome');
+    setWizardAnswers({});
   };
 
   const categories = mode === 'couples' 
     ? [
-        { label: 'Any' },
-        { label: 'Chill' },
-        { label: 'Active' },
-        { label: 'Creative' },
-        { label: 'Foodie' },
-        { label: 'Adventure' },
+        { label: 'Chill', emoji: '☕', description: 'Low-key vibes' },
+        { label: 'Active', emoji: '⚡', description: 'Get moving' },
+        { label: 'Creative', emoji: '🎨', description: 'Make something' },
+        { label: 'Foodie', emoji: '🍽️', description: 'Taste & explore' },
+        { label: 'Adventure', emoji: '🌟', description: 'Try new things' },
       ]
     : [
-        { label: 'Any' },
-        { label: 'Chill' },
-        { label: 'Active' },
-        { label: 'Creative' },
-        { label: 'Educational' },
-        { label: 'Outdoor' },
+        { label: 'Chill', emoji: '☕', description: 'Relax together' },
+        { label: 'Active', emoji: '⚡', description: 'Fun & energetic' },
+        { label: 'Creative', emoji: '🎨', description: 'Arts & crafts' },
+        { label: 'Educational', emoji: '📚', description: 'Learn together' },
+        { label: 'Outdoor', emoji: '🌳', description: 'Nature fun' },
       ];
 
   const budgetOptions = [
-    { label: 'Any', description: 'Surprise me' },
-    { label: 'Free', description: 'No cost' },
-    { label: '$', description: 'Budget' },
-    { label: '$$', description: 'Moderate' },
-    { label: '$$$', description: 'Splurge' },
+    { label: 'Free', emoji: '💚', description: 'No cost at all' },
+    { label: '$', emoji: '💵', description: 'Under $25' },
+    { label: '$$', emoji: '💰', description: '$25 - $75' },
+    { label: '$$$', emoji: '💎', description: '$75+' },
   ];
   
   const timingOptions = [
-    { label: 'Anytime', description: 'Flexible' },
-    { label: 'Quick (1-2h)', description: 'Quick fun' },
-    { label: 'Half Day', description: '3-5 hours' },
-    { label: 'Full Day', description: 'All day' },
+    { label: 'Quick (1-2h)', emoji: '⚡', description: 'Perfect for busy days' },
+    { label: 'Half Day', emoji: '☀️', description: '3-5 hours of fun' },
+    { label: 'Full Day', emoji: '🌅', description: 'Make it epic' },
   ];
 
-  const hasSelectedFilters = categoryFilter !== 'Any' || budgetFilter !== 'Any' || timingFilter !== 'Anytime';
-  const isScratchDisabled = !hasSelectedFilters || hasStartedScratch;
+  const settingOptions = [
+    { label: 'Indoor', value: 'indoor' as const, emoji: '🏠', description: 'Cozy & comfortable' },
+    { label: 'Outdoor', value: 'outdoor' as const, emoji: '🌤️', description: 'Fresh air & nature' },
+    { label: 'Either', value: 'either' as const, emoji: '✨', description: 'Surprise me!' },
+  ];
 
   const shimmerTranslate = shimmerAnim.interpolate({
     inputRange: [0, 1],
     outputRange: [-100, 100],
   });
+
+  const renderWizardContent = () => {
+    const slideTransform = slideAnim.interpolate({
+      inputRange: [-SCREEN_WIDTH, 0, SCREEN_WIDTH],
+      outputRange: [-SCREEN_WIDTH, 0, SCREEN_WIDTH],
+    });
+
+    const opacity = slideAnim.interpolate({
+      inputRange: [-SCREEN_WIDTH, 0, SCREEN_WIDTH],
+      outputRange: [0, 1, 0],
+    });
+
+    switch (wizardStep) {
+      case 'welcome':
+        return (
+          <Animated.View style={[styles.wizardContent, { transform: [{ translateX: slideTransform }], opacity }]}>
+            <View style={styles.welcomeContainer}>
+              <Text style={styles.welcomeEmoji}>✨</Text>
+              <Text style={styles.welcomeTitle}>
+                Let&apos;s create a{mode === 'couples' ? ' romantic' : 'n unforgettable'} moment
+              </Text>
+              <Text style={styles.welcomeDescription}>
+                {mode === 'couples' 
+                  ? 'Answer a few quick questions and we&apos;ll find the perfect experience to share with your partner'
+                  : 'Answer a few questions to discover the perfect family activity everyone will love'
+                }
+              </Text>
+              <TouchableOpacity
+                style={styles.startButton}
+                onPress={handleStartWizard}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.startButtonText}>Let&apos;s Go! 🎯</Text>
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+        );
+
+      case 'category':
+        return (
+          <Animated.View style={[styles.wizardContent, { transform: [{ translateX: slideTransform }], opacity }]}>
+            <View style={styles.questionContainer}>
+              <Text style={styles.questionNumber}>Question 1 of 4</Text>
+              <Text style={styles.questionTitle}>
+                What kind of vibe are {mode === 'couples' ? 'you two' : 'you all'} feeling?
+              </Text>
+              <Text style={styles.questionSubtitle}>Pick what matches your mood today</Text>
+              
+              <View style={styles.optionsGrid}>
+                {categories.map((cat) => (
+                  <TouchableOpacity
+                    key={cat.label}
+                    style={[
+                      styles.optionCard,
+                      wizardAnswers.category === cat.label && styles.optionCardSelected,
+                    ]}
+                    onPress={() => handleWizardAnswer('category', cat.label)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.optionEmoji}>{cat.emoji}</Text>
+                    <Text style={styles.optionLabel}>{cat.label}</Text>
+                    <Text style={styles.optionDescription}>{cat.description}</Text>
+                    {isCategoryPremium(cat.label) && !isPremium && (
+                      <View style={styles.premiumTag}>
+                        <Text style={styles.premiumTagText}>PRO</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </Animated.View>
+        );
+
+      case 'budget':
+        return (
+          <Animated.View style={[styles.wizardContent, { transform: [{ translateX: slideTransform }], opacity }]}>
+            <View style={styles.questionContainer}>
+              <Text style={styles.questionNumber}>Question 2 of 4</Text>
+              <Text style={styles.questionTitle}>What&apos;s your budget for this?</Text>
+              <Text style={styles.questionSubtitle}>Be honest - every budget makes memories</Text>
+              
+              <View style={styles.optionsGrid}>
+                {budgetOptions.map((budget) => (
+                  <TouchableOpacity
+                    key={budget.label}
+                    style={[
+                      styles.optionCard,
+                      wizardAnswers.budget === budget.label && styles.optionCardSelected,
+                    ]}
+                    onPress={() => handleWizardAnswer('budget', budget.label)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.optionEmoji}>{budget.emoji}</Text>
+                    <Text style={styles.optionLabel}>{budget.label}</Text>
+                    <Text style={styles.optionDescription}>{budget.description}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </Animated.View>
+        );
+
+      case 'timing':
+        return (
+          <Animated.View style={[styles.wizardContent, { transform: [{ translateX: slideTransform }], opacity }]}>
+            <View style={styles.questionContainer}>
+              <Text style={styles.questionNumber}>Question 3 of 4</Text>
+              <Text style={styles.questionTitle}>How much time do you have?</Text>
+              <Text style={styles.questionSubtitle}>Quality matters more than quantity</Text>
+              
+              <View style={styles.optionsGrid}>
+                {timingOptions.map((timing) => (
+                  <TouchableOpacity
+                    key={timing.label}
+                    style={[
+                      styles.optionCard,
+                      wizardAnswers.timing === timing.label && styles.optionCardSelected,
+                    ]}
+                    onPress={() => handleWizardAnswer('timing', timing.label)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.optionEmoji}>{timing.emoji}</Text>
+                    <Text style={styles.optionLabel}>{timing.label}</Text>
+                    <Text style={styles.optionDescription}>{timing.description}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </Animated.View>
+        );
+
+      case 'setting':
+        return (
+          <Animated.View style={[styles.wizardContent, { transform: [{ translateX: slideTransform }], opacity }]}>
+            <View style={styles.questionContainer}>
+              <Text style={styles.questionNumber}>Question 4 of 4</Text>
+              <Text style={styles.questionTitle}>Indoor or outdoor?</Text>
+              <Text style={styles.questionSubtitle}>
+                {location?.weather ? `Currently ${location.weather.temp}°F and ${location.weather.condition.toLowerCase()}` : 'What sounds better right now?'}
+              </Text>
+              
+              <View style={styles.optionsGrid}>
+                {settingOptions.map((setting) => (
+                  <TouchableOpacity
+                    key={setting.value}
+                    style={[
+                      styles.optionCard,
+                      wizardAnswers.setting === setting.value && styles.optionCardSelected,
+                    ]}
+                    onPress={() => handleWizardAnswer('setting', setting.value)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.optionEmoji}>{setting.emoji}</Text>
+                    <Text style={styles.optionLabel}>{setting.label}</Text>
+                    <Text style={styles.optionDescription}>{setting.description}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </Animated.View>
+        );
+
+      case 'summary':
+        return (
+          <Animated.View style={[styles.wizardContent, { transform: [{ translateX: slideTransform }], opacity }]}>
+            <View style={styles.summaryContainer}>
+              <Text style={styles.summaryEmoji}>🎉</Text>
+              <Text style={styles.summaryTitle}>Perfect! Here&apos;s what we found:</Text>
+              
+              <View style={styles.summaryCard}>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>Vibe</Text>
+                  <Text style={styles.summaryValue}>{wizardAnswers.category}</Text>
+                </View>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>Budget</Text>
+                  <Text style={styles.summaryValue}>{wizardAnswers.budget}</Text>
+                </View>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>Time</Text>
+                  <Text style={styles.summaryValue}>{wizardAnswers.timing}</Text>
+                </View>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>Setting</Text>
+                  <Text style={styles.summaryValue}>
+                    {wizardAnswers.setting === 'indoor' ? 'Indoor' : wizardAnswers.setting === 'outdoor' ? 'Outdoor' : 'Either'}
+                  </Text>
+                </View>
+              </View>
+
+              <Text style={styles.summaryDescription}>
+                Time to reveal your personalized {mode === 'couples' ? 'date' : 'family activity'}!
+              </Text>
+
+              <View style={styles.cardContainer}>
+                <ScratchCard
+                  disabled={hasStartedScratch}
+                  onScratchStart={handleScratchStart}
+                  onScratchComplete={handleScratchComplete}
+                  scratchLayer={
+                    <LinearGradient
+                      colors={[Colors.primaryGradientStart, Colors.primary, Colors.primaryDark, Colors.primaryGradientEnd]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.scratchLayer}
+                    >
+                      <Animated.View
+                        style={[
+                          styles.shimmer,
+                          {
+                            transform: [{ translateX: shimmerTranslate }],
+                          },
+                        ]}
+                      />
+                      <View style={styles.scratchContent}>
+                        <Text style={styles.scratchText}>Scratch Me</Text>
+                        <Text style={styles.scratchSubtext}>Reveal your moment</Text>
+                      </View>
+                    </LinearGradient>
+                  }
+                  revealContent={
+                    <View style={styles.revealContent}>
+                      {isGenerating || !currentActivity ? (
+                        <>
+                          <ActivityIndicator size="large" color={Colors.primary} />
+                          <Text style={styles.revealTitle}>Creating your adventure...</Text>
+                        </>
+                      ) : (
+                        <>
+                          <Text style={styles.revealEmoji}>{currentActivity.emoji}</Text>
+                          <Text style={styles.revealTitle}>{currentActivity.title}</Text>
+                          <Text style={styles.revealDescription}>{currentActivity.description}</Text>
+                          {location?.weather && (
+                            <View style={styles.weatherBox}>
+                              <Text style={styles.weatherIcon}>{location.weather.icon}</Text>
+                              <View style={styles.weatherInfo}>
+                                <Text style={styles.weatherTemp}>{location.weather.temp}°F</Text>
+                                <Text style={styles.weatherCondition}>{location.weather.condition}</Text>
+                              </View>
+                            </View>
+                          )}
+                          <View style={styles.statsRow}>
+                            <View style={styles.statItem}>
+                              <Text style={styles.statLabel}>Duration</Text>
+                              <Text style={styles.statValue}>{currentActivity.duration}</Text>
+                            </View>
+                            <View style={styles.statItem}>
+                              <Text style={styles.statLabel}>Cost</Text>
+                              <Text style={styles.statValue}>{currentActivity.cost === 'free' ? 'Free' : currentActivity.cost}</Text>
+                            </View>
+                          </View>
+                          {currentActivity.proTip && (
+                            <View style={styles.proTipBox}>
+                              <Text style={styles.proTipLabel}>💡 Pro Tip</Text>
+                              <Text style={styles.proTipText}>{currentActivity.proTip}</Text>
+                            </View>
+                          )}
+                          <View style={styles.actionButtons}>
+                            <TouchableOpacity
+                              style={[
+                                styles.saveButton,
+                                (isSaved || isActivitySaved(currentActivity.title)) && styles.saveButtonDisabled
+                              ]}
+                              onPress={handleSaveActivity}
+                              disabled={isSaved || isActivitySaved(currentActivity.title)}
+                              activeOpacity={0.7}
+                            >
+                              <View style={styles.saveButtonContent}>
+                                <Text style={styles.saveButtonText}>
+                                  {(isSaved || isActivitySaved(currentActivity.title)) ? 'Saved to Memory Book' : 'Save to Memory Book'}
+                                </Text>
+                              </View>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={styles.shareButton}
+                              onPress={handleShareActivity}
+                              disabled={isSharing}
+                              activeOpacity={0.7}
+                            >
+                              <Text style={styles.shareButtonText}>Share</Text>
+                            </TouchableOpacity>
+                          </View>
+                          <View style={styles.secondaryActions}>
+                            <TouchableOpacity
+                              style={styles.notInterestedButton}
+                              onPress={handleNotInterested}
+                              activeOpacity={0.7}
+                            >
+                              <Text style={styles.notInterestedText}>Not Interested</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={styles.tryAgainButton}
+                              onPress={handleTryAgain}
+                              activeOpacity={0.7}
+                            >
+                              <Text style={styles.tryAgainText}>Try Again</Text>
+                            </TouchableOpacity>
+                          </View>
+                        </>
+                      )}
+                    </View>
+                  }
+                />
+              </View>
+
+              <TouchableOpacity
+                style={styles.changeAnswersButton}
+                onPress={handleRestartWizard}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.changeAnswersText}>↻ Change Answers</Text>
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+        );
+
+      default:
+        return null;
+    }
+  };
 
   if (!mode) {
     return (
@@ -490,211 +841,36 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
         scrollEnabled={scrollEnabled}
       >
-        <View style={styles.titleSection}>
-          <Text style={styles.headline}>Create moments together</Text>
-          <Text style={styles.subheadline}>Discover your next memory with loved ones</Text>
-        </View>
-
-        <View style={styles.personalizedPrompt}>
-          <Text style={styles.personalizedPromptText}>{getPersonalizedPrompt()}</Text>
-        </View>
-
-        <View style={styles.cardContainer}>
-          <ScratchCard
-            disabled={isScratchDisabled}
-            onScratchStart={handleScratchStart}
-            onScratchComplete={handleScratchComplete}
-            scratchLayer={
-              <LinearGradient
-                colors={
-                  isScratchDisabled
-                    ? ['#666666', '#555555', '#444444', '#333333']
-                    : [Colors.primaryGradientStart, Colors.primary, Colors.primaryDark, Colors.primaryGradientEnd]
-                }
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.scratchLayer}
-              >
-                {!isScratchDisabled && (
-                  <Animated.View
-                    style={[
-                      styles.shimmer,
-                      {
-                        transform: [{ translateX: shimmerTranslate }],
-                      },
-                    ]}
-                  />
-                )}
-                <View style={styles.scratchContent}>
-                  <Text style={styles.scratchText}>
-                    {isScratchDisabled ? 'Select Filters' : 'Scratch Me'}
-                  </Text>
-                  <Text style={styles.scratchSubtext}>
-                    {isScratchDisabled ? 'Choose preferences first' : 'Drag to reveal'}
-                  </Text>
-                </View>
-              </LinearGradient>
-            }
-            revealContent={
-              <View style={styles.revealContent}>
-                {isGenerating || !currentActivity ? (
-                  <>
-                    <ActivityIndicator size="large" color={Colors.primary} />
-                    <Text style={styles.revealTitle}>Creating your adventure...</Text>
-                  </>
-                ) : (
-                  <>
-                    <Text style={styles.revealEmoji}>{currentActivity.emoji}</Text>
-                    <Text style={styles.revealTitle}>{currentActivity.title}</Text>
-                    <Text style={styles.revealDescription}>{currentActivity.description}</Text>
-                    {location?.weather && (
-                      <View style={styles.weatherBox}>
-                        <Text style={styles.weatherIcon}>{location.weather.icon}</Text>
-                        <View style={styles.weatherInfo}>
-                          <Text style={styles.weatherTemp}>{location.weather.temp}°F</Text>
-                          <Text style={styles.weatherCondition}>{location.weather.condition}</Text>
-                        </View>
-                      </View>
-                    )}
-                    <View style={styles.statsRow}>
-                      <View style={styles.statItem}>
-                        <Text style={styles.statLabel}>Duration</Text>
-                        <Text style={styles.statValue}>{currentActivity.duration}</Text>
-                      </View>
-                      <View style={styles.statItem}>
-                        <Text style={styles.statLabel}>Cost</Text>
-                        <Text style={styles.statValue}>{currentActivity.cost === 'free' ? 'Free' : currentActivity.cost}</Text>
-                      </View>
-                    </View>
-                    {currentActivity.proTip && (
-                      <View style={styles.proTipBox}>
-                        <Text style={styles.proTipLabel}>💡 Pro Tip</Text>
-                        <Text style={styles.proTipText}>{currentActivity.proTip}</Text>
-                      </View>
-                    )}
-                    <View style={styles.actionButtons}>
-                      <TouchableOpacity
-                        style={[
-                          styles.saveButton,
-                          (isSaved || isActivitySaved(currentActivity.title)) && styles.saveButtonDisabled
-                        ]}
-                        onPress={handleSaveActivity}
-                        disabled={isSaved || isActivitySaved(currentActivity.title)}
-                        activeOpacity={0.7}
-                      >
-                        <View style={styles.saveButtonContent}>
-                          <Text style={styles.saveButtonText}>
-                            {(isSaved || isActivitySaved(currentActivity.title)) ? 'Saved to Memory Book' : 'Save to Memory Book'}
-                          </Text>
-                        </View>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={styles.shareButton}
-                        onPress={handleShareActivity}
-                        disabled={isSharing}
-                        activeOpacity={0.7}
-                      >
-                        <Text style={styles.shareButtonText}>Share</Text>
-                      </TouchableOpacity>
-                    </View>
-                    <View style={styles.secondaryActions}>
-                      <TouchableOpacity
-                        style={styles.notInterestedButton}
-                        onPress={handleNotInterested}
-                        activeOpacity={0.7}
-                      >
-                        <Text style={styles.notInterestedText}>Not Interested</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={styles.tryAgainButton}
-                        onPress={handleTryAgain}
-                        activeOpacity={0.7}
-                      >
-                        <Text style={styles.tryAgainText}>Try Again</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </>
-                )}
-              </View>
-            }
-          />
-        </View>
-
-        <View style={styles.scratchCountContainer}>
-          <Text style={styles.scratchCountText}>
-            {isPremium ? '✨ Unlimited scratches' : `${remainingScratches} scratches remaining this month`}
-          </Text>
-        </View>
-
-        {showFilters && (
-          <Animated.View style={[styles.filtersSection, { opacity: fadeAnim }]}>
-            <View style={styles.filterRow}>
-              <View style={styles.filterHeader}>
-                <Text style={styles.filterQuestion}>What&apos;s the vibe? 🎭</Text>
-                <Text style={styles.filterHint}>Pick what matches your mood</Text>
-              </View>
-              <ScrollView 
-                horizontal 
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.filterScroll}
-              >
-                {categories.map((cat) => (
-                  <FilterPill
-                    key={cat.label}
-                    label={cat.label}
-                    selected={categoryFilter === cat.label}
-                    onPress={() => handleCategorySelect(cat.label)}
-                    isPremium={isCategoryPremium(cat.label)}
-                    showPremiumBadge={isPremium}
-                  />
-                ))}
-              </ScrollView>
+        {wizardStep !== 'summary' && (
+          <View style={styles.progressContainer}>
+            <View style={styles.progressBarBackground}>
+              <Animated.View 
+                style={[
+                  styles.progressBarFill,
+                  { width: `${getWizardProgress()}%` }
+                ]}
+              />
             </View>
-
-            <View style={styles.filterRow}>
-              <View style={styles.filterHeader}>
-                <Text style={styles.filterQuestion}>What&apos;s the budget? 💰</Text>
-                <Text style={styles.filterHint}>How much do you want to spend?</Text>
-              </View>
-              <ScrollView 
-                horizontal 
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.filterScroll}
+            {wizardStep !== 'welcome' && (
+              <TouchableOpacity
+                style={styles.backButton}
+                onPress={handleWizardBack}
+                activeOpacity={0.7}
               >
-                {budgetOptions.map((budget) => (
-                  <FilterPill
-                    key={budget.label}
-                    label={budget.label}
-                    description={budget.description}
-                    selected={budgetFilter === budget.label}
-                    onPress={() => setBudgetFilter(budget.label)}
-                  />
-                ))}
-              </ScrollView>
-            </View>
+                <Text style={styles.backButtonText}>← Back</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
 
-            <View style={styles.filterRow}>
-              <View style={styles.filterHeader}>
-                <Text style={styles.filterQuestion}>How much time? ⏰</Text>
-                <Text style={styles.filterHint}>Pick your perfect duration</Text>
-              </View>
-              <ScrollView 
-                horizontal 
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.filterScroll}
-              >
-                {timingOptions.map((timing) => (
-                  <FilterPill
-                    key={timing.label}
-                    label={timing.label}
-                    description={timing.description}
-                    selected={timingFilter === timing.label}
-                    onPress={() => setTimingFilter(timing.label)}
-                  />
-                ))}
-              </ScrollView>
-            </View>
-          </Animated.View>
+        {renderWizardContent()}
+
+        {wizardStep === 'summary' && (
+          <View style={styles.scratchCountContainer}>
+            <Text style={styles.scratchCountText}>
+              {isPremium ? '✨ Unlimited scratches' : `${remainingScratches} scratches remaining this month`}
+            </Text>
+          </View>
         )}
       </ScrollView>
     </SafeAreaView>
@@ -763,39 +939,6 @@ const styles = StyleSheet.create({
   contentContainer: {
     paddingHorizontal: Spacing.lg,
     paddingBottom: Spacing.xl,
-  },
-  titleSection: {
-    marginBottom: Spacing.xl,
-    paddingHorizontal: Spacing.sm,
-  },
-  headline: {
-    fontSize: Typography.sizes.hero,
-    fontWeight: '400' as const,
-    color: Colors.text,
-    marginBottom: Spacing.sm,
-    textAlign: 'center',
-  },
-  subheadline: {
-    fontSize: Typography.sizes.body,
-    color: Colors.textLight,
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-  personalizedPrompt: {
-    backgroundColor: Colors.primary + '15',
-    paddingVertical: Spacing.lg,
-    paddingHorizontal: Spacing.xl,
-    borderRadius: BorderRadius.large,
-    marginBottom: Spacing.xl,
-    borderWidth: 1,
-    borderColor: Colors.primary + '30',
-  },
-  personalizedPromptText: {
-    fontSize: Typography.sizes.h3,
-    color: Colors.primary,
-    textAlign: 'center',
-    fontWeight: '400' as const,
-    lineHeight: 24,
   },
   cardContainer: {
     marginBottom: Spacing.xl,
@@ -939,29 +1082,6 @@ const styles = StyleSheet.create({
     fontSize: Typography.sizes.caption,
     color: Colors.textLight,
     fontWeight: '400' as const,
-  },
-  filtersSection: {
-    gap: Spacing.xl,
-  },
-  filterRow: {
-    gap: Spacing.md,
-  },
-  filterHeader: {
-    marginBottom: Spacing.xs,
-  },
-  filterQuestion: {
-    fontSize: Typography.sizes.h3,
-    fontWeight: '400' as const,
-    color: Colors.text,
-    marginBottom: 4,
-  },
-  filterHint: {
-    fontSize: Typography.sizes.caption,
-    color: Colors.textLight,
-    fontWeight: '400' as const,
-  },
-  filterScroll: {
-    paddingRight: Spacing.lg,
   },
   modeSelectionContainer: {
     flex: 1,
@@ -1135,6 +1255,204 @@ const styles = StyleSheet.create({
   tryAgainText: {
     fontSize: Typography.sizes.caption,
     fontWeight: '400' as const,
+    color: Colors.textSecondary,
+  },
+  wizardContent: {
+    flex: 1,
+    minHeight: 500,
+  },
+  welcomeContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.xxl,
+  },
+  welcomeEmoji: {
+    fontSize: 80,
+    marginBottom: Spacing.lg,
+  },
+  welcomeTitle: {
+    fontSize: Typography.sizes.h1,
+    fontWeight: '400' as const,
+    color: Colors.text,
+    textAlign: 'center',
+    marginBottom: Spacing.md,
+    lineHeight: 36,
+  },
+  welcomeDescription: {
+    fontSize: Typography.sizes.body,
+    color: Colors.textLight,
+    textAlign: 'center',
+    marginBottom: Spacing.xxl,
+    lineHeight: 24,
+    paddingHorizontal: Spacing.md,
+  },
+  startButton: {
+    backgroundColor: Colors.primary,
+    paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing.xxl * 2,
+    borderRadius: BorderRadius.large,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  startButtonText: {
+    fontSize: Typography.sizes.h3,
+    fontWeight: '400' as const,
+    color: Colors.backgroundDark,
+  },
+  questionContainer: {
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.xl,
+  },
+  questionNumber: {
+    fontSize: Typography.sizes.caption,
+    color: Colors.textLight,
+    textTransform: 'uppercase',
+    marginBottom: Spacing.sm,
+    fontWeight: '400' as const,
+  },
+  questionTitle: {
+    fontSize: Typography.sizes.h1,
+    fontWeight: '400' as const,
+    color: Colors.text,
+    marginBottom: Spacing.xs,
+    lineHeight: 32,
+  },
+  questionSubtitle: {
+    fontSize: Typography.sizes.body,
+    color: Colors.textLight,
+    marginBottom: Spacing.xl,
+    lineHeight: 22,
+  },
+  optionsGrid: {
+    gap: Spacing.md,
+  },
+  optionCard: {
+    backgroundColor: Colors.cardBackground,
+    borderWidth: 2,
+    borderColor: Colors.cardBorder,
+    borderRadius: BorderRadius.large,
+    padding: Spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    position: 'relative',
+  },
+  optionCardSelected: {
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primary + '15',
+  },
+  optionEmoji: {
+    fontSize: 32,
+  },
+  optionLabel: {
+    fontSize: Typography.sizes.h3,
+    fontWeight: '400' as const,
+    color: Colors.text,
+    flex: 1,
+  },
+  optionDescription: {
+    fontSize: Typography.sizes.caption,
+    color: Colors.textLight,
+    position: 'absolute',
+    right: Spacing.lg,
+    bottom: Spacing.md,
+  },
+  premiumTag: {
+    backgroundColor: Colors.accent,
+    paddingHorizontal: Spacing.xs,
+    paddingVertical: 2,
+    borderRadius: 4,
+    position: 'absolute',
+    top: Spacing.sm,
+    right: Spacing.sm,
+  },
+  premiumTagText: {
+    fontSize: 10,
+    fontWeight: '400' as const,
+    color: Colors.backgroundDark,
+    letterSpacing: 0.5,
+  },
+  summaryContainer: {
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.xl,
+    alignItems: 'center',
+  },
+  summaryEmoji: {
+    fontSize: 64,
+    marginBottom: Spacing.md,
+  },
+  summaryTitle: {
+    fontSize: Typography.sizes.h2,
+    fontWeight: '400' as const,
+    color: Colors.text,
+    textAlign: 'center',
+    marginBottom: Spacing.lg,
+  },
+  summaryCard: {
+    backgroundColor: Colors.cardBackground,
+    borderRadius: BorderRadius.large,
+    padding: Spacing.lg,
+    width: '100%',
+    gap: Spacing.md,
+    marginBottom: Spacing.lg,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  summaryLabel: {
+    fontSize: Typography.sizes.body,
+    color: Colors.textLight,
+  },
+  summaryValue: {
+    fontSize: Typography.sizes.body,
+    fontWeight: '400' as const,
+    color: Colors.primary,
+  },
+  summaryDescription: {
+    fontSize: Typography.sizes.body,
+    color: Colors.textLight,
+    textAlign: 'center',
+    marginBottom: Spacing.xl,
+  },
+  changeAnswersButton: {
+    marginTop: Spacing.lg,
+    paddingVertical: Spacing.md,
+  },
+  changeAnswersText: {
+    fontSize: Typography.sizes.body,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+  },
+  progressContainer: {
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.md,
+    marginBottom: Spacing.lg,
+  },
+  progressBarBackground: {
+    height: 4,
+    backgroundColor: Colors.cardBackground,
+    borderRadius: 2,
+    overflow: 'hidden',
+    marginBottom: Spacing.md,
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: Colors.primary,
+  },
+  backButton: {
+    alignSelf: 'flex-start',
+  },
+  backButtonText: {
+    fontSize: Typography.sizes.body,
     color: Colors.textSecondary,
   },
 });
