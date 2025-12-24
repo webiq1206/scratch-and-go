@@ -122,6 +122,11 @@ export default function WelcomeScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
+          <View style={styles.headerContainer}>
+            <Text style={styles.setupTitle}>Setting Up Your Experience</Text>
+            <Text style={styles.setupSubtitle}>Help us personalize your activities</Text>
+          </View>
+
           <View style={styles.progressContainer}>
             <View style={styles.progressBar}>
               <View style={[styles.progressFill, { width: `${progress}%` }]} />
@@ -165,6 +170,11 @@ export default function WelcomeScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
+          <View style={styles.headerContainer}>
+            <Text style={styles.setupTitle}>Setting Up Your Experience</Text>
+            <Text style={styles.setupSubtitle}>Help us personalize your activities</Text>
+          </View>
+
           <View style={styles.progressContainer}>
             <View style={styles.progressBar}>
               <View style={[styles.progressFill, { width: `${progress}%` }]} />
@@ -204,8 +214,7 @@ export default function WelcomeScreen() {
           </View>
 
           <Text style={styles.privacyNote}>
-            These preferences help us personalize your experience.
-            You can change them anytime in settings.
+            This is a one-time setup. You can always change these preferences later in your settings.
           </Text>
         </ScrollView>
       </View>
@@ -481,8 +490,26 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.xl,
-    justifyContent: 'center',
+    paddingTop: 60,
+    paddingBottom: Spacing.xl,
+    justifyContent: 'flex-start',
+  },
+  headerContainer: {
+    alignItems: 'center',
+    marginBottom: Spacing.xl,
+    paddingTop: Spacing.lg,
+  },
+  setupTitle: {
+    fontSize: 28,
+    fontWeight: '400' as const,
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginBottom: Spacing.xs,
+  },
+  setupSubtitle: {
+    fontSize: Typography.sizes.body,
+    color: '#B8B8B8',
+    textAlign: 'center',
   },
   progressContainer: {
     marginBottom: Spacing.xxl,
