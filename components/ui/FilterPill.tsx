@@ -1,6 +1,5 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, View } from 'react-native';
-import { Crown } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import Typography from '@/constants/typography';
 import Spacing from '@/constants/spacing';
@@ -16,7 +15,7 @@ interface FilterPillProps {
   showPremiumBadge?: boolean;
 }
 
-export default function FilterPill({ label, selected, onPress, emoji, description, isPremium, showPremiumBadge }: FilterPillProps) {
+export default function FilterPill({ label, selected, onPress, description, isPremium, showPremiumBadge }: FilterPillProps) {
   return (
     <TouchableOpacity
       style={[styles.pill, selected && styles.selected, isPremium && !showPremiumBadge && styles.premiumLocked]}
@@ -24,7 +23,6 @@ export default function FilterPill({ label, selected, onPress, emoji, descriptio
       activeOpacity={0.7}
     >
       <View style={styles.pillContent}>
-        {emoji && <Text style={styles.emoji}>{emoji}</Text>}
         <View style={styles.textContainer}>
           <Text style={[styles.text, selected && styles.selectedText, isPremium && !showPremiumBadge && styles.premiumText]}>{label}</Text>
           {description && selected && (
@@ -32,7 +30,9 @@ export default function FilterPill({ label, selected, onPress, emoji, descriptio
           )}
         </View>
         {isPremium && !showPremiumBadge && (
-          <Crown size={12} color={Colors.accent} />
+          <View style={styles.premiumBadge}>
+            <Text style={styles.premiumBadgeText}>PRO</Text>
+          </View>
         )}
       </View>
     </TouchableOpacity>
@@ -63,9 +63,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
   },
-  emoji: {
-    fontSize: 16,
-  },
   textContainer: {
     flexDirection: 'column',
     alignItems: 'flex-start',
@@ -89,5 +86,17 @@ const styles = StyleSheet.create({
   },
   premiumText: {
     color: Colors.accent,
+  },
+  premiumBadge: {
+    backgroundColor: Colors.accent,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  premiumBadgeText: {
+    fontSize: 9,
+    fontWeight: '600' as const,
+    color: '#1A1A1A',
+    letterSpacing: 0.5,
   },
 });

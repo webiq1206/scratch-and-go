@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Dimensions
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Facebook } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import Typography from '@/constants/typography';
 import Spacing from '@/constants/spacing';
@@ -276,7 +275,10 @@ export default function WelcomeScreen() {
             disabled={isLoggingIn}
           >
             <View style={styles.socialButtonContent}>
-              <Facebook size={20} color="#FFFFFF" />
+              <Image
+                source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/5/51/Facebook_f_logo_%282019%29.svg' }}
+                style={styles.socialIcon}
+              />
               <Text style={[styles.socialButtonText, styles.facebookButtonText]}>Continue with Facebook</Text>
             </View>
           </TouchableOpacity>

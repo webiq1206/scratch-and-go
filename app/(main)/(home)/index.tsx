@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, Animated, ActivityIndicator, Alert, TouchableOpacity, Image } from 'react-native';
-import { Share2, ThumbsDown, RefreshCw } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -242,35 +241,35 @@ export default function HomeScreen() {
 
   const categories = mode === 'couples' 
     ? [
-        { label: 'Any', emoji: '🎲' },
-        { label: 'Chill', emoji: '😌' },
-        { label: 'Active', emoji: '⚡' },
-        { label: 'Creative', emoji: '🎨' },
-        { label: 'Foodie', emoji: '🍽️' },
-        { label: 'Adventure', emoji: '🗺️' },
+        { label: 'Any' },
+        { label: 'Chill' },
+        { label: 'Active' },
+        { label: 'Creative' },
+        { label: 'Foodie' },
+        { label: 'Adventure' },
       ]
     : [
-        { label: 'Any', emoji: '🎲' },
-        { label: 'Chill', emoji: '😌' },
-        { label: 'Active', emoji: '⚡' },
-        { label: 'Creative', emoji: '🎨' },
-        { label: 'Educational', emoji: '📚' },
-        { label: 'Outdoor', emoji: '🌲' },
+        { label: 'Any' },
+        { label: 'Chill' },
+        { label: 'Active' },
+        { label: 'Creative' },
+        { label: 'Educational' },
+        { label: 'Outdoor' },
       ];
 
   const budgetOptions = [
-    { label: 'Any', emoji: '💰', description: 'Surprise me' },
-    { label: 'Free', emoji: '🎁', description: 'No cost' },
-    { label: '$', emoji: '💵', description: 'Budget' },
-    { label: '$$', emoji: '💳', description: 'Moderate' },
-    { label: '$$$', emoji: '💎', description: 'Splurge' },
+    { label: 'Any', description: 'Surprise me' },
+    { label: 'Free', description: 'No cost' },
+    { label: '$', description: 'Budget' },
+    { label: '$$', description: 'Moderate' },
+    { label: '$$$', description: 'Splurge' },
   ];
   
   const timingOptions = [
-    { label: 'Anytime', emoji: '🕐', description: 'Flexible' },
-    { label: 'Quick (1-2h)', emoji: '⏱️', description: 'Quick fun' },
-    { label: 'Half Day', emoji: '☀️', description: '3-5 hours' },
-    { label: 'Full Day', emoji: '🌅', description: 'All day' },
+    { label: 'Anytime', description: 'Flexible' },
+    { label: 'Quick (1-2h)', description: 'Quick fun' },
+    { label: 'Half Day', description: '3-5 hours' },
+    { label: 'Full Day', description: 'All day' },
   ];
 
   const hasSelectedFilters = categoryFilter !== 'Any' || budgetFilter !== 'Any' || timingFilter !== 'Anytime';
@@ -584,18 +583,9 @@ export default function HomeScreen() {
                         activeOpacity={0.7}
                       >
                         <View style={styles.saveButtonContent}>
-                          {(isSaved || isActivitySaved(currentActivity.title)) ? (
-                            <Text style={styles.saveButtonText}>✓ Saved to Memory Book</Text>
-                          ) : (
-                            <>
-                              <Image 
-                                source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/attachments/1n8u08ei0gt3gyiihcy40' }}
-                                style={styles.heartIcon}
-                                resizeMode="contain"
-                              />
-                              <Text style={styles.saveButtonText}>Save to Memory Book</Text>
-                            </>
-                          )}
+                          <Text style={styles.saveButtonText}>
+                            {(isSaved || isActivitySaved(currentActivity.title)) ? 'Saved to Memory Book' : 'Save to Memory Book'}
+                          </Text>
                         </View>
                       </TouchableOpacity>
                       <TouchableOpacity
@@ -604,7 +594,6 @@ export default function HomeScreen() {
                         disabled={isSharing}
                         activeOpacity={0.7}
                       >
-                        <Share2 size={20} color={Colors.text} />
                         <Text style={styles.shareButtonText}>Share</Text>
                       </TouchableOpacity>
                     </View>
@@ -614,7 +603,6 @@ export default function HomeScreen() {
                         onPress={handleNotInterested}
                         activeOpacity={0.7}
                       >
-                        <ThumbsDown size={16} color={Colors.textSecondary} />
                         <Text style={styles.notInterestedText}>Not Interested</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
@@ -622,7 +610,6 @@ export default function HomeScreen() {
                         onPress={handleTryAgain}
                         activeOpacity={0.7}
                       >
-                        <RefreshCw size={16} color={Colors.textSecondary} />
                         <Text style={styles.tryAgainText}>Try Again</Text>
                       </TouchableOpacity>
                     </View>
@@ -655,7 +642,6 @@ export default function HomeScreen() {
                   <FilterPill
                     key={cat.label}
                     label={cat.label}
-                    emoji={cat.emoji}
                     selected={categoryFilter === cat.label}
                     onPress={() => handleCategorySelect(cat.label)}
                     isPremium={isCategoryPremium(cat.label)}
@@ -679,7 +665,6 @@ export default function HomeScreen() {
                   <FilterPill
                     key={budget.label}
                     label={budget.label}
-                    emoji={budget.emoji}
                     description={budget.description}
                     selected={budgetFilter === budget.label}
                     onPress={() => setBudgetFilter(budget.label)}
@@ -702,7 +687,6 @@ export default function HomeScreen() {
                   <FilterPill
                     key={timing.label}
                     label={timing.label}
-                    emoji={timing.emoji}
                     description={timing.description}
                     selected={timingFilter === timing.label}
                     onPress={() => setTimingFilter(timing.label)}
@@ -1101,22 +1085,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: Spacing.xs,
   },
   saveButtonText: {
     fontSize: Typography.sizes.body,
     fontWeight: '400' as const,
     color: Colors.text,
   },
-  heartIcon: {
-    width: 18,
-    height: 18,
-  },
   shareButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: Spacing.xs,
     backgroundColor: Colors.cardBackground,
     borderWidth: 1,
     borderColor: Colors.cardBorder,
@@ -1140,7 +1118,6 @@ const styles = StyleSheet.create({
   notInterestedButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.xs,
     paddingVertical: Spacing.sm,
     paddingHorizontal: Spacing.md,
   },
@@ -1152,7 +1129,6 @@ const styles = StyleSheet.create({
   tryAgainButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.xs,
     paddingVertical: Spacing.sm,
     paddingHorizontal: Spacing.md,
   },
