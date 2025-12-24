@@ -69,7 +69,6 @@ export default function ScratchCard({
       onShouldBlockNativeResponder: () => true,
       onPanResponderGrant: (evt) => {
         if (disabled || isRevealed) return;
-        evt.preventDefault?.();
         const { locationX, locationY } = evt.nativeEvent;
         console.log('[ScratchCard] Touch started at:', locationX, locationY);
         
@@ -89,11 +88,12 @@ export default function ScratchCard({
       },
       onPanResponderMove: (evt) => {
         if (disabled || isRevealed) return;
-        evt.preventDefault?.();
         const { locationX, locationY } = evt.nativeEvent;
         addScratch(locationX, locationY);
-        if (scratches.length % 5 === 0) {
+        if (scratches.length % 3 === 0) {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        }
+        if (scratches.length % 5 === 0) {
           checkScratchProgress();
         }
       },
@@ -102,6 +102,11 @@ export default function ScratchCard({
         console.log('[ScratchCard] Touch released');
         checkScratchProgress();
         
+        if (onTouchEnd) {
+          onTouchEnd();
+        }
+      },
+      onPanResponderTerminate: () => {
         if (onTouchEnd) {
           onTouchEnd();
         }
@@ -154,7 +159,8 @@ export default function ScratchCard({
       {!isRevealed && (
         <Animated.View 
           style={[StyleSheet.absoluteFill, { opacity }]} 
-          pointerEvents={disabled || isRevealed ? 'none' : 'box-only'}
+          pointerEvents={disabled || isRevealed ? 'none' : 'auto'}
+          {...panResponder.panHandlers}
         >
           <MaskedView
             style={StyleSheet.absoluteFill}
@@ -176,11 +182,7 @@ export default function ScratchCard({
               </View>
             }
           >
-            <View 
-              style={StyleSheet.absoluteFill}
-              {...panResponder.panHandlers}
-              onStartShouldSetResponderCapture={() => true}
-            >
+            <View style={StyleSheet.absoluteFill}>
               {scratchLayer}
             </View>
           </MaskedView>
