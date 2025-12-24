@@ -35,9 +35,12 @@ export default function ScratchCard({
   const checkScratchProgress = useCallback(() => {
     if (isRevealed) return;
     
-    const scratchPercentage = (scratches.length * 100) / 200;
+    const scratchPercentage = (scratches.length * 100) / 100;
     
-    if (scratchPercentage >= 50) {
+    console.log('[ScratchCard] Progress:', scratchPercentage.toFixed(1), '% -', scratches.length, 'scratches');
+    
+    if (scratchPercentage >= 30) {
+      console.log('[ScratchCard] Threshold reached! Revealing...');
       setIsRevealed(true);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       
@@ -46,6 +49,7 @@ export default function ScratchCard({
         duration: 400,
         useNativeDriver: true,
       }).start(() => {
+        console.log('[ScratchCard] Animation complete, calling onScratchComplete');
         onScratchComplete();
       });
     }
@@ -63,7 +67,9 @@ export default function ScratchCard({
         if (disabled || isRevealed) return;
         evt.preventDefault?.();
         const { locationX, locationY } = evt.nativeEvent;
+        console.log('[ScratchCard] Touch started at:', locationX, locationY);
         if (!hasStarted) {
+          console.log('[ScratchCard] First scratch - calling onScratchStart');
           setHasStarted(true);
           if (onScratchStart) {
             onScratchStart();
@@ -77,12 +83,14 @@ export default function ScratchCard({
         evt.preventDefault?.();
         const { locationX, locationY } = evt.nativeEvent;
         addScratch(locationX, locationY);
-        if (scratches.length % 3 === 0) {
+        if (scratches.length % 5 === 0) {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          checkScratchProgress();
         }
       },
       onPanResponderRelease: () => {
         if (disabled || isRevealed) return;
+        console.log('[ScratchCard] Touch released');
         checkScratchProgress();
       },
     })
@@ -111,8 +119,8 @@ export default function ScratchCard({
                 style={[
                   styles.scratchMarkWeb,
                   {
-                    left: scratch.x - 25,
-                    top: scratch.y - 25,
+                    left: scratch.x - 30,
+                    top: scratch.y - 30,
                   },
                 ]}
               />
@@ -198,17 +206,17 @@ const styles = StyleSheet.create({
   },
   scratchHole: {
     position: 'absolute',
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     backgroundColor: 'black',
   },
   scratchMarkWeb: {
     position: 'absolute',
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   disabledOverlay: {
     ...StyleSheet.absoluteFillObject,
