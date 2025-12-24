@@ -46,10 +46,10 @@ function RootLayoutNav() {
 
         if (!preferences.completedOnboarding && !inWelcome) {
           console.log('[Navigation] Navigating to welcome');
-          router.replace('/welcome');
+          router.replace('/welcome' as any);
         } else if (preferences.completedOnboarding && !inMain) {
           console.log('[Navigation] Navigating to main');
-          router.replace('/(main)/(home)');
+          router.replace('/(main)/(home)' as any);
         }
 
         hasNavigated.current = true;

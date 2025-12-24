@@ -109,7 +109,7 @@ export default function MemoryBookScreen() {
   };
 
   const handleActivityPress = (activity: SavedActivity) => {
-    router.push(`/activity/${activity.id}`);
+    router.push(`/activity/${activity.id}` as any);
   };
 
   const handleRatingChange = (activityId: string, rating: number) => {

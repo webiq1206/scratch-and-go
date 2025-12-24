@@ -137,7 +137,7 @@ export default function HomeScreen() {
         `'${value}' is a premium category. Upgrade to unlock exclusive activity categories!`,
         [
           { text: 'Not Now', style: 'cancel' },
-          { text: 'Upgrade', onPress: () => router.push('/paywall') }
+          { text: 'Upgrade', onPress: () => router.push('/paywall' as any) }
         ]
       );
       return;
@@ -193,7 +193,7 @@ export default function HomeScreen() {
         `You've used your 3 free scratches this month! Upgrade to premium for unlimited scratches.`,
         [
           { text: 'Not Now', style: 'cancel' },
-          { text: 'Upgrade', onPress: () => router.push('/paywall') }
+          { text: 'Upgrade', onPress: () => router.push('/paywall' as any) }
         ]
       );
       return;
@@ -281,7 +281,7 @@ export default function HomeScreen() {
         `You've used your 3 free scratches this month! Upgrade to premium for unlimited scratches.`,
         [
           { text: 'Not Now', style: 'cancel' },
-          { text: 'Upgrade', onPress: () => router.push('/paywall') }
+          { text: 'Upgrade', onPress: () => router.push('/paywall' as any) }
         ]
       );
       return;

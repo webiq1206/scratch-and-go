@@ -32,7 +32,7 @@ export default function WelcomeScreen() {
       if (savedMode && savedPreferences) {
         const prefs = JSON.parse(savedPreferences);
         if (prefs.completedOnboarding) {
-          router.replace('/(main)/(home)');
+          router.replace('/(main)/(home)' as any);
         }
       }
     };
@@ -110,7 +110,7 @@ export default function WelcomeScreen() {
     
     await AsyncStorage.setItem(MODE_KEY, selectedMode!);
     await AsyncStorage.setItem(PREFERENCES_KEY, JSON.stringify(preferencesWithFlag));
-    router.replace('/(main)/(home)');
+    router.replace('/(main)/(home)' as any);
   };
 
   if (step === 'religion') {

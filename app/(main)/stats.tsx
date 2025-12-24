@@ -52,7 +52,7 @@ export default function StatsScreen() {
 
         <TouchableOpacity
           style={styles.yearRecapButton}
-          onPress={() => router.push('/(main)/year-recap')}
+          onPress={() => router.push('/(main)/year-recap' as any)}
           activeOpacity={0.8}
         >
           <LinearGradient

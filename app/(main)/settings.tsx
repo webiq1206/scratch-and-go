@@ -63,7 +63,7 @@ export default function SettingsScreen() {
   };
 
   const handleUpgradeToPremium = () => {
-    router.push('/paywall');
+    router.push('/paywall' as any);
   };
 
   const handleManageSubscription = () => {

@@ -43,7 +43,7 @@ export default function ScratchCard({
     
     console.log('[ScratchCard] Progress:', scratchPercentage.toFixed(1), '% -', scratches.length, 'scratches');
     
-    if (scratchPercentage >= 30) {
+    if (scratchPercentage >= 20) {
       console.log('[ScratchCard] Threshold reached! Revealing...');
       setIsRevealed(true);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -85,15 +85,16 @@ export default function ScratchCard({
         }
         addScratch(locationX, locationY);
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        checkScratchProgress();
       },
       onPanResponderMove: (evt) => {
         if (disabled || isRevealed) return;
         const { locationX, locationY } = evt.nativeEvent;
         addScratch(locationX, locationY);
-        if (scratches.length % 3 === 0) {
+        if (scratches.length % 2 === 0) {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         }
-        if (scratches.length % 5 === 0) {
+        if (scratches.length % 3 === 0) {
           checkScratchProgress();
         }
       },

@@ -1,9 +1,12 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { Home, BookHeart, Settings } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Colors from '@/constants/colors';
 
 export default function MainLayout() {
+  const insets = useSafeAreaInsets();
+  
   return (
     <Tabs
       screenOptions={{
@@ -14,8 +17,7 @@ export default function MainLayout() {
           backgroundColor: '#000000',
           borderTopColor: Colors.backgroundDark,
           borderTopWidth: 1,
-          height: 85,
-          paddingBottom: 28,
+          paddingBottom: insets.bottom > 0 ? insets.bottom : 8,
           paddingTop: 8,
         },
         tabBarLabelStyle: {

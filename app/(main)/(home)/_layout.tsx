@@ -11,7 +11,7 @@ export default function HomeLayout() {
     const checkMode = async () => {
       const savedMode = await AsyncStorage.getItem(MODE_KEY);
       if (!savedMode) {
-        router.replace('/welcome');
+        router.replace('/welcome' as any);
       }
     };
     checkMode();

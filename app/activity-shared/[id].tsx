@@ -63,7 +63,7 @@ export default function ActivitySharedScreen() {
           { text: 'Not Now', style: 'cancel' },
           {
             text: 'Get Started',
-            onPress: () => router.replace('/welcome'),
+            onPress: () => router.replace('/welcome' as any),
           },
         ]
       );
@@ -89,15 +89,15 @@ export default function ActivitySharedScreen() {
 
   const handleGetStarted = () => {
     if (isOnboarded) {
-      router.replace('/(main)/(home)');
+      router.replace('/(main)/(home)' as any);
     } else {
-      router.replace('/welcome');
+      router.replace('/welcome' as any);
     }
   };
 
   const handleClose = () => {
     if (isOnboarded) {
-      router.replace('/(main)/(home)');
+      router.replace('/(main)/(home)' as any);
     } else {
       router.back();
     }
