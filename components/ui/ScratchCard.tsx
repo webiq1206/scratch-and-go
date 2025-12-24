@@ -11,6 +11,8 @@ const CARD_HEIGHT = 300;
 interface ScratchCardProps {
   onScratchStart?: () => void;
   onScratchComplete: () => void;
+  onTouchStart?: () => void;
+  onTouchEnd?: () => void;
   scratchLayer: React.ReactNode;
   revealContent: React.ReactNode;
   disabled?: boolean;
@@ -18,7 +20,9 @@ interface ScratchCardProps {
 
 export default function ScratchCard({ 
   onScratchStart,
-  onScratchComplete, 
+  onScratchComplete,
+  onTouchStart,
+  onTouchEnd,
   scratchLayer,
   revealContent,
   disabled = false
@@ -68,6 +72,11 @@ export default function ScratchCard({
         evt.preventDefault?.();
         const { locationX, locationY } = evt.nativeEvent;
         console.log('[ScratchCard] Touch started at:', locationX, locationY);
+        
+        if (onTouchStart) {
+          onTouchStart();
+        }
+        
         if (!hasStarted) {
           console.log('[ScratchCard] First scratch - calling onScratchStart');
           setHasStarted(true);
@@ -92,6 +101,10 @@ export default function ScratchCard({
         if (disabled || isRevealed) return;
         console.log('[ScratchCard] Touch released');
         checkScratchProgress();
+        
+        if (onTouchEnd) {
+          onTouchEnd();
+        }
       },
     })
   ).current;

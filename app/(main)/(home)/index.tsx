@@ -520,6 +520,8 @@ export default function HomeScreen() {
                   disabled={hasStartedScratch}
                   onScratchStart={handleScratchStart}
                   onScratchComplete={handleScratchComplete}
+                  onTouchStart={() => setScrollEnabled(false)}
+                  onTouchEnd={() => setScrollEnabled(true)}
                   scratchLayer={
                     <LinearGradient
                       colors={[Colors.primaryGradientStart, Colors.primary, Colors.primaryDark, Colors.primaryGradientEnd]}
