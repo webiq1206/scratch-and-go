@@ -63,4 +63,16 @@ export type ActivityInteraction = 'saved' | 'completed' | 'skipped' | 'not_inter
 export interface ActivityWithInteraction extends Activity {
   interactionType: ActivityInteraction;
   interactionDate: number;
+  rating?: number;
+}
+
+export interface UserLearningProfile {
+  dislikedCategories: Record<string, number>;
+  likedCategories: Record<string, number>;
+  dislikedThemes: string[];
+  likedThemes: string[];
+  preferredBudget?: string;
+  preferredDuration?: string;
+  preferredSetting?: 'indoor' | 'outdoor';
+  lastUpdated: number;
 }

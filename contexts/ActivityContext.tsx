@@ -1,8 +1,8 @@
 import createContextHook from '@nkzw/create-context-hook';
 import { useMutation } from '@tanstack/react-query';
 import { generateObject } from '@rork-ai/toolkit-sdk';
-import { Activity, ActivitySchema, Filters, ActivityWithInteraction } from '@/types/activity';
-import { useState, useEffect } from 'react';
+import { Activity, ActivitySchema, Filters, ActivityWithInteraction, UserLearningProfile } from '@/types/activity';
+import { useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { usePreferences } from './PreferencesContext';
 import { useLocation } from './LocationContext';
@@ -12,6 +12,7 @@ const HISTORY_KEY = 'scratch_and_go_history';
 const SCRATCH_COUNT_KEY = 'scratch_and_go_count';
 const SCRATCH_MONTH_KEY = 'scratch_and_go_month';
 const INTERACTIONS_KEY = 'scratch_and_go_interactions';
+const LEARNING_PROFILE_KEY = 'scratch_and_go_learning_profile';
 
 export const [ActivityProvider, useActivity] = createContextHook(() => {
   const { getContentRestrictions } = usePreferences();
@@ -20,6 +21,13 @@ export const [ActivityProvider, useActivity] = createContextHook(() => {
   const [currentActivity, setCurrentActivity] = useState<Activity | null>(null);
   const [activityHistory, setActivityHistory] = useState<Activity[]>([]);
   const [activityInteractions, setActivityInteractions] = useState<ActivityWithInteraction[]>([]);
+  const [learningProfile, setLearningProfile] = useState<UserLearningProfile>({
+    dislikedCategories: {},
+    likedCategories: {},
+    dislikedThemes: [],
+    likedThemes: [],
+    lastUpdated: Date.now(),
+  });
   const [scratchCount, setScratchCount] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -27,6 +35,7 @@ export const [ActivityProvider, useActivity] = createContextHook(() => {
     loadHistory();
     loadScratchCount();
     loadInteractions();
+    loadLearningProfile();
   }, []);
 
   const loadHistory = async () => {
@@ -69,6 +78,124 @@ export const [ActivityProvider, useActivity] = createContextHook(() => {
     }
   };
 
+  const loadLearningProfile = async () => {
+    try {
+      const stored = await AsyncStorage.getItem(LEARNING_PROFILE_KEY);
+      if (stored) {
+        setLearningProfile(JSON.parse(stored));
+      }
+    } catch (error) {
+      console.error('Failed to load learning profile:', error);
+    }
+  };
+
+  const updateLearningProfile = useCallback(async () => {
+    if (activityInteractions.length === 0) return;
+
+    const newProfile: UserLearningProfile = {
+      dislikedCategories: {},
+      likedCategories: {},
+      dislikedThemes: [],
+      likedThemes: [],
+      lastUpdated: Date.now(),
+    };
+
+    const dislikedActivities = activityInteractions.filter(
+      a => a.interactionType === 'not_interested' || a.interactionType === 'skipped'
+    );
+    
+    const likedActivities = activityInteractions.filter(
+      a => a.interactionType === 'completed' || a.interactionType === 'saved'
+    );
+
+    dislikedActivities.forEach(activity => {
+      newProfile.dislikedCategories[activity.category] = 
+        (newProfile.dislikedCategories[activity.category] || 0) + 1;
+      
+      const themes = extractThemes(activity.title, activity.description);
+      themes.forEach(theme => {
+        if (!newProfile.dislikedThemes.includes(theme)) {
+          newProfile.dislikedThemes.push(theme);
+        }
+      });
+    });
+
+    likedActivities.forEach(activity => {
+      newProfile.likedCategories[activity.category] = 
+        (newProfile.likedCategories[activity.category] || 0) + 1;
+      
+      const themes = extractThemes(activity.title, activity.description);
+      themes.forEach(theme => {
+        if (!newProfile.likedThemes.includes(theme)) {
+          newProfile.likedThemes.push(theme);
+        }
+      });
+    });
+
+    const budgetPrefs: Record<string, number> = {};
+    likedActivities.forEach(a => {
+      budgetPrefs[a.cost] = (budgetPrefs[a.cost] || 0) + 1;
+    });
+    if (Object.keys(budgetPrefs).length > 0) {
+      newProfile.preferredBudget = Object.entries(budgetPrefs)
+        .sort(([,a], [,b]) => b - a)[0][0];
+    }
+
+    const indoorOutdoorPrefs = { indoor: 0, outdoor: 0 };
+    likedActivities.forEach(a => {
+      const desc = a.description.toLowerCase();
+      if (desc.includes('indoor') || desc.includes('inside')) {
+        indoorOutdoorPrefs.indoor++;
+      }
+      if (desc.includes('outdoor') || desc.includes('outside') || desc.includes('park') || desc.includes('nature')) {
+        indoorOutdoorPrefs.outdoor++;
+      }
+    });
+    if (indoorOutdoorPrefs.indoor > indoorOutdoorPrefs.outdoor * 1.5) {
+      newProfile.preferredSetting = 'indoor';
+    } else if (indoorOutdoorPrefs.outdoor > indoorOutdoorPrefs.indoor * 1.5) {
+      newProfile.preferredSetting = 'outdoor';
+    }
+
+    setLearningProfile(newProfile);
+    await AsyncStorage.setItem(LEARNING_PROFILE_KEY, JSON.stringify(newProfile));
+    console.log('Updated learning profile:', newProfile);
+  }, [activityInteractions]);
+
+  useEffect(() => {
+    updateLearningProfile();
+  }, [updateLearningProfile]);
+
+  const extractThemes = (title: string, description: string): string[] => {
+    const text = `${title} ${description}`.toLowerCase();
+    const themes: string[] = [];
+
+    const themeKeywords: Record<string, string[]> = {
+      'food': ['food', 'restaurant', 'dining', 'eat', 'meal', 'cuisine', 'cook', 'recipe'],
+      'music': ['music', 'concert', 'band', 'song', 'instrument', 'karaoke'],
+      'sports': ['sport', 'game', 'athletic', 'exercise', 'fitness', 'gym', 'workout'],
+      'art': ['art', 'paint', 'draw', 'craft', 'create', 'gallery', 'museum'],
+      'nature': ['nature', 'hike', 'trail', 'park', 'outdoor', 'forest', 'beach', 'mountain'],
+      'water': ['water', 'swim', 'beach', 'lake', 'river', 'ocean', 'boat', 'kayak'],
+      'nightlife': ['bar', 'club', 'nightlife', 'party', 'drink', 'cocktail'],
+      'culture': ['culture', 'museum', 'history', 'heritage', 'tradition', 'festival'],
+      'shopping': ['shop', 'store', 'mall', 'market', 'boutique', 'browse'],
+      'relaxation': ['relax', 'spa', 'massage', 'peaceful', 'calm', 'quiet', 'meditate'],
+      'adventure': ['adventure', 'explore', 'discover', 'thrill', 'exciting', 'challenge'],
+      'learning': ['learn', 'class', 'workshop', 'lesson', 'course', 'study', 'teach'],
+      'movies': ['movie', 'film', 'cinema', 'theater', 'watch', 'screening'],
+      'gaming': ['game', 'arcade', 'video game', 'board game', 'play'],
+    };
+
+    Object.entries(themeKeywords).forEach(([theme, keywords]) => {
+      if (keywords.some(keyword => text.includes(keyword))) {
+        themes.push(theme);
+      }
+    });
+
+    return themes;
+  };
+
   const incrementScratchCount = async () => {
     const newCount = scratchCount + 1;
     setScratchCount(newCount);
@@ -91,16 +218,45 @@ export const [ActivityProvider, useActivity] = createContextHook(() => {
       const weather = currentLocation?.weather;
 
       const notInterestedActivities = activityInteractions
-        .filter(a => a.interactionType === 'not_interested')
-        .slice(0, 10)
+        .filter(a => a.interactionType === 'not_interested' || a.interactionType === 'skipped')
+        .slice(0, 15)
         .map(a => `${a.title} (${a.category})`);
       
       const completedAndRatedActivities = activityInteractions
-        .filter(a => a.interactionType === 'completed')
-        .slice(0, 5);
+        .filter(a => a.interactionType === 'completed' || a.interactionType === 'saved')
+        .slice(0, 10);
+
+      const stronglyDislikedCategories = Object.entries(learningProfile.dislikedCategories)
+        .filter(([_, count]) => count >= 2)
+        .map(([cat]) => cat);
+
+      const preferredCategories = Object.entries(learningProfile.likedCategories)
+        .filter(([_, count]) => count >= 2)
+        .map(([cat]) => cat);
 
       const contentRestrictions = getContentRestrictions();
+      
+      const intelligentFilters = getIntelligentFilters(filters);
+      
       const systemPrompt = `You are an expert at creating unique, engaging ${filters.mode === 'couples' ? 'date night' : 'family'} activity ideas.
+
+USER LEARNING PROFILE - CRITICAL RESTRICTIONS:
+${stronglyDislikedCategories.length > 0 ? `NEVER suggest these categories (user has rejected them multiple times):
+${stronglyDislikedCategories.join(', ')}
+ABSOLUTELY AVOID these categories at all costs.` : ''}
+
+${learningProfile.dislikedThemes.length > 0 ? `AVOID these themes/topics:
+${learningProfile.dislikedThemes.join(', ')}
+Do not suggest activities related to these themes.` : ''}
+
+${preferredCategories.length > 0 ? `User enjoys these categories (prioritize when possible):
+${preferredCategories.join(', ')}` : ''}
+
+${learningProfile.likedThemes.length > 0 ? `User likes these themes:
+${learningProfile.likedThemes.join(', ')}` : ''}
+
+${learningProfile.preferredBudget ? `User typically prefers: ${learningProfile.preferredBudget} activities` : ''}
+${learningProfile.preferredSetting ? `User shows preference for: ${learningProfile.preferredSetting} activities` : ''}
 
 ${currentLocation ? `LOCATION CONTEXT:
 The user is in ${currentLocation.city}, ${currentLocation.region}, ${currentLocation.country}.
@@ -128,12 +284,12 @@ ${currentTimeOfDay === 'Night' ? 'Consider late-night activities, stargazing, 24
 CRITICAL CONTENT RESTRICTIONS:
 ${contentRestrictions.map(r => `- ${r}`).join('\n')}
 
-Generate a personalized activity with these parameters:
+Generate a personalized activity with these INTELLIGENT parameters:
 - Mode: ${filters.mode}
-- Category: ${filters.category !== 'Any' ? filters.category : 'any category'}
-- Budget: ${filters.budget !== 'Any' ? filters.budget : 'any budget'}
-- Duration: ${filters.timing !== 'Anytime' ? filters.timing : 'any duration'}
-${filters.setting && filters.setting !== 'either' ? `- Setting: ${filters.setting}` : ''}
+- Category: ${intelligentFilters.category}
+- Budget: ${intelligentFilters.budget}
+- Duration: ${intelligentFilters.timing}
+${intelligentFilters.setting && intelligentFilters.setting !== 'either' ? `- Setting: ${intelligentFilters.setting}` : ''}
 ${filters.kidAges ? `- Kid ages: ${filters.kidAges}` : ''}
 - Current season: ${currentSeason}
 - Time of day: ${currentTimeOfDay}
@@ -142,13 +298,13 @@ ${weather ? `- Current weather: ${weather.temp}°F, ${weather.condition}` : ''}
 
 Previously generated activities (avoid repeating): ${historyTitles || 'None'}
 
-${notInterestedActivities.length > 0 ? `USER DISLIKES (avoid similar themes/categories):
+${notInterestedActivities.length > 0 ? `REJECTED ACTIVITIES - DO NOT SUGGEST SIMILAR:
 ${notInterestedActivities.join(', ')}
-Do NOT suggest activities similar to these in theme, style, or category.` : ''}
+CRITICAL: Analyze WHY these were rejected and avoid similar patterns.` : ''}
 
-${completedAndRatedActivities.length > 0 ? `SUCCESSFUL ACTIVITIES (user enjoyed these):
-${completedAndRatedActivities.map(a => `${a.title} - ${a.category}`).join(', ')}
-Consider suggesting activities with similar themes or styles.` : ''}
+${completedAndRatedActivities.length > 0 ? `SUCCESSFUL ACTIVITIES (user loved these):
+${completedAndRatedActivities.map(a => `${a.title} - ${a.category}${a.rating ? ` (rated ${a.rating}/5)` : ''}`).join(', ')}
+Prioritize activities similar in style and theme to these successful ones.` : ''}
 
 IMPORTANT: Make this suggestion highly relevant to the local area and current conditions. Consider:
 - Current ACTUAL weather conditions (not just typical weather)
@@ -217,11 +373,35 @@ Create something unique, exciting, and memorable. Use inclusive language ("your 
     setCurrentActivity(null);
   };
 
-  const trackInteraction = async (activity: Activity, interactionType: 'saved' | 'completed' | 'skipped' | 'not_interested') => {
+  const getIntelligentFilters = (userFilters: Filters): Filters => {
+    const intelligent = { ...userFilters };
+
+    if (userFilters.category === 'Any' && Object.keys(learningProfile.likedCategories).length > 0) {
+      const topCategory = Object.entries(learningProfile.likedCategories)
+        .sort(([,a], [,b]) => b - a)[0][0];
+      intelligent.category = topCategory;
+      console.log(`🧠 Intelligent filter: Suggesting ${topCategory} based on user preferences`);
+    }
+
+    if (userFilters.budget === 'Any' && learningProfile.preferredBudget) {
+      intelligent.budget = learningProfile.preferredBudget;
+      console.log(`🧠 Intelligent filter: Budget set to ${learningProfile.preferredBudget}`);
+    }
+
+    if ((!userFilters.setting || userFilters.setting === 'either') && learningProfile.preferredSetting) {
+      intelligent.setting = learningProfile.preferredSetting;
+      console.log(`🧠 Intelligent filter: Setting preference: ${learningProfile.preferredSetting}`);
+    }
+
+    return intelligent;
+  };
+
+  const trackInteraction = async (activity: Activity, interactionType: 'saved' | 'completed' | 'skipped' | 'not_interested', rating?: number) => {
     const interaction: ActivityWithInteraction = {
       ...activity,
       interactionType,
       interactionDate: Date.now(),
+      rating,
     };
 
     const newInteractions = [interaction, ...activityInteractions].slice(0, 100);
@@ -248,6 +428,7 @@ Create something unique, exciting, and memorable. Use inclusive language ("your 
     currentActivity,
     activityHistory,
     activityInteractions,
+    learningProfile,
     scratchCount,
     isGenerating,
     generateActivity,
