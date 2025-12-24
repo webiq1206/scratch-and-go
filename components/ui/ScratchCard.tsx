@@ -43,7 +43,7 @@ export default function ScratchCard({
     
     console.log('[ScratchCard] Progress:', scratchPercentage.toFixed(1), '% -', scratches.length, 'scratches');
     
-    if (scratchPercentage >= 20) {
+    if (scratches.length >= 30) {
       console.log('[ScratchCard] Threshold reached! Revealing...');
       setIsRevealed(true);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -61,7 +61,10 @@ export default function ScratchCard({
 
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => !disabled && !isRevealed,
+      onStartShouldSetPanResponder: () => {
+        console.log('[ScratchCard] onStartShouldSetPanResponder - disabled:', disabled, 'isRevealed:', isRevealed);
+        return !disabled && !isRevealed;
+      },
       onStartShouldSetPanResponderCapture: () => !disabled && !isRevealed,
       onMoveShouldSetPanResponder: () => !disabled && !isRevealed,
       onMoveShouldSetPanResponderCapture: () => !disabled && !isRevealed,
@@ -70,7 +73,7 @@ export default function ScratchCard({
       onPanResponderGrant: (evt) => {
         if (disabled || isRevealed) return;
         const { locationX, locationY } = evt.nativeEvent;
-        console.log('[ScratchCard] Touch started at:', locationX, locationY);
+        console.log('[ScratchCard] Touch granted at:', locationX, locationY);
         
         if (onTouchStart) {
           onTouchStart();
@@ -85,7 +88,6 @@ export default function ScratchCard({
         }
         addScratch(locationX, locationY);
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        checkScratchProgress();
       },
       onPanResponderMove: (evt) => {
         if (disabled || isRevealed) return;
@@ -93,9 +95,6 @@ export default function ScratchCard({
         addScratch(locationX, locationY);
         if (scratches.length % 2 === 0) {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        }
-        if (scratches.length % 3 === 0) {
-          checkScratchProgress();
         }
       },
       onPanResponderRelease: () => {
@@ -108,6 +107,7 @@ export default function ScratchCard({
         }
       },
       onPanResponderTerminate: () => {
+        console.log('[ScratchCard] Gesture terminated');
         if (onTouchEnd) {
           onTouchEnd();
         }
@@ -119,7 +119,7 @@ export default function ScratchCard({
 
   if (Platform.OS === 'web') {
     return (
-      <View style={styles.container} pointerEvents={disabled || isRevealed ? 'none' : 'auto'}>
+      <View style={styles.container}>
         <View style={styles.revealLayer}>
           {revealContent}
         </View>
@@ -128,7 +128,6 @@ export default function ScratchCard({
           <Animated.View 
             style={[styles.scratchLayer, { opacity }]}
             {...panResponder.panHandlers}
-            onStartShouldSetResponderCapture={() => true}
           >
             {scratchLayer}
             
@@ -152,7 +151,7 @@ export default function ScratchCard({
   }
 
   return (
-    <View style={styles.container} pointerEvents={disabled || isRevealed ? 'none' : 'auto'}>
+    <View style={styles.container}>
       <View style={styles.revealLayer}>
         {revealContent}
       </View>
@@ -160,7 +159,6 @@ export default function ScratchCard({
       {!isRevealed && (
         <Animated.View 
           style={[StyleSheet.absoluteFill, { opacity }]} 
-          pointerEvents={disabled || isRevealed ? 'none' : 'auto'}
           {...panResponder.panHandlers}
         >
           <MaskedView
