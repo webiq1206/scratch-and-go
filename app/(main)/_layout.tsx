@@ -1,6 +1,6 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
-import { Home, BookHeart, Clock, BarChart3, Settings } from 'lucide-react-native';
+import { Home, BookHeart, Settings } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 
 export default function MainLayout() {
@@ -47,30 +47,36 @@ export default function MainLayout() {
         }}
       />
       <Tabs.Screen
-        name="queue"
-        options={{
-          title: 'Queue',
-          tabBarIcon: ({ color, size }) => (
-            <Clock size={size || 24} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="stats"
-        options={{
-          title: 'Stats',
-          tabBarIcon: ({ color, size }) => (
-            <BarChart3 size={size || 24} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
         name="settings"
         options={{
           title: 'Settings',
           tabBarIcon: ({ color, size }) => (
             <Settings size={size || 24} color={color} />
           ),
+        }}
+      />
+      <Tabs.Screen
+        name="queue"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="stats"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="year-recap"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="activity"
+        options={{
+          href: null,
         }}
       />
     </Tabs>
