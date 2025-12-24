@@ -13,14 +13,17 @@ const SCRATCH_COUNT_KEY = 'scratch_and_go_count';
 const SCRATCH_MONTH_KEY = 'scratch_and_go_month';
 const INTERACTIONS_KEY = 'scratch_and_go_interactions';
 const LEARNING_PROFILE_KEY = 'scratch_and_go_learning_profile';
+const SAVED_FOR_LATER_KEY = 'scratch_and_go_saved_for_later';
 
 export const [ActivityProvider, useActivity] = createContextHook(() => {
   const { getContentRestrictions } = usePreferences();
   const { location } = useLocation();
   const { isPremium } = useSubscription();
   const [currentActivity, setCurrentActivity] = useState<Activity | null>(null);
+  const [currentFilters, setCurrentFilters] = useState<Filters | null>(null);
   const [activityHistory, setActivityHistory] = useState<Activity[]>([]);
   const [activityInteractions, setActivityInteractions] = useState<ActivityWithInteraction[]>([]);
+  const [savedForLater, setSavedForLater] = useState<Activity[]>([]);
   const [learningProfile, setLearningProfile] = useState<UserLearningProfile>({
     dislikedCategories: {},
     likedCategories: {},
@@ -36,6 +39,7 @@ export const [ActivityProvider, useActivity] = createContextHook(() => {
     loadScratchCount();
     loadInteractions();
     loadLearningProfile();
+    loadSavedForLater();
   }, []);
 
   const loadHistory = async () => {
@@ -86,6 +90,17 @@ export const [ActivityProvider, useActivity] = createContextHook(() => {
       }
     } catch (error) {
       console.error('Failed to load learning profile:', error);
+    }
+  };
+
+  const loadSavedForLater = async () => {
+    try {
+      const stored = await AsyncStorage.getItem(SAVED_FOR_LATER_KEY);
+      if (stored) {
+        setSavedForLater(JSON.parse(stored));
+      }
+    } catch (error) {
+      console.error('Failed to load saved for later:', error);
     }
   };
 
@@ -333,8 +348,9 @@ Create something unique, exciting, and memorable. Use inclusive language ("your 
       console.log('Generated activity:', activity);
       return activity;
     },
-    onSuccess: (activity) => {
+    onSuccess: (activity, filters) => {
       setCurrentActivity(activity);
+      setCurrentFilters(filters);
       setIsGenerating(false);
     },
     onError: (error) => {
@@ -356,9 +372,57 @@ Create something unique, exciting, and memorable. Use inclusive language ("your 
     }
 
     setIsGenerating(true);
+    setCurrentFilters(filters);
     await incrementScratchCount();
     generateActivityMutation.mutate(filters);
     return true;
+  };
+
+  const regenerateActivity = async () => {
+    if (!currentFilters) {
+      console.error('No filters available for regeneration');
+      return false;
+    }
+
+    if (!isPremium && scratchCount >= 3) {
+      console.log('Scratch limit reached for this month');
+      return false;
+    }
+
+    setIsGenerating(true);
+    await incrementScratchCount();
+    generateActivityMutation.mutate(currentFilters);
+    return true;
+  };
+
+  const saveForLaterActivity = async (activity?: Activity) => {
+    const activityToSave = activity || currentActivity;
+    if (!activityToSave) {
+      console.error('No activity to save');
+      return false;
+    }
+
+    const isDuplicate = savedForLater.some(a => a.title === activityToSave.title);
+    if (isDuplicate) {
+      console.log('Activity already saved for later');
+      return false;
+    }
+
+    const newSavedForLater = [activityToSave, ...savedForLater];
+    setSavedForLater(newSavedForLater);
+    await AsyncStorage.setItem(SAVED_FOR_LATER_KEY, JSON.stringify(newSavedForLater));
+    console.log('Activity saved for later:', activityToSave.title);
+    return true;
+  };
+
+  const removeFromSavedForLater = async (activityTitle: string) => {
+    const newSavedForLater = savedForLater.filter(a => a.title !== activityTitle);
+    setSavedForLater(newSavedForLater);
+    await AsyncStorage.setItem(SAVED_FOR_LATER_KEY, JSON.stringify(newSavedForLater));
+  };
+
+  const isActivitySavedForLater = (activityTitle: string): boolean => {
+    return savedForLater.some(a => a.title === activityTitle);
   };
 
   const saveToHistory = async () => {
@@ -426,12 +490,18 @@ Create something unique, exciting, and memorable. Use inclusive language ("your 
 
   return {
     currentActivity,
+    currentFilters,
     activityHistory,
     activityInteractions,
+    savedForLater,
     learningProfile,
     scratchCount,
     isGenerating,
     generateActivity,
+    regenerateActivity,
+    saveForLaterActivity,
+    removeFromSavedForLater,
+    isActivitySavedForLater,
     saveToHistory,
     clearCurrentActivity,
     trackInteraction,

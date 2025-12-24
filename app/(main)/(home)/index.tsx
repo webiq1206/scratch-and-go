@@ -48,6 +48,9 @@ export default function HomeScreen() {
   const { 
     currentActivity, 
     generateActivity, 
+    regenerateActivity,
+    saveForLaterActivity,
+    isActivitySavedForLater,
     isGenerating, 
     isLimitReached, 
     remainingScratches,
@@ -60,6 +63,7 @@ export default function HomeScreen() {
   const { isPremium } = useSubscription();
   const [isSaved, setIsSaved] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
+  const [isSavedForLater, setIsSavedForLater] = useState(false);
 
   useEffect(() => {
     const init = async () => {
@@ -197,6 +201,7 @@ export default function HomeScreen() {
     
     setHasStartedScratch(true);
     setIsSaved(false);
+    setIsSavedForLater(false);
     setScrollEnabled(false);
     
     const filters: Filters = {
@@ -244,6 +249,61 @@ export default function HomeScreen() {
     }
   };
 
+  const handleSaveForLater = async () => {
+    if (!currentActivity || isSavedForLater) return;
+
+    if (isActivitySavedForLater(currentActivity.title)) {
+      Alert.alert(
+        'Already Saved',
+        'This activity is already in your saved for later list.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+    
+    const success = await saveForLaterActivity();
+    if (success) {
+      setIsSavedForLater(true);
+      Alert.alert(
+        'Saved for Later!',
+        'This activity has been added to your queue. You can find it anytime in the Queue tab.',
+        [{ text: 'Got it!' }]
+      );
+    }
+  };
+
+  const handleRegenerateActivity = async () => {
+    if (isGenerating) return;
+
+    if (isLimitReached) {
+      Alert.alert(
+        'Scratch Limit Reached',
+        `You've used your 3 free scratches this month! Upgrade to premium for unlimited scratches.`,
+        [
+          { text: 'Not Now', style: 'cancel' },
+          { text: 'Upgrade', onPress: () => router.push('/paywall') }
+        ]
+      );
+      return;
+    }
+
+    Alert.alert(
+      'Regenerate Activity?',
+      'This will create a new activity suggestion with your current preferences.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Regenerate',
+          onPress: async () => {
+            setIsSaved(false);
+            setIsSavedForLater(false);
+            await regenerateActivity();
+          }
+        }
+      ]
+    );
+  };
+
   const handleScratchComplete = () => {
     console.log('Scratch complete - activity revealed');
     setScrollEnabled(true);
@@ -269,17 +329,6 @@ export default function HomeScreen() {
         }
       ]
     );
-  };
-
-  const handleTryAgain = async () => {
-    if (!mode) return;
-    
-    clearCurrentActivity();
-    setHasStartedScratch(false);
-    setIsSaved(false);
-    setScrollEnabled(true);
-    setWizardStep('welcome');
-    setWizardAnswers({});
   };
 
   const categories = mode === 'couples' 
@@ -616,18 +665,34 @@ export default function HomeScreen() {
                           </View>
                           <View style={styles.secondaryActions}>
                             <TouchableOpacity
-                              style={styles.notInterestedButton}
+                              style={styles.actionLink}
+                              onPress={handleSaveForLater}
+                              disabled={isSavedForLater || isActivitySavedForLater(currentActivity.title)}
+                              activeOpacity={0.7}
+                            >
+                              <Text style={[
+                                styles.actionLinkText,
+                                (isSavedForLater || isActivitySavedForLater(currentActivity.title)) && styles.actionLinkTextDisabled
+                              ]}>
+                                {(isSavedForLater || isActivitySavedForLater(currentActivity.title)) ? 'Saved for Later' : 'Save for Later'}
+                              </Text>
+                            </TouchableOpacity>
+                            <View style={styles.actionDivider} />
+                            <TouchableOpacity
+                              style={styles.actionLink}
+                              onPress={handleRegenerateActivity}
+                              disabled={isGenerating}
+                              activeOpacity={0.7}
+                            >
+                              <Text style={styles.actionLinkText}>Regenerate</Text>
+                            </TouchableOpacity>
+                            <View style={styles.actionDivider} />
+                            <TouchableOpacity
+                              style={styles.actionLink}
                               onPress={handleNotInterested}
                               activeOpacity={0.7}
                             >
-                              <Text style={styles.notInterestedText}>Not Interested</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                              style={styles.tryAgainButton}
-                              onPress={handleTryAgain}
-                              activeOpacity={0.7}
-                            >
-                              <Text style={styles.tryAgainText}>Try Again</Text>
+                              <Text style={styles.actionLinkText}>Not Interested</Text>
                             </TouchableOpacity>
                           </View>
                         </>
@@ -1247,33 +1312,29 @@ const styles = StyleSheet.create({
   },
   secondaryActions: {
     flexDirection: 'row',
-    gap: Spacing.md,
-    marginTop: Spacing.sm,
+    alignItems: 'center',
+    marginTop: Spacing.md,
     width: '100%',
     paddingHorizontal: Spacing.lg,
     justifyContent: 'center',
   },
-  notInterestedButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  actionLink: {
     paddingVertical: Spacing.sm,
     paddingHorizontal: Spacing.md,
   },
-  notInterestedText: {
+  actionLinkText: {
     fontSize: Typography.sizes.caption,
     fontWeight: '400' as const,
-    color: Colors.textSecondary,
+    color: Colors.primary,
   },
-  tryAgainButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-  },
-  tryAgainText: {
-    fontSize: Typography.sizes.caption,
-    fontWeight: '400' as const,
+  actionLinkTextDisabled: {
     color: Colors.textSecondary,
+    opacity: 0.5,
+  },
+  actionDivider: {
+    width: 1,
+    height: 14,
+    backgroundColor: Colors.cardBorder,
   },
   wizardContent: {
     flex: 1,
