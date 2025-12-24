@@ -114,8 +114,8 @@ export default function SettingsScreen() {
             await updatePreferences({
               includeAlcohol: true,
               includeReligious: false,
-              includeGambling: false,
-              includeWeapons: false,
+              includeKidFriendly: true,
+              includeOutdoorAdventures: true,
               religion: undefined,
             });
             Alert.alert('Preferences Reset', 'Your content preferences have been reset to defaults.');
@@ -393,14 +393,14 @@ export default function SettingsScreen() {
 
             <View style={styles.preferenceItem}>
               <View style={styles.preferenceInfo}>
-                <Text style={styles.preferenceTitle}>Gambling Activities</Text>
+                <Text style={styles.preferenceTitle}>Kid-Friendly Activities</Text>
                 <Text style={styles.preferenceDescription}>
-                  Casinos, betting venues
+                  Playgrounds, family parks, kid-friendly museums
                 </Text>
               </View>
               <Switch
-                value={preferences.includeGambling}
-                onValueChange={(value) => handleToggle('includeGambling', value)}
+                value={preferences.includeKidFriendly}
+                onValueChange={(value) => handleToggle('includeKidFriendly', value)}
                 trackColor={{ false: '#3A3A3A', true: Colors.primary }}
                 thumbColor="#FFFFFF"
               />
@@ -408,14 +408,14 @@ export default function SettingsScreen() {
 
             <View style={styles.preferenceItem}>
               <View style={styles.preferenceInfo}>
-                <Text style={styles.preferenceTitle}>Weapons Activities</Text>
+                <Text style={styles.preferenceTitle}>Outdoor Adventures</Text>
                 <Text style={styles.preferenceDescription}>
-                  Shooting ranges, hunting, archery
+                  Hiking trails, nature walks, beaches, parks
                 </Text>
               </View>
               <Switch
-                value={preferences.includeWeapons}
-                onValueChange={(value) => handleToggle('includeWeapons', value)}
+                value={preferences.includeOutdoorAdventures}
+                onValueChange={(value) => handleToggle('includeOutdoorAdventures', value)}
                 trackColor={{ false: '#3A3A3A', true: Colors.primary }}
                 thumbColor="#FFFFFF"
               />

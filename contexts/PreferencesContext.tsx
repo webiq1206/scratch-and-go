@@ -60,17 +60,22 @@ export const [PreferencesProvider, usePreferences] = createContextHook(() => {
       restrictions.push(`User is interested in ${religionName} activities. Suggest relevant places of worship, faith-based events, and religious celebrations that align with this faith.`);
     }
     
-    if (!preferences.includeGambling) {
-      restrictions.push('Never suggest gambling, casinos, or betting');
+    if (!preferences.includeKidFriendly) {
+      restrictions.push('Avoid suggesting activities specifically designed for children, playgrounds, or kid-focused venues');
+    } else {
+      restrictions.push('Include family-friendly activities that are suitable for children and create memorable moments for families');
     }
     
-    if (!preferences.includeWeapons) {
-      restrictions.push('Never suggest hunting or activities involving weapons');
+    if (!preferences.includeOutdoorAdventures) {
+      restrictions.push('Avoid suggesting hiking, nature trails, camping, or activities requiring significant outdoor activity');
+    } else {
+      restrictions.push('Include outdoor adventures like hiking, nature walks, parks, and outdoor exploration opportunities');
     }
 
     restrictions.push('Never suggest politically affiliated events');
     restrictions.push('Avoid specific dietary places (use "restaurant" not "steakhouse")');
     restrictions.push('Keep all content appropriate and inclusive');
+    restrictions.push('Focus on activities that help create lasting memories with loved ones');
     
     return restrictions;
   };

@@ -2,8 +2,8 @@ export interface UserPreferences {
   includeAlcohol: boolean;
   includeReligious: boolean;
   religion?: string;
-  includeGambling: boolean;
-  includeWeapons: boolean;
+  includeKidFriendly: boolean;
+  includeOutdoorAdventures: boolean;
   completedOnboarding: boolean;
 }
 
@@ -11,8 +11,8 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   includeAlcohol: false,
   includeReligious: false,
   religion: undefined,
-  includeGambling: false,
-  includeWeapons: false,
+  includeKidFriendly: true,
+  includeOutdoorAdventures: true,
   completedOnboarding: false,
 };
 
@@ -51,16 +51,16 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
     noLabel: 'No, skip these',
   },
   {
-    id: 'includeGambling',
-    question: 'Include gambling or casino activities?',
-    description: 'This includes casinos, betting venues, and games of chance',
+    id: 'includeKidFriendly',
+    question: 'Include activities suitable for children?',
+    description: 'This includes playgrounds, family parks, kid-friendly museums, and child-appropriate events',
     yesLabel: 'Yes, include them',
     noLabel: 'No, skip these',
   },
   {
-    id: 'includeWeapons',
-    question: 'Include activities with weapons?',
-    description: 'This includes shooting ranges, hunting, archery, and similar activities',
+    id: 'includeOutdoorAdventures',
+    question: 'Include outdoor adventures?',
+    description: 'This includes hiking trails, nature walks, beaches, parks, and outdoor exploration',
     yesLabel: 'Yes, include them',
     noLabel: 'No, skip these',
   },
