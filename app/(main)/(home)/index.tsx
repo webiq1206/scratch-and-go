@@ -927,6 +927,8 @@ export default function HomeScreen() {
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
         scrollEnabled={scrollEnabled}
+        scrollEventThrottle={16}
+        nestedScrollEnabled={false}
       >
         {wizardStep !== 'summary' && (
           <View style={styles.progressContainer}>
