@@ -357,14 +357,14 @@ export const [LocationProvider, useLocation] = createContextHook(() => {
 });
 
 function getWeatherInfo(weatherCode: number): { condition: string; description: string; icon: string } {
-  if (weatherCode === 0) return { condition: 'Clear', description: 'Clear sky', icon: '☀️' };
-  if (weatherCode <= 3) return { condition: 'Partly Cloudy', description: 'Partly cloudy', icon: '⛅' };
-  if (weatherCode <= 48) return { condition: 'Foggy', description: 'Fog', icon: '🌫️' };
-  if (weatherCode <= 57) return { condition: 'Drizzle', description: 'Drizzle', icon: '🌦️' };
-  if (weatherCode <= 67) return { condition: 'Rain', description: 'Rain', icon: '🌧️' };
-  if (weatherCode <= 77) return { condition: 'Snow', description: 'Snow', icon: '❄️' };
-  if (weatherCode <= 82) return { condition: 'Rain', description: 'Rain showers', icon: '🌧️' };
-  if (weatherCode <= 86) return { condition: 'Snow', description: 'Snow showers', icon: '🌨️' };
-  if (weatherCode <= 99) return { condition: 'Thunderstorm', description: 'Thunderstorm', icon: '⛈️' };
-  return { condition: 'Unknown', description: 'Weather unknown', icon: '🌡️' };
+  if (weatherCode === 0) return { condition: 'Clear', description: 'Clear sky', icon: '' };
+  if (weatherCode <= 3) return { condition: 'Partly Cloudy', description: 'Partly cloudy', icon: '' };
+  if (weatherCode <= 48) return { condition: 'Foggy', description: 'Fog', icon: '' };
+  if (weatherCode <= 57) return { condition: 'Drizzle', description: 'Drizzle', icon: '' };
+  if (weatherCode <= 67) return { condition: 'Rain', description: 'Rain', icon: '' };
+  if (weatherCode <= 77) return { condition: 'Snow', description: 'Snow', icon: '' };
+  if (weatherCode <= 82) return { condition: 'Rain', description: 'Rain showers', icon: '' };
+  if (weatherCode <= 86) return { condition: 'Snow', description: 'Snow showers', icon: '' };
+  if (weatherCode <= 99) return { condition: 'Thunderstorm', description: 'Thunderstorm', icon: '' };
+  return { condition: 'Unknown', description: 'Weather unknown', icon: '' };
 }

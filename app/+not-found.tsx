@@ -9,7 +9,6 @@ export default function NotFoundScreen() {
     <>
       <Stack.Screen options={{ title: "Oops!" }} />
       <View style={styles.container}>
-        <Text style={styles.emoji}>🤔</Text>
         <Text style={styles.title}>This screen doesn&apos;t exist.</Text>
         <Link href="/" style={styles.link}>
           <Text style={styles.linkText}>Go to home screen</Text>
@@ -27,11 +26,8 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
     backgroundColor: Colors.background,
   },
-  emoji: {
-    fontSize: 64,
-    marginBottom: Spacing.lg,
-  },
   title: {
+    marginTop: Spacing.lg,
     fontSize: Typography.sizes.h2,
     fontWeight: Typography.weights.semibold,
     color: Colors.text,

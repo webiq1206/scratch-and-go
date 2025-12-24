@@ -104,7 +104,7 @@ export const [YearRecapProvider, useYearRecap] = createContextHook(() => {
         type: 'streak',
         title: 'Streak Master',
         description: `${streakData.longestStreak} week streak!`,
-        emoji: '🔥',
+        emoji: '',
         value: streakData.longestStreak,
       });
     }
@@ -130,7 +130,7 @@ export const [YearRecapProvider, useYearRecap] = createContextHook(() => {
         type: 'achievement',
         title: 'Monthly Explorer',
         description: 'Made memories every month!',
-        emoji: '🎉',
+        emoji: '',
         value: yearActivities.length,
       });
     }
@@ -161,7 +161,7 @@ export const [YearRecapProvider, useYearRecap] = createContextHook(() => {
         type: 'money',
         title: 'Budget Master',
         description: 'Enjoyed free activities all year!',
-        emoji: '💚',
+        emoji: '',
         value: 0,
       });
     }
@@ -203,18 +203,18 @@ export const [YearRecapProvider, useYearRecap] = createContextHook(() => {
 
 function getCategoryEmoji(category: string): string {
   const emojiMap: Record<string, string> = {
-    'Adventure': '🏔️',
-    'Food & Dining': '🍽️',
-    'Arts & Culture': '🎨',
-    'Entertainment': '🎬',
-    'Relaxation': '🧘',
-    'Fitness & Sports': '⚽',
-    'Learning': '📚',
-    'Games': '🎮',
-    'Nature': '🌳',
-    'Creative': '✨',
+    'Adventure': '',
+    'Food & Dining': '',
+    'Arts & Culture': '',
+    'Entertainment': '',
+    'Relaxation': '',
+    'Fitness & Sports': '',
+    'Learning': '',
+    'Games': '',
+    'Nature': '',
+    'Creative': '',
   };
-  return emojiMap[category] || '🎯';
+  return emojiMap[category] || '';
 }
 
 function generatePersonalizedMessage(
@@ -227,16 +227,16 @@ function generatePersonalizedMessage(
   }
 
   if (totalCompleted >= 52) {
-    return `What an incredible year! You completed ${totalCompleted} activities and made unforgettable memories every single week. You're living life to the fullest! 🌟`;
+    return `What an incredible year! You completed ${totalCompleted} activities and made unforgettable memories every single week. You're living life to the fullest!`;
   }
 
   if (totalCompleted >= 26) {
-    return `Amazing year! ${totalCompleted} activities completed and countless memories created. Your dedication to quality time is inspiring! ❤️`;
+    return `Amazing year! ${totalCompleted} activities completed and countless memories created. Your dedication to quality time is inspiring!`;
   }
 
   if (totalCompleted >= 12) {
-    return `Great year of adventures! ${totalCompleted} activities and so many special moments. Keep building those memories! 🎉`;
+    return `Great year of adventures! ${totalCompleted} activities and so many special moments. Keep building those memories!`;
   }
 
-  return `You completed ${totalCompleted} ${totalCompleted === 1 ? 'activity' : 'activities'} this year. Every moment counts, and you're making beautiful memories together! 💕`;
+  return `You completed ${totalCompleted} ${totalCompleted === 1 ? 'activity' : 'activities'} this year. Every moment counts, and you're making beautiful memories together!`;
 }

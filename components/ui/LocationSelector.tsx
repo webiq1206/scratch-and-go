@@ -73,7 +73,7 @@ export default function LocationSelector() {
             </Text>
 
             <Text style={styles.modalNote}>
-              💡 You can still generate great activities without setting a location — they just won&apos;t be as locally tailored.
+              Note: You can still generate great activities without setting a location — they just won&apos;t be as locally tailored.
             </Text>
 
             <TouchableOpacity

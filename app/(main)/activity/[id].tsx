@@ -40,7 +40,6 @@ export default function ActivityDetailScreen() {
       <SafeAreaView style={styles.container} edges={['top']}>
         <Stack.Screen options={{ title: 'Activity Not Found' }} />
         <View style={styles.errorContainer}>
-          <Text style={styles.errorEmoji}>😕</Text>
           <Text style={styles.errorText}>Activity not found</Text>
           <TouchableOpacity 
             style={styles.backButton}
@@ -70,7 +69,7 @@ export default function ActivityDetailScreen() {
     
     if (!activity.photos || activity.photos.length === 0) {
       Alert.alert(
-        '🎉 Memory Made!',
+        'Memory Made!',
         'Don\'t forget to capture this special moment with your loved ones! Add photos to preserve this memory forever.',
         [
           { text: 'Add Photos Now', onPress: () => handleTakePhoto() },
@@ -78,7 +77,7 @@ export default function ActivityDetailScreen() {
         ]
       );
     } else {
-      Alert.alert('🎉 Memory Complete!', 'Another beautiful moment captured with loved ones!');
+      Alert.alert('Memory Complete!', 'Another beautiful moment captured with loved ones!');
     }
   };
 
@@ -386,7 +385,7 @@ export default function ActivityDetailScreen() {
 
           {activity.proTip && (
             <View style={styles.proTipSection}>
-              <Text style={styles.proTipLabel}>💡 Pro Tip</Text>
+              <Text style={styles.proTipLabel}>Pro Tip</Text>
               <Text style={styles.proTipText}>{activity.proTip}</Text>
             </View>
           )}
@@ -455,7 +454,7 @@ export default function ActivityDetailScreen() {
                 style={styles.notesInput}
                 value={notesText}
                 onChangeText={setNotesText}
-                placeholder="Capture this memory... What made this moment special with your loved ones? 💭"
+                placeholder="Capture this memory... What made this moment special with your loved ones?"
                 placeholderTextColor={Colors.textLight}
                 multiline
                 numberOfLines={6}
@@ -467,7 +466,7 @@ export default function ActivityDetailScreen() {
                 {activity.notes ? (
                   <Text style={styles.notesText}>{activity.notes}</Text>
                 ) : (
-                  <Text style={styles.notesPlaceholder}>✍️ Capture the memory! What made this moment with loved ones special?</Text>
+                  <Text style={styles.notesPlaceholder}>Capture the memory! What made this moment with loved ones special?</Text>
                 )}
               </View>
             )}
@@ -475,7 +474,7 @@ export default function ActivityDetailScreen() {
 
           <View style={styles.photosSection}>
             <View style={styles.photosSectionHeader}>
-              <Text style={styles.sectionLabel}>📷 Moments with Loved Ones</Text>
+              <Text style={styles.sectionLabel}>Moments with Loved Ones</Text>
               <View style={styles.photoButtons}>
                 {Platform.OS !== 'web' && (
                   <TouchableOpacity
@@ -521,7 +520,7 @@ export default function ActivityDetailScreen() {
             ) : (
               <View style={styles.noPhotosContainer}>
                 <Camera size={40} color={Colors.primary} />
-                <Text style={styles.noPhotosText}>📸 Capture This Moment!</Text>
+                <Text style={styles.noPhotosText}>Capture This Moment!</Text>
                 <Text style={styles.noPhotosSubtext}>Take a photo with your loved ones to remember this moment forever</Text>
                 <TouchableOpacity
                   style={styles.addPhotoPromptButton}

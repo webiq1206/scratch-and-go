@@ -125,7 +125,6 @@ export default function ActivitySharedScreen() {
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <Stack.Screen options={{ headerShown: false }} />
         <View style={styles.errorContainer}>
-          <Text style={styles.errorEmoji}>😕</Text>
           <Text style={styles.errorTitle}>Activity Not Found</Text>
           <Text style={styles.errorText}>
             This link appears to be invalid or expired.

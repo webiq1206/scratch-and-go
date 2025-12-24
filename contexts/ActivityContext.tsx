@@ -444,17 +444,17 @@ Create something unique, exciting, and memorable. Use inclusive language ("your 
       const topCategory = Object.entries(learningProfile.likedCategories)
         .sort(([,a], [,b]) => b - a)[0][0];
       intelligent.category = topCategory;
-      console.log(`🧠 Intelligent filter: Suggesting ${topCategory} based on user preferences`);
+      console.log(`Intelligent filter: Suggesting ${topCategory} based on user preferences`);
     }
 
     if (userFilters.budget === 'Any' && learningProfile.preferredBudget) {
       intelligent.budget = learningProfile.preferredBudget;
-      console.log(`🧠 Intelligent filter: Budget set to ${learningProfile.preferredBudget}`);
+      console.log(`Intelligent filter: Budget set to ${learningProfile.preferredBudget}`);
     }
 
     if ((!userFilters.setting || userFilters.setting === 'either') && learningProfile.preferredSetting) {
       intelligent.setting = learningProfile.preferredSetting;
-      console.log(`🧠 Intelligent filter: Setting preference: ${learningProfile.preferredSetting}`);
+      console.log(`Intelligent filter: Setting preference: ${learningProfile.preferredSetting}`);
     }
 
     return intelligent;

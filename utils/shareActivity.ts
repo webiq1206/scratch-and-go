@@ -49,18 +49,18 @@ function formatActivityShareText(activity: Activity, shareLink: string): string 
   
   let text = `${activity.emoji} ${activity.title}\n\n`;
   text += `${activity.description}\n\n`;
-  text += `💰 Cost: ${costSymbol}\n`;
-  text += `⏱️ Duration: ${activity.duration}\n`;
+  text += `Cost: ${costSymbol}\n`;
+  text += `Duration: ${activity.duration}\n`;
   
   if (activity.supplies) {
-    text += `🎒 Supplies: ${activity.supplies}\n`;
+    text += `Supplies: ${activity.supplies}\n`;
   }
   
   if (activity.proTip) {
-    text += `\n💡 Pro Tip: ${activity.proTip}\n`;
+    text += `\nPro Tip: ${activity.proTip}\n`;
   }
   
-  text += `\n✨ Discover more activities with Scratch & Go!\n`;
+  text += `\nDiscover more activities with Scratch & Go!\n`;
   text += `\n${shareLink}`;
   
   return text;

@@ -73,25 +73,21 @@ export default function StatsScreen() {
 
         <View style={styles.statsGrid}>
           <View style={styles.statCard}>
-            <Text style={styles.statEmoji}>✨</Text>
             <Text style={styles.statValue}>{stats.totalScratched}</Text>
             <Text style={styles.statLabel}>Activities Scratched</Text>
           </View>
 
           <View style={styles.statCard}>
-            <Text style={styles.statEmoji}>💝</Text>
             <Text style={styles.statValue}>{stats.totalSaved}</Text>
             <Text style={styles.statLabel}>Activities Saved</Text>
           </View>
 
           <View style={styles.statCard}>
-            <Text style={styles.statEmoji}>🎉</Text>
             <Text style={styles.statValue}>{stats.totalCompleted}</Text>
             <Text style={styles.statLabel}>Completed</Text>
           </View>
 
           <View style={styles.statCard}>
-            <Text style={styles.statEmoji}>📅</Text>
             <Text style={styles.statValue}>{stats.currentMonthScratches}</Text>
             <Text style={styles.statLabel}>This Month</Text>
           </View>
@@ -106,7 +102,7 @@ export default function StatsScreen() {
           >
             <Award size={32} color={Colors.white} />
             <View style={styles.streakContent}>
-              <Text style={styles.streakValue}>{stats.currentStreak} Week Streak! 🔥</Text>
+              <Text style={styles.streakValue}>{stats.currentStreak} Week Streak!</Text>
               <Text style={styles.streakLabel}>
                 You&apos;re on fire! Keep completing activities.
               </Text>
@@ -123,12 +119,10 @@ export default function StatsScreen() {
           <Text style={styles.sectionTitle}>Time & Money</Text>
           <View style={styles.row}>
             <View style={styles.timeMoneyCard}>
-              <Text style={styles.timeMoneyEmoji}>⏰</Text>
               <Text style={styles.timeMoneyValue}>{formatTime(stats.estimatedTimeSpent)}</Text>
               <Text style={styles.timeMoneyLabel}>Time Spent</Text>
             </View>
             <View style={styles.timeMoneyCard}>
-              <Text style={styles.timeMoneyEmoji}>💰</Text>
               <Text style={styles.timeMoneyValue}>{formatMoney(stats.estimatedMoneySpent)}</Text>
               <Text style={styles.timeMoneyLabel}>Invested</Text>
             </View>
@@ -165,7 +159,6 @@ export default function StatsScreen() {
         {stats.monthlyRecap.highlights.length > 0 && (
           <View style={styles.section}>
             <View style={styles.recapHeader}>
-              <Text style={styles.recapEmoji}>📊</Text>
               <Text style={styles.sectionTitle}>
                 {stats.monthlyRecap.month} Recap
               </Text>

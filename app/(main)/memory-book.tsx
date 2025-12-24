@@ -121,11 +121,11 @@ export default function MemoryBookScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.title}>📖 Your Memory Book</Text>
+        <Text style={styles.title}>Your Memory Book</Text>
         <Text style={styles.subtitle}>
           {activeTab === 'saved' 
-            ? '💝 Moments waiting to be made with loved ones'
-            : '📸 Beautiful memories you\'ve created together'
+            ? 'Moments waiting to be made with loved ones'
+            : 'Beautiful memories you\'ve created together'
           }
         </Text>
       </View>
@@ -289,9 +289,7 @@ export default function MemoryBookScreen() {
 
       {displayedActivities.length === 0 ? (
         <View style={styles.emptyState}>
-          <Text style={styles.emptyEmoji}>
-            {hasActiveFilters ? '🔍' : (activeTab === 'saved' ? '💝' : '🎉')}
-          </Text>
+
           <Text style={styles.emptyTitle}>
             {hasActiveFilters
               ? 'No matching activities'

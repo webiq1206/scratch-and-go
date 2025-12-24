@@ -95,7 +95,7 @@ export default function QueueScreen() {
 
         {item.note && (
           <View style={styles.noteContainer}>
-            <Text style={styles.note}>💬 {item.note}</Text>
+            <Text style={styles.note}>{item.note}</Text>
           </View>
         )}
 

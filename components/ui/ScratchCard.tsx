@@ -73,7 +73,7 @@ export default function ScratchCard({
       },
       onStartShouldSetPanResponderCapture: (evt, gestureState) => {
         const shouldCapture = !disabledRef.current && !isRevealedRef.current;
-        console.log('[ScratchCard] ✋ CAPTURE on start:', shouldCapture);
+        console.log('[ScratchCard] CAPTURE on start:', shouldCapture);
         return shouldCapture;
       },
       onMoveShouldSetPanResponder: (evt, gestureState) => {
@@ -83,19 +83,19 @@ export default function ScratchCard({
       },
       onMoveShouldSetPanResponderCapture: (evt, gestureState) => {
         const shouldCapture = !disabledRef.current && !isRevealedRef.current;
-        console.log('[ScratchCard] ✋ CAPTURE on move:', shouldCapture, 'dx:', gestureState.dx, 'dy:', gestureState.dy);
+        console.log('[ScratchCard] CAPTURE on move:', shouldCapture, 'dx:', gestureState.dx, 'dy:', gestureState.dy);
         return shouldCapture;
       },
       onPanResponderTerminationRequest: () => {
-        console.log('[ScratchCard] ⛔ Termination requested - REJECTING');
+        console.log('[ScratchCard] Termination requested - REJECTING');
         return false;
       },
       onShouldBlockNativeResponder: () => {
-        console.log('[ScratchCard] 🚫 Blocking native responder');
+        console.log('[ScratchCard] Blocking native responder');
         return true;
       },
       onPanResponderGrant: (evt, gestureState) => {
-        console.log('[ScratchCard] ✅ GRANT - Touch started!');
+        console.log('[ScratchCard] GRANT - Touch started!');
         if (disabledRef.current || isRevealedRef.current) {
           console.log('[ScratchCard] But card is disabled or revealed, ignoring');
           return;
@@ -104,12 +104,12 @@ export default function ScratchCard({
         console.log('[ScratchCard] Touch location:', locationX, locationY);
         
         if (onTouchStart) {
-          console.log('[ScratchCard] 📱 Calling onTouchStart - disabling scroll');
+          console.log('[ScratchCard] Calling onTouchStart - disabling scroll');
           onTouchStart();
         }
         
         if (!hasStartedRef.current) {
-          console.log('[ScratchCard] 🎯 First scratch - calling onScratchStart');
+          console.log('[ScratchCard] First scratch - calling onScratchStart');
           hasStartedRef.current = true;
           if (onScratchStart) {
             onScratchStart();
@@ -123,7 +123,7 @@ export default function ScratchCard({
       onPanResponderMove: (evt, gestureState) => {
         if (disabledRef.current || isRevealedRef.current) return;
         const { locationX, locationY } = evt.nativeEvent;
-        console.log('[ScratchCard] 👆 Move:', locationX, locationY, 'dx:', gestureState.dx, 'dy:', gestureState.dy);
+        console.log('[ScratchCard] Move:', locationX, locationY, 'dx:', gestureState.dx, 'dy:', gestureState.dy);
         addScratch(locationX, locationY);
         if (Platform.OS !== 'web') {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -131,16 +131,16 @@ export default function ScratchCard({
       },
       onPanResponderRelease: (evt, gestureState) => {
         if (disabledRef.current || isRevealedRef.current) return;
-        console.log('[ScratchCard] 👋 Released! Total scratches:', scratches.length);
+        console.log('[ScratchCard] Released! Total scratches:', scratches.length);
         checkScratchProgress();
         
         if (onTouchEnd) {
-          console.log('[ScratchCard] 📱 Calling onTouchEnd - re-enabling scroll');
+          console.log('[ScratchCard] Calling onTouchEnd - re-enabling scroll');
           onTouchEnd();
         }
       },
       onPanResponderTerminate: (evt, gestureState) => {
-        console.log('[ScratchCard] ⚠️ Gesture TERMINATED');
+        console.log('[ScratchCard] Gesture TERMINATED');
         if (onTouchEnd) {
           onTouchEnd();
         }

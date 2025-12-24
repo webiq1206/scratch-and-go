@@ -187,7 +187,6 @@ function Slide1({ recap, fadeAnim, scaleAnim }: SlideProps) {
           { opacity: fadeAnim, transform: [{ scale: scaleAnim }] },
         ]}
       >
-        <Text style={styles.slideEmoji}>✨</Text>
         <Text style={styles.slideTitle}>Your {recap.year}</Text>
         <Text style={styles.slideSubtitle}>Year in Review</Text>
         <Text style={styles.slideDescription}>{recap.personalizedMessage}</Text>
@@ -208,7 +207,6 @@ function Slide2({ recap, fadeAnim, scaleAnim }: SlideProps) {
           { opacity: fadeAnim, transform: [{ scale: scaleAnim }] },
         ]}
       >
-        <Text style={styles.slideEmoji}>🎯</Text>
         <Text style={styles.bigNumber}>{recap.totalActivitiesCompleted}</Text>
         <Text style={styles.slideTitle}>
           {recap.totalActivitiesCompleted === 1 ? 'Activity' : 'Activities'} Completed
@@ -236,7 +234,6 @@ function Slide3({ recap, fadeAnim, scaleAnim }: SlideProps) {
           { opacity: fadeAnim, transform: [{ scale: scaleAnim }] },
         ]}
       >
-        <Text style={styles.slideEmoji}>⏰</Text>
         <Text style={styles.bigNumber}>{hours}</Text>
         <Text style={styles.slideTitle}>Hours of Quality Time</Text>
         <Text style={styles.slideDescription}>
@@ -261,7 +258,6 @@ function Slide4({ recap, fadeAnim, scaleAnim }: SlideProps) {
           { opacity: fadeAnim, transform: [{ scale: scaleAnim }] },
         ]}
       >
-        <Text style={styles.slideEmoji}>{recap.favoriteCategory ? '❤️' : '🎨'}</Text>
         <Text style={styles.slideTitle}>
           {recap.favoriteCategory ? 'Favorite Category' : 'Explore Categories'}
         </Text>
@@ -291,7 +287,6 @@ function Slide5({ recap, fadeAnim, scaleAnim }: SlideProps) {
           { opacity: fadeAnim, transform: [{ scale: scaleAnim }] },
         ]}
       >
-        <Text style={styles.slideEmoji}>📅</Text>
         <Text style={styles.bigNumber}>{monthsWithActivity}</Text>
         <Text style={styles.slideTitle}>
           {monthsWithActivity === 1 ? 'Month' : 'Months'} Active
@@ -333,13 +328,11 @@ function Slide6({ recap, fadeAnim, scaleAnim }: SlideProps) {
           { opacity: fadeAnim, transform: [{ scale: scaleAnim }] },
         ]}
       >
-        <Text style={styles.slideEmoji}>🏆</Text>
         <Text style={styles.slideTitle}>Highlights</Text>
         {recap.highlights.length > 0 ? (
           <View style={styles.highlightsList}>
             {recap.highlights.slice(0, 4).map((highlight: any, index: number) => (
               <View key={index} style={styles.highlightItem}>
-                <Text style={styles.highlightEmoji}>{highlight.emoji}</Text>
                 <View style={styles.highlightText}>
                   <Text style={styles.highlightTitle}>{highlight.title}</Text>
                   <Text style={styles.highlightDescription}>{highlight.description}</Text>
@@ -369,7 +362,6 @@ function Slide7({ recap, fadeAnim, scaleAnim }: SlideProps) {
           { opacity: fadeAnim, transform: [{ scale: scaleAnim }] },
         ]}
       >
-        <Text style={styles.slideEmoji}>💫</Text>
         <Text style={styles.slideTitle}>Here&apos;s to {recap.year + 1}!</Text>
         <Text style={styles.slideDescription}>
           Keep making memories, trying new things, and building amazing moments together.
@@ -397,28 +389,27 @@ function Slide7({ recap, fadeAnim, scaleAnim }: SlideProps) {
 }
 
 function generateShareMessage(recap: any): string {
-  const emoji = '✨';
-  let message = `${emoji} My ${recap.year} Year in Review ${emoji}\n\n`;
+  let message = `My ${recap.year} Year in Review\n\n`;
   
   if (recap.totalActivitiesCompleted > 0) {
-    message += `🎯 ${recap.totalActivitiesCompleted} activities completed\n`;
+    message += `${recap.totalActivitiesCompleted} activities completed\n`;
   }
   
   const hours = Math.round(recap.totalTimeSpent / 60);
   if (hours > 0) {
-    message += `⏰ ${hours} hours of quality time\n`;
+    message += `${hours} hours of quality time\n`;
   }
   
   if (recap.favoriteCategory) {
-    message += `❤️ Loved ${recap.favoriteCategory} activities\n`;
+    message += `Loved ${recap.favoriteCategory} activities\n`;
   }
   
   if (recap.streakRecord > 0) {
-    message += `🔥 ${recap.streakRecord} week streak!\n`;
+    message += `${recap.streakRecord} week streak!\n`;
   }
   
   message += `\n${recap.personalizedMessage}\n\n`;
-  message += `Made with Scratch & Go - Making memories, one activity at a time! 💕`;
+  message += `Made with Scratch & Go - Making memories, one activity at a time!`;
   
   return message;
 }

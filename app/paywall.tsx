@@ -33,7 +33,7 @@ export default function PaywallScreen() {
       await activatePremium(selectedPlan);
       
       Alert.alert(
-        '🎉 Welcome to Premium!',
+        'Welcome to Premium!',
         'You now have unlimited access to all premium features.',
         [
           {
