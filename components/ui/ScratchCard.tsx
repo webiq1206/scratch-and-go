@@ -29,8 +29,13 @@ export default function ScratchCard({
 }: ScratchCardProps) {
   const [scratches, setScratches] = useState<{ x: number; y: number }[]>([]);
   const [isRevealed, setIsRevealed] = useState(false);
-  const [hasStarted, setHasStarted] = useState(false);
   const opacity = useRef(new Animated.Value(1)).current;
+  const isRevealedRef = useRef(false);
+  const disabledRef = useRef(disabled);
+  const hasStartedRef = useRef(false);
+  
+  disabledRef.current = disabled;
+  isRevealedRef.current = isRevealed;
 
   const addScratch = useCallback((x: number, y: number) => {
     setScratches((prev) => [...prev, { x, y }]);
@@ -62,16 +67,17 @@ export default function ScratchCard({
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => {
-        console.log('[ScratchCard] onStartShouldSetPanResponder - disabled:', disabled, 'isRevealed:', isRevealed);
-        return !disabled && !isRevealed;
+        const shouldSet = !disabledRef.current && !isRevealedRef.current;
+        console.log('[ScratchCard] onStartShouldSetPanResponder - disabled:', disabledRef.current, 'isRevealed:', isRevealedRef.current, 'shouldSet:', shouldSet);
+        return shouldSet;
       },
-      onStartShouldSetPanResponderCapture: () => !disabled && !isRevealed,
-      onMoveShouldSetPanResponder: () => !disabled && !isRevealed,
-      onMoveShouldSetPanResponderCapture: () => !disabled && !isRevealed,
+      onStartShouldSetPanResponderCapture: () => !disabledRef.current && !isRevealedRef.current,
+      onMoveShouldSetPanResponder: () => !disabledRef.current && !isRevealedRef.current,
+      onMoveShouldSetPanResponderCapture: () => !disabledRef.current && !isRevealedRef.current,
       onPanResponderTerminationRequest: () => false,
       onShouldBlockNativeResponder: () => true,
       onPanResponderGrant: (evt) => {
-        if (disabled || isRevealed) return;
+        if (disabledRef.current || isRevealedRef.current) return;
         const { locationX, locationY } = evt.nativeEvent;
         console.log('[ScratchCard] Touch granted at:', locationX, locationY);
         
@@ -79,9 +85,9 @@ export default function ScratchCard({
           onTouchStart();
         }
         
-        if (!hasStarted) {
+        if (!hasStartedRef.current) {
           console.log('[ScratchCard] First scratch - calling onScratchStart');
-          setHasStarted(true);
+          hasStartedRef.current = true;
           if (onScratchStart) {
             onScratchStart();
           }
@@ -90,15 +96,13 @@ export default function ScratchCard({
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       },
       onPanResponderMove: (evt) => {
-        if (disabled || isRevealed) return;
+        if (disabledRef.current || isRevealedRef.current) return;
         const { locationX, locationY } = evt.nativeEvent;
         addScratch(locationX, locationY);
-        if (scratches.length % 2 === 0) {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        }
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       },
       onPanResponderRelease: () => {
-        if (disabled || isRevealed) return;
+        if (disabledRef.current || isRevealedRef.current) return;
         console.log('[ScratchCard] Touch released');
         checkScratchProgress();
         
