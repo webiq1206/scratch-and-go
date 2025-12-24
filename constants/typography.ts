@@ -5,6 +5,7 @@ const Typography = {
     h2: 24,
     h3: 20,
     body: 16,
+    medium: 15,
     caption: 14,
     small: 12,
   },
