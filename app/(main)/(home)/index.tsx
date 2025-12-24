@@ -576,7 +576,7 @@ export default function HomeScreen() {
 
               <View style={styles.cardContainer}>
                 <ScratchCard
-                  disabled={hasStartedScratch}
+                  disabled={isGenerating}
                   onScratchStart={handleScratchStart}
                   onScratchComplete={handleScratchComplete}
                   onTouchStart={() => setScrollEnabled(false)}
