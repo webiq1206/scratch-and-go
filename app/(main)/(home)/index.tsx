@@ -31,7 +31,9 @@ export default function HomeScreen() {
   const [budgetFilter, setBudgetFilter] = useState('Any');
   const [timingFilter, setTimingFilter] = useState('Anytime');
   const [hasStartedScratch, setHasStartedScratch] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
   const shimmerAnim = useState(new Animated.Value(0))[0];
+  const fadeAnim = useState(new Animated.Value(0))[0];
   const scrollViewRef = useRef<ScrollView>(null);
   const [scrollEnabled, setScrollEnabled] = useState(true);
   
@@ -57,6 +59,19 @@ export default function HomeScreen() {
     };
     init();
   }, []);
+
+  useEffect(() => {
+    if (mode && !showFilters) {
+      setTimeout(() => {
+        setShowFilters(true);
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 600,
+          useNativeDriver: true,
+        }).start();
+      }, 300);
+    }
+  }, [mode, showFilters, fadeAnim]);
 
   useEffect(() => {
     Animated.loop(
@@ -110,6 +125,20 @@ export default function HomeScreen() {
       return;
     }
     setCategoryFilter(category);
+  };
+
+  const getPersonalizedPrompt = () => {
+    if (!hasSelectedFilters) {
+      return "Ready to discover something amazing? Let's personalize your adventure! 🎯";
+    }
+    
+    const prompts = [
+      `Perfect choice! This is going to be amazing 💫`,
+      `Love it! Your next memory is just a scratch away ✨`,
+      `Great selection! Time to reveal something special 🎉`,
+      `Awesome! Let's make this moment unforgettable 💝`,
+    ];
+    return prompts[Math.floor(Math.random() * prompts.length)];
   };
 
   const handleScratchStart = async () => {
@@ -212,11 +241,37 @@ export default function HomeScreen() {
   };
 
   const categories = mode === 'couples' 
-    ? ['Any', 'Chill', 'Active', 'Creative', 'Foodie', 'Adventure']
-    : ['Any', 'Chill', 'Active', 'Creative', 'Educational', 'Outdoor'];
+    ? [
+        { label: 'Any', emoji: '🎲' },
+        { label: 'Chill', emoji: '😌' },
+        { label: 'Active', emoji: '⚡' },
+        { label: 'Creative', emoji: '🎨' },
+        { label: 'Foodie', emoji: '🍽️' },
+        { label: 'Adventure', emoji: '🗺️' },
+      ]
+    : [
+        { label: 'Any', emoji: '🎲' },
+        { label: 'Chill', emoji: '😌' },
+        { label: 'Active', emoji: '⚡' },
+        { label: 'Creative', emoji: '🎨' },
+        { label: 'Educational', emoji: '📚' },
+        { label: 'Outdoor', emoji: '🌲' },
+      ];
 
-  const budgetOptions = ['Any', 'Free', '$', '$$', '$$$'];
-  const timingOptions = ['Anytime', 'Quick (1-2h)', 'Half Day', 'Full Day'];
+  const budgetOptions = [
+    { label: 'Any', emoji: '💰', description: 'Surprise me' },
+    { label: 'Free', emoji: '🎁', description: 'No cost' },
+    { label: '$', emoji: '💵', description: 'Budget' },
+    { label: '$$', emoji: '💳', description: 'Moderate' },
+    { label: '$$$', emoji: '💎', description: 'Splurge' },
+  ];
+  
+  const timingOptions = [
+    { label: 'Anytime', emoji: '🕐', description: 'Flexible' },
+    { label: 'Quick (1-2h)', emoji: '⏱️', description: 'Quick fun' },
+    { label: 'Half Day', emoji: '☀️', description: '3-5 hours' },
+    { label: 'Full Day', emoji: '🌅', description: 'All day' },
+  ];
 
   const hasSelectedFilters = categoryFilter !== 'Any' || budgetFilter !== 'Any' || timingFilter !== 'Anytime';
   const isScratchDisabled = !hasSelectedFilters || hasStartedScratch;
@@ -441,11 +496,9 @@ export default function HomeScreen() {
           <Text style={styles.subheadline}>Discover your next memory with loved ones</Text>
         </View>
 
-        {!hasSelectedFilters && (
-          <View style={styles.filterPrompt}>
-            <Text style={styles.filterPromptText}>👇 Select your preferences below to get started</Text>
-          </View>
-        )}
+        <View style={styles.personalizedPrompt}>
+          <Text style={styles.personalizedPromptText}>{getPersonalizedPrompt()}</Text>
+        </View>
 
         <View style={styles.cardContainer}>
           <ScratchCard
@@ -586,63 +639,79 @@ export default function HomeScreen() {
           </Text>
         </View>
 
-        <View style={styles.filtersSection}>
-          <View style={styles.filterRow}>
-            <Text style={styles.filterLabel}>Category</Text>
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.filterScroll}
-            >
-              {categories.map((cat) => (
-                <FilterPill
-                  key={cat}
-                  label={cat}
-                  selected={categoryFilter === cat}
-                  onPress={() => handleCategorySelect(cat)}
-                  isPremium={isCategoryPremium(cat)}
-                  showPremiumBadge={isPremium}
-                />
-              ))}
-            </ScrollView>
-          </View>
+        {showFilters && (
+          <Animated.View style={[styles.filtersSection, { opacity: fadeAnim }]}>
+            <View style={styles.filterRow}>
+              <View style={styles.filterHeader}>
+                <Text style={styles.filterQuestion}>What&apos;s the vibe? 🎭</Text>
+                <Text style={styles.filterHint}>Pick what matches your mood</Text>
+              </View>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.filterScroll}
+              >
+                {categories.map((cat) => (
+                  <FilterPill
+                    key={cat.label}
+                    label={cat.label}
+                    emoji={cat.emoji}
+                    selected={categoryFilter === cat.label}
+                    onPress={() => handleCategorySelect(cat.label)}
+                    isPremium={isCategoryPremium(cat.label)}
+                    showPremiumBadge={isPremium}
+                  />
+                ))}
+              </ScrollView>
+            </View>
 
-          <View style={styles.filterRow}>
-            <Text style={styles.filterLabel}>Budget</Text>
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.filterScroll}
-            >
-              {budgetOptions.map((budget) => (
-                <FilterPill
-                  key={budget}
-                  label={budget}
-                  selected={budgetFilter === budget}
-                  onPress={() => setBudgetFilter(budget)}
-                />
-              ))}
-            </ScrollView>
-          </View>
+            <View style={styles.filterRow}>
+              <View style={styles.filterHeader}>
+                <Text style={styles.filterQuestion}>What&apos;s the budget? 💰</Text>
+                <Text style={styles.filterHint}>How much do you want to spend?</Text>
+              </View>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.filterScroll}
+              >
+                {budgetOptions.map((budget) => (
+                  <FilterPill
+                    key={budget.label}
+                    label={budget.label}
+                    emoji={budget.emoji}
+                    description={budget.description}
+                    selected={budgetFilter === budget.label}
+                    onPress={() => setBudgetFilter(budget.label)}
+                  />
+                ))}
+              </ScrollView>
+            </View>
 
-          <View style={styles.filterRow}>
-            <Text style={styles.filterLabel}>Timing</Text>
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.filterScroll}
-            >
-              {timingOptions.map((timing) => (
-                <FilterPill
-                  key={timing}
-                  label={timing}
-                  selected={timingFilter === timing}
-                  onPress={() => setTimingFilter(timing)}
-                />
-              ))}
-            </ScrollView>
-          </View>
-        </View>
+            <View style={styles.filterRow}>
+              <View style={styles.filterHeader}>
+                <Text style={styles.filterQuestion}>How much time? ⏰</Text>
+                <Text style={styles.filterHint}>Pick your perfect duration</Text>
+              </View>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.filterScroll}
+              >
+                {timingOptions.map((timing) => (
+                  <FilterPill
+                    key={timing.label}
+                    label={timing.label}
+                    emoji={timing.emoji}
+                    description={timing.description}
+                    selected={timingFilter === timing.label}
+                    onPress={() => setTimingFilter(timing.label)}
+                  />
+                ))}
+              </ScrollView>
+            </View>
+          </Animated.View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -728,20 +797,21 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 22,
   },
-  filterPrompt: {
-    backgroundColor: Colors.accent + '20',
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.lg,
-    borderRadius: BorderRadius.medium,
-    marginBottom: Spacing.lg,
+  personalizedPrompt: {
+    backgroundColor: Colors.primary + '15',
+    paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing.xl,
+    borderRadius: BorderRadius.large,
+    marginBottom: Spacing.xl,
     borderWidth: 1,
-    borderColor: Colors.accent + '40',
+    borderColor: Colors.primary + '30',
   },
-  filterPromptText: {
-    fontSize: Typography.sizes.body,
-    color: Colors.accent,
+  personalizedPromptText: {
+    fontSize: Typography.sizes.h3,
+    color: Colors.primary,
     textAlign: 'center',
     fontWeight: '400' as const,
+    lineHeight: 24,
   },
   cardContainer: {
     marginBottom: Spacing.xl,
@@ -887,16 +957,24 @@ const styles = StyleSheet.create({
     fontWeight: '400' as const,
   },
   filtersSection: {
-    gap: Spacing.lg,
+    gap: Spacing.xl,
   },
   filterRow: {
-    gap: Spacing.sm,
+    gap: Spacing.md,
   },
-  filterLabel: {
-    fontSize: Typography.sizes.body,
+  filterHeader: {
+    marginBottom: Spacing.xs,
+  },
+  filterQuestion: {
+    fontSize: Typography.sizes.h3,
     fontWeight: '400' as const,
     color: Colors.text,
-    marginBottom: Spacing.xs,
+    marginBottom: 4,
+  },
+  filterHint: {
+    fontSize: Typography.sizes.caption,
+    color: Colors.textLight,
+    fontWeight: '400' as const,
   },
   filterScroll: {
     paddingRight: Spacing.lg,

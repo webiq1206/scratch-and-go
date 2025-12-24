@@ -10,11 +10,13 @@ interface FilterPillProps {
   label: string;
   selected: boolean;
   onPress: () => void;
+  emoji?: string;
+  description?: string;
   isPremium?: boolean;
   showPremiumBadge?: boolean;
 }
 
-export default function FilterPill({ label, selected, onPress, isPremium, showPremiumBadge }: FilterPillProps) {
+export default function FilterPill({ label, selected, onPress, emoji, description, isPremium, showPremiumBadge }: FilterPillProps) {
   return (
     <TouchableOpacity
       style={[styles.pill, selected && styles.selected, isPremium && !showPremiumBadge && styles.premiumLocked]}
@@ -22,7 +24,13 @@ export default function FilterPill({ label, selected, onPress, isPremium, showPr
       activeOpacity={0.7}
     >
       <View style={styles.pillContent}>
-        <Text style={[styles.text, selected && styles.selectedText, isPremium && !showPremiumBadge && styles.premiumText]}>{label}</Text>
+        {emoji && <Text style={styles.emoji}>{emoji}</Text>}
+        <View style={styles.textContainer}>
+          <Text style={[styles.text, selected && styles.selectedText, isPremium && !showPremiumBadge && styles.premiumText]}>{label}</Text>
+          {description && selected && (
+            <Text style={[styles.description, selected && styles.selectedDescription]}>{description}</Text>
+          )}
+        </View>
         {isPremium && !showPremiumBadge && (
           <Crown size={12} color={Colors.accent} />
         )}
@@ -53,7 +61,22 @@ const styles = StyleSheet.create({
   pillContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
+  },
+  emoji: {
+    fontSize: 16,
+  },
+  textContainer: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+  },
+  description: {
+    fontSize: 10,
+    color: Colors.textMuted,
+    marginTop: 2,
+  },
+  selectedDescription: {
+    color: 'rgba(26, 26, 26, 0.7)',
   },
   text: {
     fontSize: Typography.sizes.caption,
