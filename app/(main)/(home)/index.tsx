@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, Animated, ActivityIndicator, Alert, TouchableOpacity, Image, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Animated, ActivityIndicator, Alert, TouchableOpacity, Image, Dimensions, InteractionManager } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -129,14 +129,16 @@ export default function HomeScreen() {
       return;
     }
 
-    slideAnim.setValue(SCREEN_WIDTH);
     setWizardAnswers(prev => ({ ...prev, [key]: value }));
     
-    const stepOrder: WizardStep[] = ['welcome', 'category', 'budget', 'timing', 'setting', 'summary'];
-    const currentIndex = stepOrder.indexOf(wizardStep);
-    if (currentIndex < stepOrder.length - 1) {
-      setWizardStep(stepOrder[currentIndex + 1]);
-    }
+    InteractionManager.runAfterInteractions(() => {
+      slideAnim.setValue(SCREEN_WIDTH);
+      const stepOrder: WizardStep[] = ['welcome', 'category', 'budget', 'timing', 'setting', 'summary'];
+      const currentIndex = stepOrder.indexOf(wizardStep);
+      if (currentIndex < stepOrder.length - 1) {
+        setWizardStep(stepOrder[currentIndex + 1]);
+      }
+    });
   };
 
   const handleWizardBack = () => {
