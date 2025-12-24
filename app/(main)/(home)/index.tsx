@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, Animated, ActivityIndicator, Alert, TouchableOpacity, Image } from 'react-native';
 import { Share2, ThumbsDown, RefreshCw } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -32,6 +32,8 @@ export default function HomeScreen() {
   const [timingFilter, setTimingFilter] = useState('Anytime');
   const [hasStartedScratch, setHasStartedScratch] = useState(false);
   const shimmerAnim = useState(new Animated.Value(0))[0];
+  const scrollViewRef = useRef<ScrollView>(null);
+  const [scrollEnabled, setScrollEnabled] = useState(true);
   
   const { 
     currentActivity, 
@@ -127,6 +129,7 @@ export default function HomeScreen() {
     
     setHasStartedScratch(true);
     setIsSaved(false);
+    setScrollEnabled(false);
     
     const filters: Filters = {
       mode,
@@ -174,6 +177,7 @@ export default function HomeScreen() {
 
   const handleScratchComplete = () => {
     console.log('Scratch complete - activity revealed');
+    setScrollEnabled(true);
   };
 
   const handleNotInterested = () => {
@@ -191,6 +195,7 @@ export default function HomeScreen() {
             await markAsNotInterested();
             setHasStartedScratch(false);
             setIsSaved(false);
+            setScrollEnabled(true);
           }
         }
       ]
@@ -203,6 +208,7 @@ export default function HomeScreen() {
     clearCurrentActivity();
     setHasStartedScratch(false);
     setIsSaved(false);
+    setScrollEnabled(true);
   };
 
   const categories = mode === 'couples' 
@@ -211,6 +217,9 @@ export default function HomeScreen() {
 
   const budgetOptions = ['Any', 'Free', '$', '$$', '$$$'];
   const timingOptions = ['Anytime', 'Quick (1-2h)', 'Half Day', 'Full Day'];
+
+  const hasSelectedFilters = categoryFilter !== 'Any' || budgetFilter !== 'Any' || timingFilter !== 'Anytime';
+  const isScratchDisabled = !hasSelectedFilters || hasStartedScratch;
 
   const shimmerTranslate = shimmerAnim.interpolate({
     inputRange: [0, 1],
@@ -421,37 +430,56 @@ export default function HomeScreen() {
       </View>
 
       <ScrollView 
+        ref={scrollViewRef}
         style={styles.content}
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
+        scrollEnabled={scrollEnabled}
       >
         <View style={styles.titleSection}>
           <Text style={styles.headline}>Create moments together</Text>
           <Text style={styles.subheadline}>Discover your next memory with loved ones</Text>
         </View>
 
+        {!hasSelectedFilters && (
+          <View style={styles.filterPrompt}>
+            <Text style={styles.filterPromptText}>👇 Select your preferences below to get started</Text>
+          </View>
+        )}
+
         <View style={styles.cardContainer}>
           <ScratchCard
+            disabled={isScratchDisabled}
             onScratchStart={handleScratchStart}
             onScratchComplete={handleScratchComplete}
             scratchLayer={
               <LinearGradient
-                colors={[Colors.primaryGradientStart, Colors.primary, Colors.primaryDark, Colors.primaryGradientEnd]}
+                colors={
+                  isScratchDisabled
+                    ? ['#666666', '#555555', '#444444', '#333333']
+                    : [Colors.primaryGradientStart, Colors.primary, Colors.primaryDark, Colors.primaryGradientEnd]
+                }
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.scratchLayer}
               >
-                <Animated.View
-                  style={[
-                    styles.shimmer,
-                    {
-                      transform: [{ translateX: shimmerTranslate }],
-                    },
-                  ]}
-                />
+                {!isScratchDisabled && (
+                  <Animated.View
+                    style={[
+                      styles.shimmer,
+                      {
+                        transform: [{ translateX: shimmerTranslate }],
+                      },
+                    ]}
+                  />
+                )}
                 <View style={styles.scratchContent}>
-                  <Text style={styles.scratchText}>Scratch Me</Text>
-                  <Text style={styles.scratchSubtext}>Drag to reveal</Text>
+                  <Text style={styles.scratchText}>
+                    {isScratchDisabled ? 'Select Filters' : 'Scratch Me'}
+                  </Text>
+                  <Text style={styles.scratchSubtext}>
+                    {isScratchDisabled ? 'Choose preferences first' : 'Drag to reveal'}
+                  </Text>
                 </View>
               </LinearGradient>
             }
@@ -699,6 +727,21 @@ const styles = StyleSheet.create({
     color: Colors.textLight,
     textAlign: 'center',
     lineHeight: 22,
+  },
+  filterPrompt: {
+    backgroundColor: Colors.accent + '20',
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: BorderRadius.medium,
+    marginBottom: Spacing.lg,
+    borderWidth: 1,
+    borderColor: Colors.accent + '40',
+  },
+  filterPromptText: {
+    fontSize: Typography.sizes.body,
+    color: Colors.accent,
+    textAlign: 'center',
+    fontWeight: '400' as const,
   },
   cardContainer: {
     marginBottom: Spacing.xl,

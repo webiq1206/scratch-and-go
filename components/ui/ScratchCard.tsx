@@ -13,13 +13,15 @@ interface ScratchCardProps {
   onScratchComplete: () => void;
   scratchLayer: React.ReactNode;
   revealContent: React.ReactNode;
+  disabled?: boolean;
 }
 
 export default function ScratchCard({ 
   onScratchStart,
   onScratchComplete, 
   scratchLayer,
-  revealContent 
+  revealContent,
+  disabled = false
 }: ScratchCardProps) {
   const [scratches, setScratches] = useState<{ x: number; y: number }[]>([]);
   const [isRevealed, setIsRevealed] = useState(false);
@@ -27,11 +29,14 @@ export default function ScratchCard({
 
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onStartShouldSetPanResponderCapture: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponderCapture: () => true,
+      onStartShouldSetPanResponder: () => !disabled,
+      onStartShouldSetPanResponderCapture: () => !disabled,
+      onMoveShouldSetPanResponder: () => !disabled,
+      onMoveShouldSetPanResponderCapture: () => !disabled,
+      onPanResponderTerminationRequest: () => false,
+      onShouldBlockNativeResponder: () => true,
       onPanResponderGrant: (evt) => {
+        if (disabled) return;
         const { locationX, locationY } = evt.nativeEvent;
         if (scratches.length === 0 && onScratchStart) {
           onScratchStart();
@@ -40,6 +45,7 @@ export default function ScratchCard({
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       },
       onPanResponderMove: (evt) => {
+        if (disabled) return;
         const { locationX, locationY } = evt.nativeEvent;
         addScratch(locationX, locationY);
         if (scratches.length % 3 === 0) {
@@ -47,6 +53,7 @@ export default function ScratchCard({
         }
       },
       onPanResponderRelease: () => {
+        if (disabled) return;
         checkScratchProgress();
       },
     })
@@ -75,7 +82,7 @@ export default function ScratchCard({
 
   if (Platform.OS === 'web') {
     return (
-      <View style={styles.container}>
+      <View style={styles.container} pointerEvents={disabled ? 'none' : 'auto'}>
         <View style={styles.revealLayer}>
           {revealContent}
         </View>
@@ -101,18 +108,19 @@ export default function ScratchCard({
             ))}
           </Animated.View>
         )}
+        {disabled && <View style={styles.disabledOverlay} />}
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} pointerEvents={disabled ? 'none' : 'auto'}>
       <View style={styles.revealLayer}>
         {revealContent}
       </View>
 
       {!isRevealed && (
-        <Animated.View style={{ opacity }}>
+        <Animated.View style={{ opacity }} pointerEvents={disabled ? 'none' : 'auto'}>
           <MaskedView
             style={StyleSheet.absoluteFill}
             maskElement={
@@ -142,6 +150,7 @@ export default function ScratchCard({
           </MaskedView>
         </Animated.View>
       )}
+      {disabled && <View style={styles.disabledOverlay} />}
     </View>
   );
 }
@@ -185,5 +194,9 @@ const styles = StyleSheet.create({
     height: 50,
     borderRadius: 25,
     backgroundColor: 'rgba(0, 0, 0, 0.4)',
+  },
+  disabledOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'transparent',
   },
 });
