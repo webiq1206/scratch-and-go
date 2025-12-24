@@ -4,6 +4,8 @@ export interface UserPreferences {
   religion?: string;
   includeKidFriendly: boolean;
   includeOutdoorAdventures: boolean;
+  includeArtsAndCulture: boolean;
+  includeLiveEntertainment: boolean;
   completedOnboarding: boolean;
 }
 
@@ -13,6 +15,8 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   religion: undefined,
   includeKidFriendly: true,
   includeOutdoorAdventures: true,
+  includeArtsAndCulture: true,
+  includeLiveEntertainment: true,
   completedOnboarding: false,
 };
 
@@ -37,13 +41,6 @@ export const RELIGIONS = [
 
 export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
   {
-    id: 'includeAlcohol',
-    question: 'Include activities with alcohol?',
-    description: 'This includes bars, breweries, wine tastings, and cocktail experiences',
-    yesLabel: 'Yes, include them',
-    noLabel: 'No, skip these',
-  },
-  {
     id: 'includeReligious',
     question: 'Include religious or faith-based activities?',
     description: 'This includes churches, temples, faith gatherings, and religious celebrations',
@@ -60,7 +57,21 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
   {
     id: 'includeOutdoorAdventures',
     question: 'Include outdoor adventures?',
-    description: 'This includes hiking trails, nature walks, beaches, parks, and outdoor exploration',
+    description: 'This includes hiking trails, nature walks, beaches, parks, and outdoor exploration to create memorable moments in nature',
+    yesLabel: 'Yes, include them',
+    noLabel: 'No, skip these',
+  },
+  {
+    id: 'includeArtsAndCulture',
+    question: 'Include arts and culture experiences?',
+    description: 'Museums, art galleries, theaters, cultural festivals, and creative experiences to share with loved ones',
+    yesLabel: 'Yes, include them',
+    noLabel: 'No, skip these',
+  },
+  {
+    id: 'includeLiveEntertainment',
+    question: 'Include live entertainment and shows?',
+    description: 'Concerts, live music, comedy shows, performances, and entertainment venues for memorable nights out',
     yesLabel: 'Yes, include them',
     noLabel: 'No, skip these',
   },

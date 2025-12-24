@@ -69,13 +69,26 @@ export const [PreferencesProvider, usePreferences] = createContextHook(() => {
     if (!preferences.includeOutdoorAdventures) {
       restrictions.push('Avoid suggesting hiking, nature trails, camping, or activities requiring significant outdoor activity');
     } else {
-      restrictions.push('Include outdoor adventures like hiking, nature walks, parks, and outdoor exploration opportunities');
+      restrictions.push('Include outdoor adventures like hiking, nature walks, parks, and outdoor exploration opportunities to create lasting memories in nature');
+    }
+
+    if (!preferences.includeArtsAndCulture) {
+      restrictions.push('Avoid suggesting museums, art galleries, theaters, and cultural venues');
+    } else {
+      restrictions.push('Include arts and culture experiences like museums, galleries, theaters, and cultural festivals for enriching moments together');
+    }
+
+    if (!preferences.includeLiveEntertainment) {
+      restrictions.push('Avoid suggesting concerts, live shows, and entertainment venues');
+    } else {
+      restrictions.push('Include live entertainment like concerts, shows, comedy clubs, and performances for unforgettable nights with loved ones');
     }
 
     restrictions.push('Never suggest politically affiliated events');
     restrictions.push('Avoid specific dietary places (use "restaurant" not "steakhouse")');
     restrictions.push('Keep all content appropriate and inclusive');
-    restrictions.push('Focus on activities that help create lasting memories with loved ones');
+    restrictions.push('Focus on creating and capturing meaningful moments with loved ones that will become cherished memories');
+    restrictions.push('Emphasize experiences that bring people together and strengthen relationships');
     
     return restrictions;
   };

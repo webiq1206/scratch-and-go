@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { View, StyleSheet, PanResponder, Animated, Dimensions, Platform } from 'react-native';
 import MaskedView from '@react-native-masked-view/masked-view';
 import * as Haptics from 'expo-haptics';
@@ -25,48 +25,19 @@ export default function ScratchCard({
 }: ScratchCardProps) {
   const [scratches, setScratches] = useState<{ x: number; y: number }[]>([]);
   const [isRevealed, setIsRevealed] = useState(false);
+  const [hasStarted, setHasStarted] = useState(false);
   const opacity = useRef(new Animated.Value(1)).current;
 
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => !disabled,
-      onStartShouldSetPanResponderCapture: () => !disabled,
-      onMoveShouldSetPanResponder: () => !disabled,
-      onMoveShouldSetPanResponderCapture: () => !disabled,
-      onPanResponderTerminationRequest: () => false,
-      onShouldBlockNativeResponder: () => true,
-      onPanResponderGrant: (evt) => {
-        if (disabled) return;
-        const { locationX, locationY } = evt.nativeEvent;
-        if (scratches.length === 0 && onScratchStart) {
-          onScratchStart();
-        }
-        addScratch(locationX, locationY);
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      },
-      onPanResponderMove: (evt) => {
-        if (disabled) return;
-        const { locationX, locationY } = evt.nativeEvent;
-        addScratch(locationX, locationY);
-        if (scratches.length % 3 === 0) {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        }
-      },
-      onPanResponderRelease: () => {
-        if (disabled) return;
-        checkScratchProgress();
-      },
-    })
-  ).current;
-
-  const addScratch = (x: number, y: number) => {
+  const addScratch = useCallback((x: number, y: number) => {
     setScratches((prev) => [...prev, { x, y }]);
-  };
+  }, []);
 
-  const checkScratchProgress = () => {
+  const checkScratchProgress = useCallback(() => {
+    if (isRevealed) return;
+    
     const scratchPercentage = (scratches.length * 100) / 200;
     
-    if (scratchPercentage >= 50 && !isRevealed) {
+    if (scratchPercentage >= 50) {
       setIsRevealed(true);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       
@@ -78,11 +49,50 @@ export default function ScratchCard({
         onScratchComplete();
       });
     }
-  };
+  }, [scratches.length, isRevealed, opacity, onScratchComplete]);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => !disabled && !isRevealed,
+      onStartShouldSetPanResponderCapture: () => !disabled && !isRevealed,
+      onMoveShouldSetPanResponder: () => !disabled && !isRevealed,
+      onMoveShouldSetPanResponderCapture: () => !disabled && !isRevealed,
+      onPanResponderTerminationRequest: () => false,
+      onShouldBlockNativeResponder: () => true,
+      onPanResponderGrant: (evt) => {
+        if (disabled || isRevealed) return;
+        evt.preventDefault?.();
+        const { locationX, locationY } = evt.nativeEvent;
+        if (!hasStarted) {
+          setHasStarted(true);
+          if (onScratchStart) {
+            onScratchStart();
+          }
+        }
+        addScratch(locationX, locationY);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      },
+      onPanResponderMove: (evt) => {
+        if (disabled || isRevealed) return;
+        evt.preventDefault?.();
+        const { locationX, locationY } = evt.nativeEvent;
+        addScratch(locationX, locationY);
+        if (scratches.length % 3 === 0) {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        }
+      },
+      onPanResponderRelease: () => {
+        if (disabled || isRevealed) return;
+        checkScratchProgress();
+      },
+    })
+  ).current;
+
+
 
   if (Platform.OS === 'web') {
     return (
-      <View style={styles.container} pointerEvents={disabled ? 'none' : 'auto'}>
+      <View style={styles.container} pointerEvents={disabled || isRevealed ? 'none' : 'auto'}>
         <View style={styles.revealLayer}>
           {revealContent}
         </View>
@@ -91,6 +101,7 @@ export default function ScratchCard({
           <Animated.View 
             style={[styles.scratchLayer, { opacity }]}
             {...panResponder.panHandlers}
+            onStartShouldSetResponderCapture={() => true}
           >
             {scratchLayer}
             
@@ -114,13 +125,16 @@ export default function ScratchCard({
   }
 
   return (
-    <View style={styles.container} pointerEvents={disabled ? 'none' : 'auto'}>
+    <View style={styles.container} pointerEvents={disabled || isRevealed ? 'none' : 'auto'}>
       <View style={styles.revealLayer}>
         {revealContent}
       </View>
 
       {!isRevealed && (
-        <Animated.View style={{ opacity }} pointerEvents={disabled ? 'none' : 'auto'}>
+        <Animated.View 
+          style={[StyleSheet.absoluteFill, { opacity }]} 
+          pointerEvents={disabled || isRevealed ? 'none' : 'box-only'}
+        >
           <MaskedView
             style={StyleSheet.absoluteFill}
             maskElement={
@@ -144,6 +158,7 @@ export default function ScratchCard({
             <View 
               style={StyleSheet.absoluteFill}
               {...panResponder.panHandlers}
+              onStartShouldSetResponderCapture={() => true}
             >
               {scratchLayer}
             </View>

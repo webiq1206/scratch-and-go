@@ -112,10 +112,12 @@ export default function SettingsScreen() {
           style: 'destructive',
           onPress: async () => {
             await updatePreferences({
-              includeAlcohol: true,
+              includeAlcohol: false,
               includeReligious: false,
               includeKidFriendly: true,
               includeOutdoorAdventures: true,
+              includeArtsAndCulture: true,
+              includeLiveEntertainment: true,
               religion: undefined,
             });
             Alert.alert('Preferences Reset', 'Your content preferences have been reset to defaults.');
@@ -416,6 +418,36 @@ export default function SettingsScreen() {
               <Switch
                 value={preferences.includeOutdoorAdventures}
                 onValueChange={(value) => handleToggle('includeOutdoorAdventures', value)}
+                trackColor={{ false: '#3A3A3A', true: Colors.primary }}
+                thumbColor="#FFFFFF"
+              />
+            </View>
+
+            <View style={styles.preferenceItem}>
+              <View style={styles.preferenceInfo}>
+                <Text style={styles.preferenceTitle}>Arts & Culture</Text>
+                <Text style={styles.preferenceDescription}>
+                  Museums, galleries, theaters, cultural experiences
+                </Text>
+              </View>
+              <Switch
+                value={preferences.includeArtsAndCulture}
+                onValueChange={(value) => handleToggle('includeArtsAndCulture', value)}
+                trackColor={{ false: '#3A3A3A', true: Colors.primary }}
+                thumbColor="#FFFFFF"
+              />
+            </View>
+
+            <View style={styles.preferenceItem}>
+              <View style={styles.preferenceInfo}>
+                <Text style={styles.preferenceTitle}>Live Entertainment</Text>
+                <Text style={styles.preferenceDescription}>
+                  Concerts, live music, comedy shows, performances
+                </Text>
+              </View>
+              <Switch
+                value={preferences.includeLiveEntertainment}
+                onValueChange={(value) => handleToggle('includeLiveEntertainment', value)}
                 trackColor={{ false: '#3A3A3A', true: Colors.primary }}
                 thumbColor="#FFFFFF"
               />
