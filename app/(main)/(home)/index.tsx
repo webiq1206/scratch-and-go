@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, Animated, ActivityIndicator, Alert, TouchableOpacity, Image, Dimensions, InteractionManager } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Colors from '@/constants/colors';
 import Typography from '@/constants/typography';
@@ -68,6 +68,12 @@ export default function HomeScreen() {
     init();
   }, []);
 
+  useFocusEffect(
+    useCallback(() => {
+      loadMode();
+    }, [])
+  );
+
   useEffect(() => {
     Animated.spring(slideAnim, {
       toValue: 0,
@@ -104,6 +110,10 @@ export default function HomeScreen() {
   const handleModeSelection = async (selectedMode: Mode) => {
     await AsyncStorage.setItem(MODE_KEY, selectedMode);
     setMode(selectedMode);
+    setWizardStep('welcome');
+    setWizardAnswers({});
+    setHasStartedScratch(false);
+    clearCurrentActivity();
   };
 
   const getPremiumCategories = () => {
