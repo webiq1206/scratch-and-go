@@ -8,11 +8,11 @@ export default function MainLayout() {
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: Colors.primary,
-        tabBarInactiveTintColor: Colors.textLight,
+        tabBarInactiveTintColor: Colors.primary,
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: Colors.white,
-          borderTopColor: Colors.background,
+          backgroundColor: '#000000',
+          borderTopColor: Colors.backgroundDark,
           borderTopWidth: 1,
           height: 56,
         },

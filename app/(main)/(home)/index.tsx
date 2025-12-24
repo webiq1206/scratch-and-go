@@ -208,7 +208,7 @@ export default function HomeScreen() {
     setIsSaved(true);
     
     Alert.alert(
-      '💝 Saved!',
+      'Saved!',
       'Activity saved to your Memory Book! Remember to capture photos during this special moment with your loved ones to preserve the memory forever.',
       [
         { text: 'Got it!', style: 'default' }
@@ -274,37 +274,37 @@ export default function HomeScreen() {
 
   const categories = mode === 'couples' 
     ? [
-        { label: 'Chill', emoji: '☕', description: 'Low-key vibes' },
-        { label: 'Active', emoji: '⚡', description: 'Get moving' },
-        { label: 'Creative', emoji: '🎨', description: 'Make something' },
-        { label: 'Foodie', emoji: '🍽️', description: 'Taste & explore' },
-        { label: 'Adventure', emoji: '🌟', description: 'Try new things' },
+        { label: 'Chill', description: 'Low-key vibes' },
+        { label: 'Active', description: 'Get moving' },
+        { label: 'Creative', description: 'Make something' },
+        { label: 'Foodie', description: 'Taste & explore' },
+        { label: 'Adventure', description: 'Try new things' },
       ]
     : [
-        { label: 'Chill', emoji: '☕', description: 'Relax together' },
-        { label: 'Active', emoji: '⚡', description: 'Fun & energetic' },
-        { label: 'Creative', emoji: '🎨', description: 'Arts & crafts' },
-        { label: 'Educational', emoji: '📚', description: 'Learn together' },
-        { label: 'Outdoor', emoji: '🌳', description: 'Nature fun' },
+        { label: 'Chill', description: 'Relax together' },
+        { label: 'Active', description: 'Fun & energetic' },
+        { label: 'Creative', description: 'Arts & crafts' },
+        { label: 'Educational', description: 'Learn together' },
+        { label: 'Outdoor', description: 'Nature fun' },
       ];
 
   const budgetOptions = [
-    { label: 'Free', emoji: '💚', description: 'No cost at all' },
-    { label: '$', emoji: '💵', description: 'Under $25' },
-    { label: '$$', emoji: '💰', description: '$25 - $75' },
-    { label: '$$$', emoji: '💎', description: '$75+' },
+    { label: 'Free', description: 'No cost at all' },
+    { label: '$', description: 'Under $25' },
+    { label: '$$', description: '$25 - $75' },
+    { label: '$$$', description: '$75+' },
   ];
   
   const timingOptions = [
-    { label: 'Quick (1-2h)', emoji: '⚡', description: 'Perfect for busy days' },
-    { label: 'Half Day', emoji: '☀️', description: '3-5 hours of fun' },
-    { label: 'Full Day', emoji: '🌅', description: 'Make it epic' },
+    { label: 'Quick (1-2h)', description: 'Perfect for busy days' },
+    { label: 'Half Day', description: '3-5 hours of fun' },
+    { label: 'Full Day', description: 'Make it epic' },
   ];
 
   const settingOptions = [
-    { label: 'Indoor', value: 'indoor' as const, emoji: '🏠', description: 'Cozy & comfortable' },
-    { label: 'Outdoor', value: 'outdoor' as const, emoji: '🌤️', description: 'Fresh air & nature' },
-    { label: 'Either', value: 'either' as const, emoji: '✨', description: 'Surprise me!' },
+    { label: 'Indoor', value: 'indoor' as const, description: 'Cozy & comfortable' },
+    { label: 'Outdoor', value: 'outdoor' as const, description: 'Fresh air & nature' },
+    { label: 'Either', value: 'either' as const, description: 'Surprise me!' },
   ];
 
   const shimmerTranslate = shimmerAnim.interpolate({
@@ -328,7 +328,13 @@ export default function HomeScreen() {
         return (
           <Animated.View style={[styles.wizardContent, { transform: [{ translateX: slideTransform }], opacity }]}>
             <View style={styles.welcomeContainer}>
-              <Text style={styles.welcomeEmoji}>✨</Text>
+              <View style={styles.welcomeIconContainer}>
+                <Image 
+                  source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/attachments/y0y3gb7wc49gdw8yub9ef' }}
+                  style={styles.welcomeIcon}
+                  resizeMode="contain"
+                />
+              </View>
               <Text style={styles.welcomeTitle}>
                 Let&apos;s create a{mode === 'couples' ? ' romantic' : 'n unforgettable'} moment
               </Text>
@@ -343,7 +349,7 @@ export default function HomeScreen() {
                 onPress={handleStartWizard}
                 activeOpacity={0.8}
               >
-                <Text style={styles.startButtonText}>Let&apos;s Go! 🎯</Text>
+                <Text style={styles.startButtonText}>Let&apos;s Go!</Text>
               </TouchableOpacity>
             </View>
           </Animated.View>
@@ -370,9 +376,10 @@ export default function HomeScreen() {
                     onPress={() => handleWizardAnswer('category', cat.label)}
                     activeOpacity={0.7}
                   >
-                    <Text style={styles.optionEmoji}>{cat.emoji}</Text>
-                    <Text style={styles.optionLabel}>{cat.label}</Text>
-                    <Text style={styles.optionDescription}>{cat.description}</Text>
+                    <View style={styles.optionContent}>
+                      <Text style={styles.optionLabel}>{cat.label}</Text>
+                      <Text style={styles.optionDescription}>{cat.description}</Text>
+                    </View>
                     {isCategoryPremium(cat.label) && !isPremium && (
                       <View style={styles.premiumTag}>
                         <Text style={styles.premiumTagText}>PRO</Text>
@@ -404,9 +411,10 @@ export default function HomeScreen() {
                     onPress={() => handleWizardAnswer('budget', budget.label)}
                     activeOpacity={0.7}
                   >
-                    <Text style={styles.optionEmoji}>{budget.emoji}</Text>
-                    <Text style={styles.optionLabel}>{budget.label}</Text>
-                    <Text style={styles.optionDescription}>{budget.description}</Text>
+                    <View style={styles.optionContent}>
+                      <Text style={styles.optionLabel}>{budget.label}</Text>
+                      <Text style={styles.optionDescription}>{budget.description}</Text>
+                    </View>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -433,9 +441,10 @@ export default function HomeScreen() {
                     onPress={() => handleWizardAnswer('timing', timing.label)}
                     activeOpacity={0.7}
                   >
-                    <Text style={styles.optionEmoji}>{timing.emoji}</Text>
-                    <Text style={styles.optionLabel}>{timing.label}</Text>
-                    <Text style={styles.optionDescription}>{timing.description}</Text>
+                    <View style={styles.optionContent}>
+                      <Text style={styles.optionLabel}>{timing.label}</Text>
+                      <Text style={styles.optionDescription}>{timing.description}</Text>
+                    </View>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -464,9 +473,10 @@ export default function HomeScreen() {
                     onPress={() => handleWizardAnswer('setting', setting.value)}
                     activeOpacity={0.7}
                   >
-                    <Text style={styles.optionEmoji}>{setting.emoji}</Text>
-                    <Text style={styles.optionLabel}>{setting.label}</Text>
-                    <Text style={styles.optionDescription}>{setting.description}</Text>
+                    <View style={styles.optionContent}>
+                      <Text style={styles.optionLabel}>{setting.label}</Text>
+                      <Text style={styles.optionDescription}>{setting.description}</Text>
+                    </View>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -478,7 +488,6 @@ export default function HomeScreen() {
         return (
           <Animated.View style={[styles.wizardContent, { transform: [{ translateX: slideTransform }], opacity }]}>
             <View style={styles.summaryContainer}>
-              <Text style={styles.summaryEmoji}>🎉</Text>
               <Text style={styles.summaryTitle}>Perfect! Here&apos;s what we found:</Text>
               
               <View style={styles.summaryCard}>
@@ -541,7 +550,6 @@ export default function HomeScreen() {
                         </>
                       ) : (
                         <>
-                          <Text style={styles.revealEmoji}>{currentActivity.emoji}</Text>
                           <Text style={styles.revealTitle}>{currentActivity.title}</Text>
                           <Text style={styles.revealDescription}>{currentActivity.description}</Text>
                           {location?.weather && (
@@ -565,7 +573,7 @@ export default function HomeScreen() {
                           </View>
                           {currentActivity.proTip && (
                             <View style={styles.proTipBox}>
-                              <Text style={styles.proTipLabel}>💡 Pro Tip</Text>
+                              <Text style={styles.proTipLabel}>Pro Tip</Text>
                               <Text style={styles.proTipText}>{currentActivity.proTip}</Text>
                             </View>
                           )}
@@ -622,7 +630,7 @@ export default function HomeScreen() {
                 onPress={handleRestartWizard}
                 activeOpacity={0.7}
               >
-                <Text style={styles.changeAnswersText}>↻ Change Answers</Text>
+                <Text style={styles.changeAnswersText}>Change Answers</Text>
               </TouchableOpacity>
             </View>
           </Animated.View>
@@ -859,7 +867,7 @@ export default function HomeScreen() {
                 onPress={handleWizardBack}
                 activeOpacity={0.7}
               >
-                <Text style={styles.backButtonText}>← Back</Text>
+                <Text style={styles.backButtonText}>Back</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -870,7 +878,7 @@ export default function HomeScreen() {
         {wizardStep === 'summary' && (
           <View style={styles.scratchCountContainer}>
             <Text style={styles.scratchCountText}>
-              {isPremium ? '✨ Unlimited scratches' : `${remainingScratches} scratches remaining this month`}
+              {isPremium ? 'Unlimited scratches' : `${remainingScratches} scratches remaining this month`}
             </Text>
           </View>
         )}
@@ -985,10 +993,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: Spacing.lg,
-  },
-  revealEmoji: {
-    fontSize: 72,
-    marginBottom: Spacing.sm,
   },
   revealTitle: {
     fontSize: Typography.sizes.h2,
@@ -1270,9 +1274,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.xl,
     paddingVertical: Spacing.xxl,
   },
-  welcomeEmoji: {
-    fontSize: 80,
+  welcomeIconContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: Colors.cardBackground,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: Spacing.lg,
+    borderWidth: 2,
+    borderColor: Colors.primary,
+  },
+  welcomeIcon: {
+    width: 60,
+    height: 60,
   },
   welcomeTitle: {
     fontSize: Typography.sizes.h1,
@@ -1339,30 +1354,24 @@ const styles = StyleSheet.create({
     borderColor: Colors.cardBorder,
     borderRadius: BorderRadius.large,
     padding: Spacing.lg,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
     position: 'relative',
   },
   optionCardSelected: {
     borderColor: Colors.primary,
     backgroundColor: Colors.primary + '15',
   },
-  optionEmoji: {
-    fontSize: 32,
+  optionContent: {
+    flex: 1,
   },
   optionLabel: {
     fontSize: Typography.sizes.h3,
     fontWeight: '400' as const,
     color: Colors.text,
-    flex: 1,
+    marginBottom: Spacing.xs,
   },
   optionDescription: {
     fontSize: Typography.sizes.caption,
     color: Colors.textLight,
-    position: 'absolute',
-    right: Spacing.lg,
-    bottom: Spacing.md,
   },
   premiumTag: {
     backgroundColor: Colors.accent,
@@ -1383,10 +1392,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.xl,
     alignItems: 'center',
-  },
-  summaryEmoji: {
-    fontSize: 64,
-    marginBottom: Spacing.md,
   },
   summaryTitle: {
     fontSize: Typography.sizes.h2,
