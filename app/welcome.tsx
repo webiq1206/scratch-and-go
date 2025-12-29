@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Dimensions, ActivityIndicator } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -23,6 +24,7 @@ export default function WelcomeScreen() {
   const [preferences, setPreferences] = useState<UserPreferences>(DEFAULT_PREFERENCES);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     const checkExistingMode = async () => {
@@ -255,7 +257,7 @@ export default function WelcomeScreen() {
         />
       </View>
 
-      <View style={styles.contentContainer}>
+      <View style={[styles.contentContainer, { paddingBottom: Math.max(insets.bottom, Spacing.xxl) }]}>
         <Text style={styles.mainTagline}>Create memories that last forever.</Text>
         <Text style={styles.subTagline}>
           Discover meaningful moments to share{('\n')}with the people you love most.
@@ -392,7 +394,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     paddingHorizontal: Spacing.xl,
-    paddingBottom: Spacing.xxl,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 20,

@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, router } from 'expo-router';
 import { useStats } from '@/contexts/StatsContext';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -29,7 +30,7 @@ export default function StatsScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <Stack.Screen
         options={{
           headerStyle: { backgroundColor: Colors.backgroundDark },
@@ -236,7 +237,7 @@ export default function StatsScreen() {
 
         <View style={styles.bottomSpacer} />
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -528,7 +529,7 @@ const styles = StyleSheet.create({
     maxWidth: 280,
   },
   bottomSpacer: {
-    height: Spacing.xl,
+    height: Spacing.xxl * 2,
   },
   yearRecapButton: {
     marginBottom: Spacing.md,

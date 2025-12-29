@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   Share,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { X, Share2, ArrowLeft, ArrowRight } from 'lucide-react-native';
@@ -27,6 +28,7 @@ export default function YearRecapScreen() {
   const scrollViewRef = useRef<ScrollView>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
+  const insets = useSafeAreaInsets();
 
   const totalSlides = 7;
 
@@ -96,7 +98,7 @@ export default function YearRecapScreen() {
         }}
       />
       <View style={styles.container}>
-        <View style={styles.header}>
+        <View style={[styles.header, { top: insets.top + 10 }]}>
           <TouchableOpacity
             onPress={() => {
               triggerHaptic.light();
@@ -131,7 +133,7 @@ export default function YearRecapScreen() {
           <Slide7 recap={currentYearRecap} fadeAnim={fadeAnim} scaleAnim={scaleAnim} />
         </ScrollView>
 
-        <View style={styles.navigation}>
+        <View style={[styles.navigation, { bottom: Math.max(insets.bottom, 30) }]}>
           {currentSlide > 0 && (
             <TouchableOpacity onPress={goToPrevSlide} style={styles.navButton}>
               <ArrowLeft size={24} color={Colors.white} />
@@ -421,7 +423,6 @@ const styles = StyleSheet.create({
   },
   header: {
     position: 'absolute',
-    top: 50,
     left: 0,
     right: 0,
     flexDirection: 'row',
@@ -554,7 +555,6 @@ const styles = StyleSheet.create({
   },
   navigation: {
     position: 'absolute',
-    bottom: 50,
     left: 0,
     right: 0,
     flexDirection: 'row',
