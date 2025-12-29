@@ -158,12 +158,13 @@ export const [LocationProvider, useLocation] = createContextHook(() => {
           };
           
           const errorMessage = errorMessages[error.code] || 'Failed to get your location';
-          console.error('Web geolocation error:', {
-            code: error.code,
-            message: error.message,
-            PERMISSION_DENIED: error.code === 1,
-            POSITION_UNAVAILABLE: error.code === 2,
-            TIMEOUT: error.code === 3,
+          console.error('Web geolocation error details:', {
+            errorCode: error.code,
+            errorMessage: error.message,
+            errorType: error.code === 1 ? 'PERMISSION_DENIED' : 
+                       error.code === 2 ? 'POSITION_UNAVAILABLE' : 
+                       error.code === 3 ? 'TIMEOUT' : 'UNKNOWN',
+            userMessage: errorMessage,
           });
           
           setError(errorMessage);
