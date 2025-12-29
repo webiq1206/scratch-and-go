@@ -31,9 +31,10 @@ function RootLayoutNav() {
 
     const handleNavigation = async () => {
       try {
-        const inMain = segments[0] === '(main)';
-        const inWelcome = segments[0] === 'welcome';
-        const inActivityShared = segments[0] === 'activity-shared';
+        const firstSegment = segments[0] as string | undefined;
+        const inMain = firstSegment === '(main)';
+        const inWelcome = firstSegment === 'welcome';
+        const inActivityShared = firstSegment === 'activity-shared';
 
         console.log('[Navigation] inMain:', inMain, 'inWelcome:', inWelcome, 'inActivityShared:', inActivityShared);
 

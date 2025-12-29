@@ -184,19 +184,18 @@ export default function ScratchCard({
   }
 
   return (
-    <View style={styles.container} {...panResponder.panHandlers}>
+    <View style={styles.container}>
       <View style={styles.revealLayer}>
         {revealContent}
       </View>
 
       {!isRevealed && (
         <Animated.View 
-          style={[StyleSheet.absoluteFill, { opacity }]} 
-          pointerEvents="none"
+          style={[StyleSheet.absoluteFill, { opacity }]}
+          {...panResponder.panHandlers}
         >
           <MaskedView
             style={StyleSheet.absoluteFill}
-            pointerEvents="none"
             maskElement={
               <View style={styles.maskContainer}>
                 <View style={styles.maskBase} />

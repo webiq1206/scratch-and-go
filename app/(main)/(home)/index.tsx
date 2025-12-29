@@ -547,10 +547,6 @@ export default function HomeScreen() {
         return (
           <Animated.View style={[styles.wizardContent, { transform: [{ translateX: slideTransform }], opacity }]}>
             <View style={styles.summaryContainer}>
-              <Text style={styles.summaryIntro}>
-                Time to reveal your personalized {mode === 'couples' ? 'date' : 'family activity'}!
-              </Text>
-
               <View style={styles.cardContainer}>
                 <ScratchCard
                   disabled={isGenerating}
@@ -1016,12 +1012,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contentContainer: {
+    flexGrow: 1,
     paddingHorizontal: Spacing.lg,
     paddingBottom: Spacing.xl,
   },
   cardContainer: {
-    marginBottom: Spacing.xl,
+    marginBottom: Spacing.lg,
     alignItems: 'center',
+    marginTop: Spacing.md,
   },
   scratchLayer: {
     flex: 1,
@@ -1330,7 +1328,6 @@ const styles = StyleSheet.create({
   },
   wizardContent: {
     flex: 1,
-    minHeight: 500,
   },
   welcomeContainer: {
     flex: 1,
@@ -1456,20 +1453,11 @@ const styles = StyleSheet.create({
   summaryContainer: {
     flex: 1,
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
+    paddingTop: Spacing.lg,
     alignItems: 'center',
-    justifyContent: 'center',
-  },
-  summaryIntro: {
-    fontSize: Typography.sizes.h3,
-    fontWeight: '400' as const,
-    color: Colors.text,
-    textAlign: 'center',
-    marginBottom: Spacing.xl,
-    paddingHorizontal: Spacing.md,
   },
   preferencesInfo: {
-    marginTop: Spacing.lg,
+    marginTop: Spacing.md,
     alignItems: 'center',
     gap: Spacing.sm,
   },
