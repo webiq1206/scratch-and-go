@@ -145,7 +145,8 @@ export default function HomeScreen() {
       return;
     }
 
-    setWizardAnswers(prev => ({ ...prev, [key]: value }));
+    const updatedAnswers = { ...wizardAnswers, [key]: value };
+    setWizardAnswers(updatedAnswers);
     
     slideAnim.setValue(SCREEN_WIDTH);
     const stepOrder: WizardStep[] = ['welcome', 'category', 'budget', 'timing', 'setting', 'summary'];
@@ -153,7 +154,34 @@ export default function HomeScreen() {
     if (currentIndex < stepOrder.length - 1) {
       setWizardStep(stepOrder[currentIndex + 1]);
     }
-  }, [isCategoryPremium, isPremium, router, slideAnim, wizardStep]);
+
+    if (key === 'setting' && mode) {
+      if (isLimitReached) {
+        Alert.alert(
+          'Scratch Limit Reached',
+          `You've used your 3 free scratches this month! Upgrade to premium for unlimited scratches.`,
+          [
+            { text: 'Not Now', style: 'cancel' },
+            { text: 'Upgrade', onPress: () => router.push('/paywall' as any) }
+          ]
+        );
+        return;
+      }
+
+      InteractionManager.runAfterInteractions(() => {
+        const filters: Filters = {
+          mode,
+          category: updatedAnswers.category || 'Any',
+          budget: updatedAnswers.budget || 'Any',
+          timing: updatedAnswers.timing || 'Anytime',
+          setting: updatedAnswers.setting,
+          location: location || undefined,
+        };
+        
+        generateActivity(filters);
+      });
+    }
+  }, [isCategoryPremium, isPremium, router, slideAnim, wizardStep, wizardAnswers, mode, isLimitReached, location, generateActivity]);
 
   const handleWizardBack = useCallback(() => {
     const stepOrder: WizardStep[] = ['welcome', 'category', 'budget', 'timing', 'setting', 'summary'];
@@ -185,37 +213,12 @@ export default function HomeScreen() {
   }, [wizardStep]);
 
   const handleScratchStart = async () => {
-    if (hasStartedScratch || !mode || isGenerating) return;
-    
-    if (isLimitReached) {
-      Alert.alert(
-        'Scratch Limit Reached',
-        `You've used your 3 free scratches this month! Upgrade to premium for unlimited scratches.`,
-        [
-          { text: 'Not Now', style: 'cancel' },
-          { text: 'Upgrade', onPress: () => router.push('/paywall' as any) }
-        ]
-      );
-      return;
-    }
+    if (hasStartedScratch) return;
     
     setHasStartedScratch(true);
     setIsSaved(false);
     setIsSavedForLater(false);
     setScrollEnabled(false);
-    
-    InteractionManager.runAfterInteractions(() => {
-      const filters: Filters = {
-        mode,
-        category: wizardAnswers.category || 'Any',
-        budget: wizardAnswers.budget || 'Any',
-        timing: wizardAnswers.timing || 'Anytime',
-        setting: wizardAnswers.setting,
-        location: location || undefined,
-      };
-      
-      generateActivity(filters);
-    });
   };
 
   const handleSaveActivity = useCallback(() => {
