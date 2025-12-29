@@ -33,11 +33,17 @@ export const [LocationProvider, useLocation] = createContextHook(() => {
     }
   };
 
-  const requestLocationPermission = async (): Promise<boolean> => {
+  const requestLocationPermission = useCallback(async (): Promise<boolean> => {
     try {
       if (Platform.OS === 'web') {
         if (!navigator.geolocation) {
           setError('Geolocation is not supported by your browser');
+          setHasPermissionError(true);
+          setIsTrackingEnabled(false);
+          return false;
+        }
+        if (hasPermissionError) {
+          console.log('Permission previously denied, skipping request');
           return false;
         }
         return true;
@@ -48,6 +54,8 @@ export const [LocationProvider, useLocation] = createContextHook(() => {
       
       if (status !== 'granted') {
         setError('Location permission not granted');
+        setHasPermissionError(true);
+        setIsTrackingEnabled(false);
         return false;
       }
       
@@ -55,9 +63,11 @@ export const [LocationProvider, useLocation] = createContextHook(() => {
     } catch (error) {
       console.error('Error requesting location permission:', error);
       setError('Failed to request location permission');
+      setHasPermissionError(true);
+      setIsTrackingEnabled(false);
       return false;
     }
-  };
+  }, [hasPermissionError]);
 
   const saveLocation = async (locationData: LocationData) => {
     try {
@@ -245,7 +255,12 @@ export const [LocationProvider, useLocation] = createContextHook(() => {
     }
   }, []);
 
-  const getCurrentLocation = useCallback(async (): Promise<LocationData | null> => {
+  const getCurrentLocation = useCallback(async (forceRetry: boolean = false): Promise<LocationData | null> => {
+    if (hasPermissionError && !forceRetry) {
+      console.log('Permission denied - skipping automatic location request');
+      return null;
+    }
+
     const hasPermission = await requestLocationPermission();
     if (!hasPermission) return null;
 
@@ -265,7 +280,7 @@ export const [LocationProvider, useLocation] = createContextHook(() => {
     } finally {
       setIsLoading(false);
     }
-  }, [getWebLocation, getNativeLocation]);
+  }, [getWebLocation, getNativeLocation, hasPermissionError, requestLocationPermission]);
 
   const calculateDistance = useCallback((lat1: number, lon1: number, lat2: number, lon2: number): number => {
     const R = 6371e3;
@@ -421,12 +436,16 @@ export const [LocationProvider, useLocation] = createContextHook(() => {
   };
 
   const retryLocationPermission = async () => {
+    console.log('Retrying location permission...');
     setHasPermissionError(false);
     setError(null);
     lastErrorTime.current = 0;
-    const result = await getCurrentLocation();
+    const result = await getCurrentLocation(true);
     if (result) {
       setIsTrackingEnabled(true);
+      console.log('Location permission granted and tracking enabled');
+    } else {
+      console.log('Location permission still denied');
     }
     return result;
   };
