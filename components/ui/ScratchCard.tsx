@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { View, StyleSheet, PanResponder, Animated, Dimensions, Platform } from 'react-native';
 import MaskedView from '@react-native-masked-view/masked-view';
 import * as Haptics from 'expo-haptics';
@@ -42,16 +42,20 @@ export default function ScratchCard({
   }, []);
 
   const checkScratchProgress = useCallback(() => {
-    if (isRevealed) return;
+    if (isRevealedRef.current) return;
     
     const scratchPercentage = (scratches.length * 100) / 100;
     
     console.log('[ScratchCard] Progress:', scratchPercentage.toFixed(1), '% -', scratches.length, 'scratches');
     
-    if (scratches.length >= 30) {
+    if (scratches.length >= 20) {
       console.log('[ScratchCard] Threshold reached! Revealing...');
       setIsRevealed(true);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      isRevealedRef.current = true;
+      
+      if (Platform.OS !== 'web') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
       
       Animated.timing(opacity, {
         toValue: 0,
@@ -62,7 +66,11 @@ export default function ScratchCard({
         onScratchComplete();
       });
     }
-  }, [scratches.length, isRevealed, opacity, onScratchComplete]);
+  }, [scratches.length, opacity, onScratchComplete]);
+
+  useEffect(() => {
+    checkScratchProgress();
+  }, [checkScratchProgress]);
 
   const panResponder = useRef(
     PanResponder.create({
