@@ -178,8 +178,12 @@ export const [ActivityProvider, useActivity] = createContextHook(() => {
   }, [activityInteractions]);
 
   useEffect(() => {
-    updateLearningProfile();
-  }, [updateLearningProfile]);
+    const timeout = setTimeout(() => {
+      updateLearningProfile();
+    }, 1000);
+    return () => clearTimeout(timeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activityInteractions]);
 
   const extractThemes = (title: string, description: string): string[] => {
     const text = `${title} ${description}`.toLowerCase();
@@ -253,84 +257,21 @@ export const [ActivityProvider, useActivity] = createContextHook(() => {
       
       const intelligentFilters = getIntelligentFilters(filters);
       
-      const systemPrompt = `You are an expert at creating unique, engaging ${filters.mode === 'couples' ? 'date night' : 'family'} activity ideas.
-
-USER LEARNING PROFILE - CRITICAL RESTRICTIONS:
-${stronglyDislikedCategories.length > 0 ? `NEVER suggest these categories (user has rejected them multiple times):
-${stronglyDislikedCategories.join(', ')}
-ABSOLUTELY AVOID these categories at all costs.` : ''}
-
-${learningProfile.dislikedThemes.length > 0 ? `AVOID these themes/topics:
-${learningProfile.dislikedThemes.join(', ')}
-Do not suggest activities related to these themes.` : ''}
-
-${preferredCategories.length > 0 ? `User enjoys these categories (prioritize when possible):
-${preferredCategories.join(', ')}` : ''}
-
-${learningProfile.likedThemes.length > 0 ? `User likes these themes:
-${learningProfile.likedThemes.join(', ')}` : ''}
-
-${learningProfile.preferredBudget ? `User typically prefers: ${learningProfile.preferredBudget} activities` : ''}
-${learningProfile.preferredSetting ? `User shows preference for: ${learningProfile.preferredSetting} activities` : ''}
-
-${currentLocation ? `LOCATION CONTEXT:
-The user is in ${currentLocation.city}, ${currentLocation.region}, ${currentLocation.country}.
-Consider local attractions, landmarks, venues, and region-specific activities.
-Suggest activities that take advantage of what makes this location unique.
-Mention specific places or areas when relevant (but keep suggestions flexible).
-` : ''}
-
-${weather ? `CURRENT WEATHER:
-- Temperature: ${weather.temp}°F (feels like ${weather.feelsLike}°F)
-- Conditions: ${weather.condition} - ${weather.description}
-- Wind: ${weather.windSpeed} mph
-- Humidity: ${weather.humidity}%
-
-IMPORTANT WEATHER CONSIDERATIONS:
-${weather.condition === 'Rain' || weather.condition === 'Thunderstorm' ? '- Weather is WET/RAINY: Strongly prioritize INDOOR activities or covered venues. Avoid outdoor activities unless they work in rain (museums, indoor entertainment, cooking, etc.).' : ''}${weather.condition === 'Snow' ? '- Weather is SNOWY: Consider winter activities (skiing, ice skating, cozy indoor activities). Outdoor activities should embrace the snow or be indoors.' : ''}${weather.temp < 32 ? '- Temperature is FREEZING: Prioritize indoor activities or brief outdoor activities with warm destinations.' : ''}${weather.temp < 50 && weather.temp >= 32 ? '- Temperature is COLD: Indoor activities preferred, or outdoor with warm clothing considerations.' : ''}${weather.temp > 85 ? '- Temperature is HOT: Consider indoor AC activities, water activities, or evening outdoor activities.' : ''}${weather.condition === 'Clear' && weather.temp >= 60 && weather.temp <= 85 ? '- Perfect weather for OUTDOOR activities! Take advantage of the beautiful conditions.' : ''}
-` : ''}
-
-TIME OF DAY: ${currentTimeOfDay}
-${currentTimeOfDay === 'Morning' ? 'Consider breakfast spots, brunch activities, morning outdoor activities, farmers markets.' : ''}
-${currentTimeOfDay === 'Afternoon' ? 'Consider lunch spots, daytime activities, matinee shows, afternoon adventures.' : ''}
-${currentTimeOfDay === 'Evening' ? 'Consider dinner spots, sunset activities, evening entertainment, nighttime experiences.' : ''}
-${currentTimeOfDay === 'Night' ? 'Consider late-night activities, stargazing, 24-hour venues, nighttime entertainment.' : ''}
-
-CRITICAL CONTENT RESTRICTIONS:
-${contentRestrictions.map(r => `- ${r}`).join('\n')}
-
-Generate a personalized activity with these INTELLIGENT parameters:
-- Mode: ${filters.mode}
-- Category: ${intelligentFilters.category}
-- Budget: ${intelligentFilters.budget}
-- Duration: ${intelligentFilters.timing}
-${intelligentFilters.setting && intelligentFilters.setting !== 'either' ? `- Setting: ${intelligentFilters.setting}` : ''}
-${filters.kidAges ? `- Kid ages: ${filters.kidAges}` : ''}
-- Current season: ${currentSeason}
-- Time of day: ${currentTimeOfDay}
-${currentLocation ? `- Location: ${currentLocation.city}, ${currentLocation.region}` : ''}
-${weather ? `- Current weather: ${weather.temp}°F, ${weather.condition}` : ''}
-
-Previously generated activities (avoid repeating): ${historyTitles || 'None'}
-
-${notInterestedActivities.length > 0 ? `REJECTED ACTIVITIES - DO NOT SUGGEST SIMILAR:
-${notInterestedActivities.join(', ')}
-CRITICAL: Analyze WHY these were rejected and avoid similar patterns.` : ''}
-
-${completedAndRatedActivities.length > 0 ? `SUCCESSFUL ACTIVITIES (user loved these):
-${completedAndRatedActivities.map(a => `${a.title} - ${a.category}${a.rating ? ` (rated ${a.rating}/5)` : ''}`).join(', ')}
-Prioritize activities similar in style and theme to these successful ones.` : ''}
-
-IMPORTANT: Make this suggestion highly relevant to the local area and current conditions. Consider:
-- Current ACTUAL weather conditions (not just typical weather)
-${weather && (weather.condition === 'Rain' || weather.condition === 'Thunderstorm' || weather.condition === 'Snow') ? '- WEATHER ALERT: Adjust for current precipitation - indoor activities are STRONGLY preferred' : ''}
-- Popular attractions and hidden gems in ${currentLocation?.city || 'the area'}
-- Cultural events and local experiences
-- Time-appropriate activities for ${currentTimeOfDay.toLowerCase()}
-- Nearby natural features (beaches, mountains, parks, etc.)
-${weather && weather.condition === 'Clear' && weather.temp >= 60 && weather.temp <= 85 ? '- BEAUTIFUL WEATHER: Take advantage of perfect outdoor conditions!' : ''}
-
-Create something unique, exciting, and memorable. Use inclusive language ("your partner" not gendered terms).`;
+      const systemPrompt = buildSystemPrompt({
+        filters,
+        intelligentFilters,
+        stronglyDislikedCategories,
+        learningProfile,
+        preferredCategories,
+        currentLocation,
+        weather,
+        currentTimeOfDay,
+        contentRestrictions,
+        currentSeason,
+        historyTitles,
+        notInterestedActivities,
+        completedAndRatedActivities,
+      });
 
       const activity = await Promise.race([
         generateObject({
@@ -526,4 +467,79 @@ function getTimeOfDay(): string {
   if (hour >= 12 && hour < 17) return 'Afternoon';
   if (hour >= 17 && hour < 21) return 'Evening';
   return 'Night';
+}
+
+function buildSystemPrompt(params: {
+  filters: Filters;
+  intelligentFilters: Filters;
+  stronglyDislikedCategories: string[];
+  learningProfile: UserLearningProfile;
+  preferredCategories: string[];
+  currentLocation: any;
+  weather: any;
+  currentTimeOfDay: string;
+  contentRestrictions: string[];
+  currentSeason: string;
+  historyTitles: string;
+  notInterestedActivities: string[];
+  completedAndRatedActivities: any[];
+}): string {
+  const {
+    filters,
+    intelligentFilters,
+    stronglyDislikedCategories,
+    preferredCategories,
+    currentLocation,
+    weather,
+    currentTimeOfDay,
+    contentRestrictions,
+    currentSeason,
+    historyTitles,
+    notInterestedActivities,
+    completedAndRatedActivities,
+  } = params;
+
+  const parts: string[] = [
+    `You are an expert at creating unique, engaging ${filters.mode === 'couples' ? 'date night' : 'family'} activity ideas.`,
+  ];
+
+  if (stronglyDislikedCategories.length > 0) {
+    parts.push(`\nNEVER suggest: ${stronglyDislikedCategories.join(', ')}`);
+  }
+
+  if (preferredCategories.length > 0) {
+    parts.push(`User enjoys: ${preferredCategories.join(', ')}`);
+  }
+
+  if (currentLocation) {
+    parts.push(`Location: ${currentLocation.city}, ${currentLocation.region}`);
+  }
+
+  if (weather) {
+    parts.push(`Weather: ${weather.temp}°F, ${weather.condition}`);
+    if (weather.condition === 'Rain' || weather.condition === 'Thunderstorm') {
+      parts.push('PRIORITY: Indoor activities');
+    }
+  }
+
+  parts.push(`Time: ${currentTimeOfDay}, Season: ${currentSeason}`);
+  parts.push(`Restrictions: ${contentRestrictions.slice(0, 3).join(', ')}`);
+  parts.push(`\nGenerate activity: ${filters.mode}, ${intelligentFilters.category}, ${intelligentFilters.budget}, ${intelligentFilters.timing}`);
+  
+  if (historyTitles) {
+    parts.push(`Avoid: ${historyTitles.split(', ').slice(0, 5).join(', ')}`);
+  }
+
+  if (notInterestedActivities.length > 0) {
+    parts.push(`Never suggest: ${notInterestedActivities.slice(0, 3).join(', ')}`);
+  }
+
+  if (completedAndRatedActivities.length > 0) {
+    const topActivity = completedAndRatedActivities[0];
+    parts.push(`User loved: ${topActivity.title}`);
+  }
+
+  parts.push('Create something unique and memorable.');
+
+  return parts.join('\n');
 }

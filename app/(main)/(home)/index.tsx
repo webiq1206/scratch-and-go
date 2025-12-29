@@ -185,7 +185,7 @@ export default function HomeScreen() {
   };
 
   const handleScratchStart = async () => {
-    if (hasStartedScratch || !mode) return;
+    if (hasStartedScratch || !mode || isGenerating) return;
     
     if (isLimitReached) {
       Alert.alert(
@@ -204,31 +204,36 @@ export default function HomeScreen() {
     setIsSavedForLater(false);
     setScrollEnabled(false);
     
-    const filters: Filters = {
-      mode,
-      category: wizardAnswers.category || 'Any',
-      budget: wizardAnswers.budget || 'Any',
-      timing: wizardAnswers.timing || 'Anytime',
-      setting: wizardAnswers.setting,
-      location: location || undefined,
-    };
-    
-    await generateActivity(filters);
+    InteractionManager.runAfterInteractions(() => {
+      const filters: Filters = {
+        mode,
+        category: wizardAnswers.category || 'Any',
+        budget: wizardAnswers.budget || 'Any',
+        timing: wizardAnswers.timing || 'Anytime',
+        setting: wizardAnswers.setting,
+        location: location || undefined,
+      };
+      
+      generateActivity(filters);
+    });
   };
 
   const handleSaveActivity = () => {
     if (!currentActivity || isSaved) return;
     
-    saveActivity(currentActivity);
     setIsSaved(true);
     
-    Alert.alert(
-      'Saved!',
-      'Activity saved to your Memory Book! Remember to capture photos during this special moment with your loved ones to preserve the memory forever.',
-      [
-        { text: 'Got it!', style: 'default' }
-      ]
-    );
+    InteractionManager.runAfterInteractions(() => {
+      saveActivity(currentActivity);
+      
+      Alert.alert(
+        'Saved!',
+        'Activity saved to your Memory Book! Remember to capture photos during this special moment with your loved ones to preserve the memory forever.',
+        [
+          { text: 'Got it!', style: 'default' }
+        ]
+      );
+    });
   };
 
   const handleShareActivity = async () => {
@@ -261,15 +266,20 @@ export default function HomeScreen() {
       return;
     }
     
-    const success = await saveForLaterActivity();
-    if (success) {
-      setIsSavedForLater(true);
-      Alert.alert(
-        'Saved for Later!',
-        'This activity has been added to your queue. You can find it anytime in the Queue tab.',
-        [{ text: 'Got it!' }]
-      );
-    }
+    setIsSavedForLater(true);
+    
+    InteractionManager.runAfterInteractions(async () => {
+      const success = await saveForLaterActivity();
+      if (success) {
+        Alert.alert(
+          'Saved for Later!',
+          'This activity has been added to your queue. You can find it anytime in the Queue tab.',
+          [{ text: 'Got it!' }]
+        );
+      } else {
+        setIsSavedForLater(false);
+      }
+    });
   };
 
   const handleRegenerateActivity = async () => {

@@ -105,18 +105,25 @@ export const [LocationProvider, useLocation] = createContextHook(() => {
       );
       const data = await response.json();
 
-      const weather = await fetchWeather(latitude, longitude);
-
       const locationData: LocationData = {
         city: data.address.city || data.address.town || data.address.village || 'Unknown City',
         region: data.address.state || data.address.region || 'Unknown Region',
         country: data.address.country || 'Unknown Country',
         coords: { latitude, longitude },
-        weather: weather || undefined,
+        weather: undefined,
       };
 
       await saveLocation(locationData);
       setLocation(locationData);
+
+      fetchWeather(latitude, longitude).then(weather => {
+        if (weather) {
+          const updatedLocation = { ...locationData, weather };
+          setLocation(updatedLocation);
+          saveLocation(updatedLocation);
+        }
+      }).catch(err => console.error('Weather fetch failed:', err));
+
       return locationData;
     } catch (error) {
       console.error('Reverse geocoding failed:', error);
@@ -304,7 +311,7 @@ export const [LocationProvider, useLocation] = createContextHook(() => {
 
   const setManualLocation = async (locationData: LocationData) => {
     setLocation(locationData);
-    await saveLocation(locationData);
+    saveLocation(locationData).catch(err => console.error('Failed to save location:', err));
   };
 
   const refreshWeather = async () => {
