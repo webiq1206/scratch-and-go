@@ -144,10 +144,20 @@ export const [LocationProvider, useLocation] = createContextHook(() => {
 
   const getWebLocation = useCallback((): Promise<LocationData | null> => {
     return new Promise((resolve) => {
+      if (!navigator.geolocation) {
+        const errorMsg = 'Geolocation is not supported by your browser';
+        console.error('Geolocation not supported');
+        setError(errorMsg);
+        resolve(null);
+        return;
+      }
+
       navigator.geolocation.getCurrentPosition(
         async (position) => {
+          console.log('Web location detected successfully');
           const { latitude, longitude } = position.coords;
           const locationData = await reverseGeocode(latitude, longitude);
+          setError(null);
           resolve(locationData);
         },
         (error) => {
@@ -158,22 +168,22 @@ export const [LocationProvider, useLocation] = createContextHook(() => {
           };
           
           const errorMessage = errorMessages[error.code] || 'Failed to get your location';
-          console.error('Web geolocation error details:', {
-            errorCode: error.code,
-            errorMessage: error.message,
-            errorType: error.code === 1 ? 'PERMISSION_DENIED' : 
-                       error.code === 2 ? 'POSITION_UNAVAILABLE' : 
-                       error.code === 3 ? 'TIMEOUT' : 'UNKNOWN',
-            userMessage: errorMessage,
+          console.error('Web geolocation error:', {
+            code: error.code,
+            message: error.message,
+            type: error.code === 1 ? 'PERMISSION_DENIED' : 
+                  error.code === 2 ? 'POSITION_UNAVAILABLE' : 
+                  error.code === 3 ? 'TIMEOUT' : 'UNKNOWN',
           });
+          console.error('User-facing error message:', errorMessage);
           
           setError(errorMessage);
           resolve(null);
         },
         {
-          timeout: 10000,
+          timeout: 15000,
           enableHighAccuracy: false,
-          maximumAge: 300000,
+          maximumAge: 60000,
         }
       );
     });
