@@ -547,40 +547,9 @@ export default function HomeScreen() {
         return (
           <Animated.View style={[styles.wizardContent, { transform: [{ translateX: slideTransform }], opacity }]}>
             <View style={styles.summaryContainer}>
-              <Text style={styles.summaryTitle}>Perfect! Here&apos;s what we found:</Text>
-              
-              <View style={styles.summaryCard}>
-                <View style={styles.summaryRow}>
-                  <Text style={styles.summaryLabel}>Vibe</Text>
-                  <Text style={styles.summaryValue}>{wizardAnswers.category}</Text>
-                </View>
-                <View style={styles.summaryRow}>
-                  <Text style={styles.summaryLabel}>Budget</Text>
-                  <Text style={styles.summaryValue}>{wizardAnswers.budget}</Text>
-                </View>
-                <View style={styles.summaryRow}>
-                  <Text style={styles.summaryLabel}>Time</Text>
-                  <Text style={styles.summaryValue}>{wizardAnswers.timing}</Text>
-                </View>
-                <View style={styles.summaryRow}>
-                  <Text style={styles.summaryLabel}>Setting</Text>
-                  <Text style={styles.summaryValue}>
-                    {wizardAnswers.setting === 'indoor' ? 'Indoor' : wizardAnswers.setting === 'outdoor' ? 'Outdoor' : 'Either'}
-                  </Text>
-                </View>
-              </View>
-
-              <Text style={styles.summaryDescription}>
+              <Text style={styles.summaryIntro}>
                 Time to reveal your personalized {mode === 'couples' ? 'date' : 'family activity'}!
               </Text>
-
-              <TouchableOpacity
-                style={styles.changeAnswersButton}
-                onPress={handleRestartWizard}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.changeAnswersText}>Change Answers</Text>
-              </TouchableOpacity>
 
               <View style={styles.cardContainer}>
                 <ScratchCard
@@ -605,8 +574,8 @@ export default function HomeScreen() {
                         ]}
                       />
                       <View style={styles.scratchContent}>
-                        <Text style={styles.scratchText}>Scratch Me</Text>
-                        <Text style={styles.scratchSubtext}>Reveal your moment</Text>
+                        <Text style={styles.scratchText}>Scratch to Reveal</Text>
+                        <Text style={styles.scratchSubtext}>Your adventure awaits</Text>
                       </View>
                     </LinearGradient>
                   }
@@ -708,6 +677,27 @@ export default function HomeScreen() {
                     </View>
                   }
                 />
+              </View>
+
+              <View style={styles.preferencesInfo}>
+                <View style={styles.preferencesRow}>
+                  <Text style={styles.preferenceItem}>{wizardAnswers.category}</Text>
+                  <Text style={styles.preferenceSeparator}>•</Text>
+                  <Text style={styles.preferenceItem}>{wizardAnswers.budget}</Text>
+                  <Text style={styles.preferenceSeparator}>•</Text>
+                  <Text style={styles.preferenceItem}>{wizardAnswers.timing}</Text>
+                  <Text style={styles.preferenceSeparator}>•</Text>
+                  <Text style={styles.preferenceItem}>
+                    {wizardAnswers.setting === 'indoor' ? 'Indoor' : wizardAnswers.setting === 'outdoor' ? 'Outdoor' : 'Either'}
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.changeAnswersLink}
+                  onPress={handleRestartWizard}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.changeAnswersLinkText}>Change preferences</Text>
+                </TouchableOpacity>
               </View>
             </View>
           </Animated.View>
@@ -1464,54 +1454,47 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   summaryContainer: {
+    flex: 1,
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.xl,
+    paddingTop: Spacing.md,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  summaryTitle: {
-    fontSize: Typography.sizes.h2,
+  summaryIntro: {
+    fontSize: Typography.sizes.h3,
     fontWeight: '400' as const,
     color: Colors.text,
     textAlign: 'center',
-    marginBottom: Spacing.lg,
-  },
-  summaryCard: {
-    backgroundColor: Colors.cardBackground,
-    borderRadius: BorderRadius.large,
-    padding: Spacing.lg,
-    width: '100%',
-    gap: Spacing.md,
-    marginBottom: Spacing.lg,
-    borderWidth: 1,
-    borderColor: Colors.cardBorder,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  summaryLabel: {
-    fontSize: Typography.sizes.body,
-    color: Colors.textLight,
-  },
-  summaryValue: {
-    fontSize: Typography.sizes.body,
-    fontWeight: '400' as const,
-    color: Colors.primary,
-  },
-  summaryDescription: {
-    fontSize: Typography.sizes.body,
-    color: Colors.textLight,
-    textAlign: 'center',
     marginBottom: Spacing.xl,
+    paddingHorizontal: Spacing.md,
   },
-  changeAnswersButton: {
-    marginTop: Spacing.md,
-    marginBottom: Spacing.lg,
-    paddingVertical: Spacing.md,
+  preferencesInfo: {
+    marginTop: Spacing.lg,
+    alignItems: 'center',
+    gap: Spacing.sm,
   },
-  changeAnswersText: {
-    fontSize: Typography.sizes.body,
+  preferencesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: Spacing.xs,
+  },
+  preferenceItem: {
+    fontSize: Typography.sizes.caption,
+    color: Colors.textLight,
+  },
+  preferenceSeparator: {
+    fontSize: Typography.sizes.caption,
+    color: Colors.textLight,
+    opacity: 0.5,
+  },
+  changeAnswersLink: {
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+  },
+  changeAnswersLinkText: {
+    fontSize: Typography.sizes.caption,
     color: Colors.textSecondary,
     textAlign: 'center',
   },
