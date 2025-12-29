@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Settings as SettingsIcon, User, Heart, Crown, RefreshCw, Edit } from 'lucide-react-native';
+import { Settings as SettingsIcon, User, Heart, Crown, RefreshCw, Edit, Shield, FileText } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import Typography from '@/constants/typography';
 import Spacing from '@/constants/spacing';
@@ -479,9 +479,42 @@ export default function SettingsScreen() {
         <View style={styles.divider} />
 
         <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Shield size={20} color={Colors.primary} />
+            <Text style={styles.sectionTitle}>Legal & Privacy</Text>
+          </View>
+          <Text style={styles.sectionDescription}>
+            Review our policies and terms
+          </Text>
+          
+          <View style={styles.legalLinks}>
+            <TouchableOpacity
+              style={styles.legalButton}
+              onPress={() => Linking.openURL('https://scratchandgo.app/privacy')}
+              activeOpacity={0.7}
+            >
+              <Shield size={18} color={Colors.textLight} />
+              <Text style={styles.legalButtonText}>Privacy Policy</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.legalButton}
+              onPress={() => Linking.openURL('https://scratchandgo.app/terms')}
+              activeOpacity={0.7}
+            >
+              <FileText size={18} color={Colors.textLight} />
+              <Text style={styles.legalButtonText}>Terms of Service</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.divider} />
+
+        <View style={styles.section}>
           <Text style={styles.footerNote}>
             These settings help personalize your activity suggestions. Changes take effect immediately.
           </Text>
+          <Text style={styles.versionText}>Version 1.0.0</Text>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -752,5 +785,29 @@ const styles = StyleSheet.create({
     fontSize: Typography.sizes.body,
     fontWeight: '400' as const,
     color: Colors.text,
+  },
+  legalLinks: {
+    gap: Spacing.md,
+  },
+  legalButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.medium,
+    backgroundColor: '#1A1A1A',
+    borderWidth: 1,
+    borderColor: '#262626',
+  },
+  legalButtonText: {
+    fontSize: Typography.sizes.body,
+    fontWeight: '400' as const,
+    color: Colors.text,
+  },
+  versionText: {
+    fontSize: Typography.sizes.small,
+    color: Colors.textMuted,
+    textAlign: 'center',
+    marginTop: Spacing.md,
   },
 });

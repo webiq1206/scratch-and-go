@@ -12,6 +12,8 @@ import { CollaborativeProvider } from "@/contexts/CollaborativeContext";
 import { StatsProvider } from "@/contexts/StatsContext";
 import { YearRecapProvider } from "@/contexts/YearRecapContext";
 import { AuthContext } from "@/contexts/AuthContext";
+import { AnalyticsProvider } from "@/contexts/AnalyticsContext";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -90,9 +92,11 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthContext>
-        <PreferencesProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <AnalyticsProvider>
+          <AuthContext>
+            <PreferencesProvider>
           <SubscriptionProvider>
             <LocationProvider>
               <ActivityProvider>
@@ -110,8 +114,10 @@ export default function RootLayout() {
               </ActivityProvider>
             </LocationProvider>
           </SubscriptionProvider>
-        </PreferencesProvider>
-      </AuthContext>
-    </QueryClientProvider>
+            </PreferencesProvider>
+          </AuthContext>
+        </AnalyticsProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
