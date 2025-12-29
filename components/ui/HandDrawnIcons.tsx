@@ -10,24 +10,36 @@ export const HandDrawnHome: React.FC<IconProps> = ({ size = 24, color = '#FF6B9D
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Path
-        d="M3.5 12.8C3.4 12.2 3.3 11.7 3.8 11.3L11.2 4.2C11.7 3.8 12.3 3.8 12.8 4.2L20.2 11.3C20.7 11.7 20.6 12.2 20.5 12.8L20.3 19.8C20.2 20.4 19.8 20.9 19.2 21L4.8 21C4.2 21 3.8 20.5 3.7 19.9L3.5 12.8Z"
+        d="M5.8 3.2L18.1 3C18.7 3 19.2 3.4 19.3 4L19.5 20C19.5 20.6 19.1 21.1 18.5 21.2L6.2 21.3C5.6 21.3 5.1 20.9 5 20.3L4.8 4.3C4.8 3.7 5.2 3.2 5.8 3.2Z"
         stroke={color}
         strokeWidth="1.8"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
       <Path
-        d="M9.2 20.9L9.1 15.2C9.1 14.6 9.5 14.1 10.1 14.1L13.9 14C14.5 14 14.9 14.4 14.9 15L14.8 20.9"
-        stroke={color}
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <Path
-        d="M11.8 4.3C11.9 4.2 12 4.1 12.2 4.2"
+        d="M8.2 3L8.3 7.8"
         stroke={color}
         strokeWidth="1.5"
         strokeLinecap="round"
+      />
+      <Path
+        d="M15.8 3L15.9 7.8"
+        stroke={color}
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+      <Path
+        d="M5 7.8L19.3 7.9"
+        stroke={color}
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+      <Path
+        d="M9.8 13.2C9.7 12.7 9.9 12.3 10.3 12.1C10.7 11.9 11.2 12 11.4 12.3L11.5 12.4C11.6 12.5 11.8 12.5 11.9 12.4L12 12.3C12.2 12 12.7 11.9 13.1 12.1C13.5 12.3 13.7 12.7 13.6 13.2C13.5 13.7 13.2 14.1 12.8 14.4L11.8 15.2C11.7 15.3 11.6 15.3 11.6 15.2L10.6 14.4C10.2 14.1 9.9 13.7 9.8 13.2Z"
+        stroke={color}
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
     </Svg>
   );
