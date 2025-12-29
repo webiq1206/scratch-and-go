@@ -37,9 +37,12 @@ export const [ActivityProvider, useActivity] = createContextHook(() => {
   useEffect(() => {
     loadHistory();
     loadScratchCount();
-    loadInteractions();
-    loadLearningProfile();
-    loadSavedForLater();
+    
+    setTimeout(() => {
+      loadInteractions();
+      loadLearningProfile();
+      loadSavedForLater();
+    }, 500);
   }, []);
 
   const loadHistory = async () => {
@@ -107,83 +110,85 @@ export const [ActivityProvider, useActivity] = createContextHook(() => {
   const updateLearningProfile = useCallback(async () => {
     if (activityInteractions.length === 0) return;
 
-    const newProfile: UserLearningProfile = {
-      dislikedCategories: {},
-      likedCategories: {},
-      dislikedThemes: [],
-      likedThemes: [],
-      lastUpdated: Date.now(),
-    };
+    setTimeout(async () => {
+      const newProfile: UserLearningProfile = {
+        dislikedCategories: {},
+        likedCategories: {},
+        dislikedThemes: [],
+        likedThemes: [],
+        lastUpdated: Date.now(),
+      };
 
-    const dislikedActivities = activityInteractions.filter(
-      a => a.interactionType === 'not_interested' || a.interactionType === 'skipped'
-    );
-    
-    const likedActivities = activityInteractions.filter(
-      a => a.interactionType === 'completed' || a.interactionType === 'saved'
-    );
-
-    dislikedActivities.forEach(activity => {
-      newProfile.dislikedCategories[activity.category] = 
-        (newProfile.dislikedCategories[activity.category] || 0) + 1;
+      const dislikedActivities = activityInteractions.filter(
+        a => a.interactionType === 'not_interested' || a.interactionType === 'skipped'
+      );
       
-      const themes = extractThemes(activity.title, activity.description);
-      themes.forEach(theme => {
-        if (!newProfile.dislikedThemes.includes(theme)) {
-          newProfile.dislikedThemes.push(theme);
+      const likedActivities = activityInteractions.filter(
+        a => a.interactionType === 'completed' || a.interactionType === 'saved'
+      );
+
+      dislikedActivities.forEach(activity => {
+        newProfile.dislikedCategories[activity.category] = 
+          (newProfile.dislikedCategories[activity.category] || 0) + 1;
+        
+        const themes = extractThemes(activity.title, activity.description);
+        themes.forEach(theme => {
+          if (!newProfile.dislikedThemes.includes(theme)) {
+            newProfile.dislikedThemes.push(theme);
+          }
+        });
+      });
+
+      likedActivities.forEach(activity => {
+        newProfile.likedCategories[activity.category] = 
+          (newProfile.likedCategories[activity.category] || 0) + 1;
+        
+        const themes = extractThemes(activity.title, activity.description);
+        themes.forEach(theme => {
+          if (!newProfile.likedThemes.includes(theme)) {
+            newProfile.likedThemes.push(theme);
+          }
+        });
+      });
+
+      const budgetPrefs: Record<string, number> = {};
+      likedActivities.forEach(a => {
+        budgetPrefs[a.cost] = (budgetPrefs[a.cost] || 0) + 1;
+      });
+      if (Object.keys(budgetPrefs).length > 0) {
+        newProfile.preferredBudget = Object.entries(budgetPrefs)
+          .sort(([,a], [,b]) => b - a)[0][0];
+      }
+
+      const indoorOutdoorPrefs = { indoor: 0, outdoor: 0 };
+      likedActivities.forEach(a => {
+        const desc = a.description.toLowerCase();
+        if (desc.includes('indoor') || desc.includes('inside')) {
+          indoorOutdoorPrefs.indoor++;
+        }
+        if (desc.includes('outdoor') || desc.includes('outside') || desc.includes('park') || desc.includes('nature')) {
+          indoorOutdoorPrefs.outdoor++;
         }
       });
-    });
-
-    likedActivities.forEach(activity => {
-      newProfile.likedCategories[activity.category] = 
-        (newProfile.likedCategories[activity.category] || 0) + 1;
-      
-      const themes = extractThemes(activity.title, activity.description);
-      themes.forEach(theme => {
-        if (!newProfile.likedThemes.includes(theme)) {
-          newProfile.likedThemes.push(theme);
-        }
-      });
-    });
-
-    const budgetPrefs: Record<string, number> = {};
-    likedActivities.forEach(a => {
-      budgetPrefs[a.cost] = (budgetPrefs[a.cost] || 0) + 1;
-    });
-    if (Object.keys(budgetPrefs).length > 0) {
-      newProfile.preferredBudget = Object.entries(budgetPrefs)
-        .sort(([,a], [,b]) => b - a)[0][0];
-    }
-
-    const indoorOutdoorPrefs = { indoor: 0, outdoor: 0 };
-    likedActivities.forEach(a => {
-      const desc = a.description.toLowerCase();
-      if (desc.includes('indoor') || desc.includes('inside')) {
-        indoorOutdoorPrefs.indoor++;
+      if (indoorOutdoorPrefs.indoor > indoorOutdoorPrefs.outdoor * 1.5) {
+        newProfile.preferredSetting = 'indoor';
+      } else if (indoorOutdoorPrefs.outdoor > indoorOutdoorPrefs.indoor * 1.5) {
+        newProfile.preferredSetting = 'outdoor';
       }
-      if (desc.includes('outdoor') || desc.includes('outside') || desc.includes('park') || desc.includes('nature')) {
-        indoorOutdoorPrefs.outdoor++;
-      }
-    });
-    if (indoorOutdoorPrefs.indoor > indoorOutdoorPrefs.outdoor * 1.5) {
-      newProfile.preferredSetting = 'indoor';
-    } else if (indoorOutdoorPrefs.outdoor > indoorOutdoorPrefs.indoor * 1.5) {
-      newProfile.preferredSetting = 'outdoor';
-    }
 
-    setLearningProfile(newProfile);
-    await AsyncStorage.setItem(LEARNING_PROFILE_KEY, JSON.stringify(newProfile));
-    console.log('Updated learning profile:', newProfile);
+      setLearningProfile(newProfile);
+      await AsyncStorage.setItem(LEARNING_PROFILE_KEY, JSON.stringify(newProfile));
+      console.log('Updated learning profile');
+    }, 100);
   }, [activityInteractions]);
 
   useEffect(() => {
     const timeout = setTimeout(() => {
       updateLearningProfile();
-    }, 1000);
+    }, 5000);
     return () => clearTimeout(timeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activityInteractions]);
+  }, [activityInteractions.length]);
 
   const extractThemes = (title: string, description: string): string[] => {
     const text = `${title} ${description}`.toLowerCase();

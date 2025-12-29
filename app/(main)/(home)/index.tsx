@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, Animated, ActivityIndicator, Alert, TouchableOpacity, Image, Dimensions, InteractionManager } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -66,15 +66,17 @@ export default function HomeScreen() {
   const [isSavedForLater, setIsSavedForLater] = useState(false);
 
   useEffect(() => {
-    const init = async () => {
-      await loadMode();
-    };
-    init();
+    InteractionManager.runAfterInteractions(() => {
+      loadMode();
+    });
   }, []);
 
   useFocusEffect(
     useCallback(() => {
-      loadMode();
+      const task = InteractionManager.runAfterInteractions(() => {
+        loadMode();
+      });
+      return () => task.cancel();
     }, [])
   );
 
@@ -120,17 +122,17 @@ export default function HomeScreen() {
     clearCurrentActivity();
   };
 
-  const getPremiumCategories = () => {
+  const getPremiumCategories = useCallback(() => {
     return mode === 'couples' 
       ? ['Adventure'] 
       : ['Outdoor'];
-  };
+  }, [mode]);
 
-  const isCategoryPremium = (category: string) => {
+  const isCategoryPremium = useCallback((category: string) => {
     return getPremiumCategories().includes(category);
-  };
+  }, [getPremiumCategories]);
 
-  const handleWizardAnswer = (key: keyof WizardAnswers, value: string | 'indoor' | 'outdoor' | 'either') => {
+  const handleWizardAnswer = useCallback((key: keyof WizardAnswers, value: string | 'indoor' | 'outdoor' | 'either') => {
     if (key === 'category' && isCategoryPremium(value as string) && !isPremium) {
       Alert.alert(
         'Premium Category',
@@ -153,36 +155,36 @@ export default function HomeScreen() {
         setWizardStep(stepOrder[currentIndex + 1]);
       }
     });
-  };
+  }, [isCategoryPremium, isPremium, router, slideAnim, wizardStep]);
 
-  const handleWizardBack = () => {
+  const handleWizardBack = useCallback(() => {
     const stepOrder: WizardStep[] = ['welcome', 'category', 'budget', 'timing', 'setting', 'summary'];
     const currentIndex = stepOrder.indexOf(wizardStep);
     if (currentIndex > 0) {
       slideAnim.setValue(-SCREEN_WIDTH);
       setWizardStep(stepOrder[currentIndex - 1]);
     }
-  };
+  }, [slideAnim, wizardStep]);
 
-  const handleStartWizard = () => {
+  const handleStartWizard = useCallback(() => {
     setWizardAnswers({});
     setWizardStep('category');
     slideAnim.setValue(SCREEN_WIDTH);
-  };
+  }, [slideAnim]);
 
-  const handleRestartWizard = () => {
+  const handleRestartWizard = useCallback(() => {
     setWizardAnswers({});
     setWizardStep('welcome');
     setHasStartedScratch(false);
     clearCurrentActivity();
-  };
+  }, [clearCurrentActivity]);
 
-  const getWizardProgress = () => {
+  const wizardProgress = useMemo(() => {
     const steps = ['category', 'budget', 'timing', 'setting'];
     const currentIndex = steps.indexOf(wizardStep);
     if (currentIndex === -1) return 0;
     return ((currentIndex + 1) / steps.length) * 100;
-  };
+  }, [wizardStep]);
 
   const handleScratchStart = async () => {
     if (hasStartedScratch || !mode || isGenerating) return;
@@ -218,7 +220,7 @@ export default function HomeScreen() {
     });
   };
 
-  const handleSaveActivity = () => {
+  const handleSaveActivity = useCallback(() => {
     if (!currentActivity || isSaved) return;
     
     setIsSaved(true);
@@ -234,9 +236,9 @@ export default function HomeScreen() {
         ]
       );
     });
-  };
+  }, [currentActivity, isSaved, saveActivity]);
 
-  const handleShareActivity = async () => {
+  const handleShareActivity = useCallback(async () => {
     if (!currentActivity || isSharing) return;
     
     setIsSharing(true);
@@ -252,7 +254,7 @@ export default function HomeScreen() {
     } finally {
       setIsSharing(false);
     }
-  };
+  }, [currentActivity, isSharing]);
 
   const handleSaveForLater = async () => {
     if (!currentActivity || isSavedForLater) return;
@@ -314,10 +316,10 @@ export default function HomeScreen() {
     );
   };
 
-  const handleScratchComplete = () => {
+  const handleScratchComplete = useCallback(() => {
     console.log('Scratch complete - activity revealed');
     setScrollEnabled(true);
-  };
+  }, []);
 
   const handleNotInterested = () => {
     if (!currentActivity) return;
@@ -932,7 +934,7 @@ export default function HomeScreen() {
               <Animated.View 
                 style={[
                   styles.progressBarFill,
-                  { width: `${getWizardProgress()}%` }
+                  { width: `${wizardProgress}%` }
                 ]}
               />
             </View>
