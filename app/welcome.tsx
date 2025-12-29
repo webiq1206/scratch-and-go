@@ -224,18 +224,18 @@ export default function WelcomeScreen() {
   }
 
   const polaroidImages = [
-    { uri: 'https://r2-pub.rork.com/generated-images/607ff251-9133-410d-ace6-05dca7cff93b.png', offset: 20, rotate: '-3deg' },
-    { uri: 'https://r2-pub.rork.com/generated-images/048f8fae-5bc5-4aed-9540-052c641f597e.png', offset: -5, rotate: '2deg' },
-    { uri: 'https://r2-pub.rork.com/generated-images/07d8a70f-801b-4db1-9df0-f279c96f76a5.png', offset: 15, rotate: '-2deg' },
-    { uri: 'https://r2-pub.rork.com/generated-images/2ab872a7-455c-4c34-a695-a732c39bf7ab.png', offset: -10, rotate: '4deg' },
-    { uri: 'https://r2-pub.rork.com/generated-images/095b3f39-4b79-4885-9987-db534bfa986c.png', offset: 30, rotate: '3deg' },
-    { uri: 'https://r2-pub.rork.com/generated-images/edd5ca88-9972-49cb-8976-6c43c0717761.png', offset: 5, rotate: '-4deg' },
-    { uri: 'https://images.unsplash.com/photo-1511895426328-dc8714191300?w=400', offset: 25, rotate: '2deg' },
-    { uri: 'https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=400', offset: -15, rotate: '-3deg' },
-    { uri: 'https://images.unsplash.com/photo-1541694458248-5aa2101c77df?w=400', offset: 35, rotate: '-2deg' },
-    { uri: 'https://images.unsplash.com/photo-1516733968668-dbdce39c4651?w=400', offset: 10, rotate: '3deg' },
-    { uri: 'https://images.unsplash.com/photo-1502086223501-7ea6ecd79368?w=400', offset: 40, rotate: '-4deg' },
-    { uri: 'https://images.unsplash.com/photo-1522038038628-2876b5e21c88?w=400', offset: 0, rotate: '2deg' },
+    { uri: 'https://r2-pub.rork.com/generated-images/b6d4e365-2f71-4c09-801a-cb3e4230f9aa.png', offset: 20, rotate: '-3deg' },
+    { uri: 'https://r2-pub.rork.com/generated-images/369a252a-1ff2-448c-916f-5baf6aa39b58.png', offset: -5, rotate: '2deg' },
+    { uri: 'https://r2-pub.rork.com/generated-images/28fbaf27-94f2-4a5d-ad1a-6a9b9be5b347.png', offset: 15, rotate: '-2deg' },
+    { uri: 'https://r2-pub.rork.com/generated-images/06c17602-3ffd-4f65-8b61-07f234377b70.png', offset: -10, rotate: '4deg' },
+    { uri: 'https://r2-pub.rork.com/generated-images/6a58e16a-503a-44ea-b4f1-67416714ca98.png', offset: 30, rotate: '3deg' },
+    { uri: 'https://r2-pub.rork.com/generated-images/a162487b-00e2-4d1f-9663-ba25f6b37151.png', offset: 5, rotate: '-4deg' },
+    { uri: 'https://r2-pub.rork.com/generated-images/ced576bf-8e1b-430d-875c-14ead9797187.png', offset: 25, rotate: '2deg' },
+    { uri: 'https://r2-pub.rork.com/generated-images/3d621e77-1dcf-4aaf-b2da-9b966f6f130f.png', offset: -15, rotate: '-3deg' },
+    { uri: 'https://r2-pub.rork.com/generated-images/c5f5349d-7bc9-444e-a675-f5c37a67648c.png', offset: 35, rotate: '-2deg' },
+    { uri: 'https://r2-pub.rork.com/generated-images/54dc9a48-bc9c-47df-a041-6a45af6bcc6e.png', offset: 10, rotate: '3deg' },
+    { uri: 'https://r2-pub.rork.com/generated-images/8a59d14e-42c8-47c4-a54c-c0400d953bb0.png', offset: 40, rotate: '-4deg' },
+    { uri: 'https://r2-pub.rork.com/generated-images/14b9dd81-cead-4151-958b-e1ff18fc5330.png', offset: 0, rotate: '2deg' },
   ];
 
   return (
