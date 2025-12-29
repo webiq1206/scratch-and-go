@@ -1012,14 +1012,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contentContainer: {
-    flexGrow: 1,
     paddingHorizontal: Spacing.lg,
     paddingBottom: Spacing.xl,
   },
   cardContainer: {
-    marginBottom: Spacing.lg,
     alignItems: 'center',
-    marginTop: Spacing.md,
+    marginTop: 0,
+    marginBottom: Spacing.md,
   },
   scratchLayer: {
     flex: 1,
@@ -1453,7 +1452,7 @@ const styles = StyleSheet.create({
   summaryContainer: {
     flex: 1,
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.lg,
+    paddingTop: Spacing.sm,
     alignItems: 'center',
   },
   preferencesInfo: {
