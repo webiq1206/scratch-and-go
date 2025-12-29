@@ -151,9 +151,28 @@ export const [LocationProvider, useLocation] = createContextHook(() => {
           resolve(locationData);
         },
         (error) => {
-          console.error('Web geolocation error:', error);
-          setError('Failed to get your location');
+          const errorMessages: { [key: number]: string } = {
+            1: 'Location permission denied. Please enable location access in your browser settings.',
+            2: 'Unable to determine your location. Please check your internet connection.',
+            3: 'Location request timed out. Please try again.',
+          };
+          
+          const errorMessage = errorMessages[error.code] || 'Failed to get your location';
+          console.error('Web geolocation error:', {
+            code: error.code,
+            message: error.message,
+            PERMISSION_DENIED: error.code === 1,
+            POSITION_UNAVAILABLE: error.code === 2,
+            TIMEOUT: error.code === 3,
+          });
+          
+          setError(errorMessage);
           resolve(null);
+        },
+        {
+          timeout: 10000,
+          enableHighAccuracy: false,
+          maximumAge: 300000,
         }
       );
     });
