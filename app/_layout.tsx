@@ -3,6 +3,7 @@ import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { trpc, trpcClient } from "@/lib/trpc";
 import { ActivityProvider } from "@/contexts/ActivityContext";
 import { PreferencesProvider, usePreferences } from "@/contexts/PreferencesContext";
 import { LocationProvider } from "@/contexts/LocationContext";
@@ -93,7 +94,8 @@ function RootLayoutNav() {
 export default function RootLayout() {
   return (
     <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
+      <trpc.Provider client={trpcClient} queryClient={queryClient}>
+        <QueryClientProvider client={queryClient}>
         <AnalyticsProvider>
           <AuthContext>
             <PreferencesProvider>
@@ -117,7 +119,8 @@ export default function RootLayout() {
             </PreferencesProvider>
           </AuthContext>
         </AnalyticsProvider>
-      </QueryClientProvider>
+        </QueryClientProvider>
+      </trpc.Provider>
     </ErrorBoundary>
   );
 }
