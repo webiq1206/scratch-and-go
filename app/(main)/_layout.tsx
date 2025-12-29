@@ -1,8 +1,8 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
-import { Home, BookHeart, Settings } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Colors from '@/constants/colors';
+import { HandDrawnHome, HandDrawnBookHeart, HandDrawnSettings } from '@/components/ui/HandDrawnIcons';
 
 export default function MainLayout() {
   const insets = useSafeAreaInsets();
@@ -35,7 +35,7 @@ export default function MainLayout() {
         options={{
           title: 'Home',
           tabBarIcon: ({ color, size }) => (
-            <Home size={size || 24} color={color} />
+            <HandDrawnHome size={size || 24} color={color} />
           ),
         }}
       />
@@ -44,7 +44,7 @@ export default function MainLayout() {
         options={{
           title: 'Memories',
           tabBarIcon: ({ color, size }) => (
-            <BookHeart size={size || 24} color={color} />
+            <HandDrawnBookHeart size={size || 24} color={color} />
           ),
         }}
       />
@@ -53,7 +53,7 @@ export default function MainLayout() {
         options={{
           title: 'Settings',
           tabBarIcon: ({ color, size }) => (
-            <Settings size={size || 24} color={color} />
+            <HandDrawnSettings size={size || 24} color={color} />
           ),
         }}
       />
