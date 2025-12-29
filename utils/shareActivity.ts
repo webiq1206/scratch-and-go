@@ -47,7 +47,7 @@ export async function shareActivity(activity: Activity): Promise<void> {
 function formatActivityShareText(activity: Activity, shareLink: string): string {
   const costSymbol = activity.cost === 'free' ? 'Free' : activity.cost.toUpperCase();
   
-  let text = `${activity.emoji} ${activity.title}\n\n`;
+  let text = `${activity.title}\n\n`;
   text += `${activity.description}\n\n`;
   text += `Cost: ${costSymbol}\n`;
   text += `Duration: ${activity.duration}\n`;

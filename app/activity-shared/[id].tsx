@@ -172,7 +172,6 @@ export default function ActivitySharedScreen() {
         </View>
 
         <View style={styles.content}>
-          <Text style={styles.emoji}>{activity.emoji}</Text>
           <Text style={styles.title}>{activity.title}</Text>
           <Text style={styles.description}>{activity.description}</Text>
 

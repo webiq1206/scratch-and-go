@@ -110,7 +110,7 @@ export async function addActivityToCalendar({
     const calculatedEndDate = endDate || new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
 
     const eventDetails = {
-      title: `${activity.emoji} ${activity.title}`,
+      title: activity.title,
       startDate,
       endDate: calculatedEndDate,
       notes: notes || activity.description,

@@ -64,7 +64,6 @@ export const [YearRecapProvider, useYearRecap] = createContextHook(() => {
       .slice(0, 3)
       .map(a => ({
         title: a.title,
-        emoji: a.emoji,
         category: a.category,
         rating: a.rating,
         completedAt: a.completedAt || 0,

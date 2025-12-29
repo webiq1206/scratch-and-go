@@ -16,7 +16,6 @@ export interface YearRecapData {
 
 export interface YearActivity {
   title: string;
-  emoji: string;
   category: string;
   rating?: number;
   completedAt: number;

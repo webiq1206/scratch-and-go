@@ -68,7 +68,6 @@ export default function QueueScreen() {
     return (
       <View style={styles.activityCard}>
         <View style={styles.cardHeader}>
-          <Text style={styles.emoji}>{item.emoji}</Text>
           <View style={styles.headerText}>
             <Text style={styles.activityTitle}>{item.title}</Text>
             <Text style={styles.addedBy}>Added by {item.addedByName}</Text>

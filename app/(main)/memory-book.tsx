@@ -399,7 +399,6 @@ function ActivityCard({ activity, onPress, onMarkComplete, onMarkIncomplete, onD
       activeOpacity={0.8}
     >
       <View style={styles.activityHeader}>
-        <Text style={styles.activityEmoji}>{activity.emoji}</Text>
         <View style={styles.activityHeaderText}>
           <Text style={styles.activityTitle} numberOfLines={2}>{activity.title}</Text>
           <Text style={styles.activityDescription} numberOfLines={2}>{activity.description}</Text>

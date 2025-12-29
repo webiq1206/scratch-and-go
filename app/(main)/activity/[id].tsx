@@ -297,10 +297,6 @@ export default function ActivityDetailScreen() {
           contentContainerStyle={styles.contentContainer}
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.emojiContainer}>
-            <Text style={styles.emoji}>{activity.emoji}</Text>
-          </View>
-
           <Text style={styles.title}>{activity.title}</Text>
           <Text style={styles.description}>{activity.description}</Text>
 
