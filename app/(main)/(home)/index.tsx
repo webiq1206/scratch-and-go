@@ -574,6 +574,14 @@ export default function HomeScreen() {
                 Time to reveal your personalized {mode === 'couples' ? 'date' : 'family activity'}!
               </Text>
 
+              <TouchableOpacity
+                style={styles.changeAnswersButton}
+                onPress={handleRestartWizard}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.changeAnswersText}>Change Answers</Text>
+              </TouchableOpacity>
+
               <View style={styles.cardContainer}>
                 <ScratchCard
                   disabled={isGenerating}
@@ -701,14 +709,6 @@ export default function HomeScreen() {
                   }
                 />
               </View>
-
-              <TouchableOpacity
-                style={styles.changeAnswersButton}
-                onPress={handleRestartWizard}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.changeAnswersText}>Change Answers</Text>
-              </TouchableOpacity>
             </View>
           </Animated.View>
         );
@@ -1506,7 +1506,8 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xl,
   },
   changeAnswersButton: {
-    marginTop: Spacing.lg,
+    marginTop: Spacing.md,
+    marginBottom: Spacing.lg,
     paddingVertical: Spacing.md,
   },
   changeAnswersText: {
