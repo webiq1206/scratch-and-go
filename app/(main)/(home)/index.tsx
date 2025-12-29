@@ -147,14 +147,12 @@ export default function HomeScreen() {
 
     setWizardAnswers(prev => ({ ...prev, [key]: value }));
     
-    InteractionManager.runAfterInteractions(() => {
-      slideAnim.setValue(SCREEN_WIDTH);
-      const stepOrder: WizardStep[] = ['welcome', 'category', 'budget', 'timing', 'setting', 'summary'];
-      const currentIndex = stepOrder.indexOf(wizardStep);
-      if (currentIndex < stepOrder.length - 1) {
-        setWizardStep(stepOrder[currentIndex + 1]);
-      }
-    });
+    slideAnim.setValue(SCREEN_WIDTH);
+    const stepOrder: WizardStep[] = ['welcome', 'category', 'budget', 'timing', 'setting', 'summary'];
+    const currentIndex = stepOrder.indexOf(wizardStep);
+    if (currentIndex < stepOrder.length - 1) {
+      setWizardStep(stepOrder[currentIndex + 1]);
+    }
   }, [isCategoryPremium, isPremium, router, slideAnim, wizardStep]);
 
   const handleWizardBack = useCallback(() => {
