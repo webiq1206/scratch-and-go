@@ -14,8 +14,11 @@ export const [LocationProvider, useLocation] = createContextHook(() => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isTrackingEnabled, setIsTrackingEnabled] = useState(true);
+  const [hasPermissionError, setHasPermissionError] = useState(false);
   const trackingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const appState = useRef<AppStateStatus>(AppState.currentState);
+  const lastErrorTime = useRef<number>(0);
+  const ERROR_COOLDOWN = 60000;
 
   const loadSavedLocation = async () => {
     try {
@@ -152,15 +155,24 @@ export const [LocationProvider, useLocation] = createContextHook(() => {
         return;
       }
 
+      const timeoutId = setTimeout(() => {
+        console.error('Geolocation timeout - no response after 15 seconds');
+      }, 15000);
+
       navigator.geolocation.getCurrentPosition(
         async (position) => {
+          clearTimeout(timeoutId);
           console.log('Web location detected successfully');
           const { latitude, longitude } = position.coords;
           const locationData = await reverseGeocode(latitude, longitude);
           setError(null);
+          setHasPermissionError(false);
+          lastErrorTime.current = 0;
           resolve(locationData);
         },
         (error) => {
+          clearTimeout(timeoutId);
+          
           const errorMessages: { [key: number]: string } = {
             1: 'Location permission denied. Please enable location access in your browser settings.',
             2: 'Unable to determine your location. Please check your internet connection.',
@@ -168,15 +180,24 @@ export const [LocationProvider, useLocation] = createContextHook(() => {
           };
           
           const errorMessage = errorMessages[error.code] || 'Failed to get your location';
-          console.error('Web geolocation error:', {
+          const errorDetails = {
             code: error.code,
-            message: error.message,
+            message: error.message || 'No message available',
             type: error.code === 1 ? 'PERMISSION_DENIED' : 
                   error.code === 2 ? 'POSITION_UNAVAILABLE' : 
                   error.code === 3 ? 'TIMEOUT' : 'UNKNOWN',
-          });
-          console.error('User-facing error message:', errorMessage);
+            timestamp: new Date().toISOString(),
+          };
           
+          console.error('Geolocation Error Details:', JSON.stringify(errorDetails, null, 2));
+          
+          if (error.code === 1) {
+            setHasPermissionError(true);
+            setIsTrackingEnabled(false);
+            console.log('Disabling automatic location tracking due to permission denial');
+          }
+          
+          lastErrorTime.current = Date.now();
           setError(errorMessage);
           resolve(null);
         },
@@ -265,7 +286,13 @@ export const [LocationProvider, useLocation] = createContextHook(() => {
 
   useEffect(() => {
     checkAndUpdateLocationRef.current = async () => {
-      if (!isTrackingEnabled) {
+      if (!isTrackingEnabled || hasPermissionError) {
+        return;
+      }
+
+      const now = Date.now();
+      if (now - lastErrorTime.current < ERROR_COOLDOWN) {
+        console.log('Skipping location check - in error cooldown period');
         return;
       }
 
@@ -287,10 +314,11 @@ export const [LocationProvider, useLocation] = createContextHook(() => {
           console.log('Significant location change detected');
         }
       } catch (error) {
-        console.error('Error checking location:', error);
+        console.error('Error checking location:', error instanceof Error ? error.message : String(error));
+        lastErrorTime.current = Date.now();
       }
     };
-  }, [isTrackingEnabled, location, calculateDistance, getCurrentLocation]);
+  }, [isTrackingEnabled, hasPermissionError, location, calculateDistance, getCurrentLocation]);
 
   const setupLocationTracking = useCallback(() => {
     console.log('Setting up automatic location tracking');
@@ -384,8 +412,23 @@ export const [LocationProvider, useLocation] = createContextHook(() => {
 
 
   const toggleLocationTracking = (enabled: boolean) => {
+    if (enabled && hasPermissionError) {
+      console.log('Cannot enable tracking - permission was denied');
+      return;
+    }
     setIsTrackingEnabled(enabled);
     console.log(`Location tracking ${enabled ? 'enabled' : 'disabled'}`);
+  };
+
+  const retryLocationPermission = async () => {
+    setHasPermissionError(false);
+    setError(null);
+    lastErrorTime.current = 0;
+    const result = await getCurrentLocation();
+    if (result) {
+      setIsTrackingEnabled(true);
+    }
+    return result;
   };
 
   return {
@@ -400,6 +443,8 @@ export const [LocationProvider, useLocation] = createContextHook(() => {
     hasWeather: !!location?.weather,
     isTrackingEnabled,
     toggleLocationTracking,
+    hasPermissionError,
+    retryLocationPermission,
   };
 });
 
