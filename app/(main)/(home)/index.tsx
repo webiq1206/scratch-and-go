@@ -300,21 +300,10 @@ export default function HomeScreen() {
       return;
     }
 
-    Alert.alert(
-      'Regenerate Activity?',
-      'This will create a new activity suggestion with your current preferences.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Regenerate',
-          onPress: async () => {
-            setIsSaved(false);
-            setIsSavedForLater(false);
-            await regenerateActivity();
-          }
-        }
-      ]
-    );
+    setIsSaved(false);
+    setIsSavedForLater(false);
+    setHasStartedScratch(false);
+    await regenerateActivity();
   };
 
   const handleScratchComplete = useCallback(() => {
@@ -597,8 +586,8 @@ export default function HomeScreen() {
                         </>
                       ) : (
                         <>
-                          <Text style={styles.revealTitle}>{currentActivity.title}</Text>
-                          <Text style={styles.revealDescription}>{currentActivity.description}</Text>
+                          <Text style={styles.revealTitle} numberOfLines={3}>{currentActivity.title}</Text>
+                          <Text style={styles.revealDescription} numberOfLines={4}>{currentActivity.description}</Text>
                           {location?.weather && (
                             <View style={styles.weatherBox}>
                               <Text style={styles.weatherIcon}>{location.weather.icon}</Text>
@@ -640,16 +629,27 @@ export default function HomeScreen() {
                                 </Text>
                               </View>
                             </TouchableOpacity>
+                          </View>
+                          <View style={styles.secondaryActions}>
                             <TouchableOpacity
-                              style={styles.shareButton}
+                              style={styles.regenerateButton}
+                              onPress={handleRegenerateActivity}
+                              disabled={isGenerating}
+                              activeOpacity={0.7}
+                            >
+                              <Text style={styles.regenerateButtonText}>{isGenerating ? 'Generating...' : '🔄 Generate New Idea'}</Text>
+                            </TouchableOpacity>
+                          </View>
+                          <View style={styles.tertiaryActions}>
+                            <TouchableOpacity
+                              style={styles.actionLink}
                               onPress={handleShareActivity}
                               disabled={isSharing}
                               activeOpacity={0.7}
                             >
-                              <Text style={styles.shareButtonText}>Share</Text>
+                              <Text style={styles.actionLinkText}>Share</Text>
                             </TouchableOpacity>
-                          </View>
-                          <View style={styles.secondaryActions}>
+                            <View style={styles.actionDivider} />
                             <TouchableOpacity
                               style={styles.actionLink}
                               onPress={handleSaveForLater}
@@ -662,15 +662,6 @@ export default function HomeScreen() {
                               ]}>
                                 {(isSavedForLater || isActivitySavedForLater(currentActivity.title)) ? 'Saved for Later' : 'Save for Later'}
                               </Text>
-                            </TouchableOpacity>
-                            <View style={styles.actionDivider} />
-                            <TouchableOpacity
-                              style={styles.actionLink}
-                              onPress={handleRegenerateActivity}
-                              disabled={isGenerating}
-                              activeOpacity={0.7}
-                            >
-                              <Text style={styles.actionLinkText}>Regenerate</Text>
                             </TouchableOpacity>
                             <View style={styles.actionDivider} />
                             <TouchableOpacity
@@ -1072,90 +1063,92 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.cardBackground,
     alignItems: 'center',
     justifyContent: 'flex-start',
-    padding: Spacing.lg,
-    paddingTop: Spacing.md,
+    padding: Spacing.md,
+    paddingTop: Spacing.sm,
   },
   revealTitle: {
-    fontSize: Typography.sizes.h3,
-    fontWeight: '400' as const,
+    fontSize: Typography.sizes.body,
+    fontWeight: '600' as const,
     color: Colors.text,
     textAlign: 'center',
     marginBottom: Spacing.xs,
-    paddingHorizontal: Spacing.sm,
+    paddingHorizontal: Spacing.xs,
+    lineHeight: 20,
   },
   revealDescription: {
-    fontSize: Typography.sizes.caption,
+    fontSize: 12,
     color: Colors.textLight,
     textAlign: 'center',
-    paddingHorizontal: Spacing.sm,
-    marginBottom: Spacing.sm,
-    lineHeight: 18,
+    paddingHorizontal: Spacing.xs,
+    marginBottom: Spacing.xs,
+    lineHeight: 16,
   },
   statsRow: {
     flexDirection: 'row',
     gap: Spacing.md,
     marginVertical: Spacing.xs,
+    marginBottom: Spacing.sm,
   },
   statItem: {
     alignItems: 'center',
     gap: Spacing.xs,
   },
   statLabel: {
-    fontSize: Typography.sizes.caption,
+    fontSize: 10,
     color: Colors.textLight,
     textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   statValue: {
-    fontSize: Typography.sizes.body,
-    fontWeight: '400' as const,
+    fontSize: 13,
+    fontWeight: '600' as const,
     color: Colors.primary,
   },
   proTipBox: {
     backgroundColor: Colors.accent + '20',
-    padding: Spacing.sm,
-    borderRadius: 12,
+    padding: Spacing.xs,
+    borderRadius: 8,
     marginTop: Spacing.xs,
     marginBottom: Spacing.xs,
-    maxWidth: '95%',
+    width: '100%',
   },
   proTipLabel: {
-    fontSize: Typography.sizes.caption,
-    fontWeight: '400' as const,
+    fontSize: 11,
+    fontWeight: '600' as const,
     color: Colors.accent,
-    marginBottom: Spacing.xs,
+    marginBottom: 4,
   },
   proTipText: {
-    fontSize: Typography.sizes.caption,
+    fontSize: 11,
     color: Colors.text,
-    lineHeight: 18,
+    lineHeight: 15,
   },
   weatherBox: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.medium,
-    marginBottom: Spacing.sm,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: 8,
+    marginBottom: Spacing.xs,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   weatherIcon: {
-    fontSize: 28,
-    marginRight: Spacing.sm,
+    fontSize: 20,
+    marginRight: Spacing.xs,
   },
   weatherInfo: {
     flex: 1,
   },
   weatherTemp: {
-    fontSize: Typography.sizes.h3,
+    fontSize: 14,
     color: Colors.text,
-    fontWeight: '400' as const,
+    fontWeight: '600' as const,
   },
   weatherCondition: {
-    fontSize: Typography.sizes.caption,
+    fontSize: 11,
     color: Colors.textSecondary,
-    marginTop: 2,
   },
   scratchCountContainer: {
     alignItems: 'center',
@@ -1271,18 +1264,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   actionButtons: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-    marginTop: Spacing.md,
+    marginTop: Spacing.xs,
     width: '100%',
-    paddingHorizontal: Spacing.md,
   },
   saveButton: {
-    flex: 1,
     backgroundColor: Colors.primary,
     paddingVertical: Spacing.sm,
     paddingHorizontal: Spacing.md,
-    borderRadius: BorderRadius.medium,
+    borderRadius: 10,
+    width: '100%',
   },
   saveButtonDisabled: {
     backgroundColor: Colors.cardBackground,
@@ -1295,42 +1285,47 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   saveButtonText: {
-    fontSize: Typography.sizes.body,
-    fontWeight: '400' as const,
+    fontSize: 14,
+    fontWeight: '600' as const,
     color: Colors.text,
+    textAlign: 'center',
   },
-  shareButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+
+  secondaryActions: {
+    marginTop: Spacing.xs,
+    width: '100%',
+  },
+  regenerateButton: {
     backgroundColor: Colors.cardBackground,
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
+    borderColor: Colors.primary,
     paddingVertical: Spacing.sm,
     paddingHorizontal: Spacing.md,
-    borderRadius: BorderRadius.medium,
+    borderRadius: 10,
+    width: '100%',
   },
-  shareButtonText: {
-    fontSize: Typography.sizes.body,
-    fontWeight: '400' as const,
-    color: Colors.text,
+  regenerateButtonText: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: Colors.primary,
+    textAlign: 'center',
   },
-  secondaryActions: {
+  tertiaryActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: Spacing.sm,
+    marginTop: Spacing.xs,
     width: '100%',
     paddingHorizontal: Spacing.sm,
     justifyContent: 'center',
   },
   actionLink: {
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
   },
   actionLinkText: {
-    fontSize: Typography.sizes.caption,
+    fontSize: 12,
     fontWeight: '400' as const,
-    color: Colors.primary,
+    color: Colors.textSecondary,
   },
   actionLinkTextDisabled: {
     color: Colors.textSecondary,

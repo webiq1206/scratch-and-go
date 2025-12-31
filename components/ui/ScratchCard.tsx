@@ -6,7 +6,7 @@ import { BorderRadius } from '@/constants/design';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = SCREEN_WIDTH - 48;
-const CARD_HEIGHT = 300;
+const CARD_HEIGHT = 400;
 
 interface ScratchCardProps {
   onScratchStart?: () => void;
@@ -33,18 +33,26 @@ export default function ScratchCard({
   const isRevealedRef = useRef(false);
   const disabledRef = useRef(disabled);
   const hasStartedRef = useRef(false);
+  const scratchPercentage = useRef(0);
   
   disabledRef.current = disabled;
   isRevealedRef.current = isRevealed;
 
   const addScratch = useCallback((x: number, y: number) => {
-    setScratches((prev) => [...prev, { x, y }]);
+    setScratches((prev) => {
+      const newScratches = [...prev, { x, y }];
+      const uniquePositions = new Set(
+        newScratches.map(s => `${Math.floor(s.x / 20)},${Math.floor(s.y / 20)}`)
+      );
+      scratchPercentage.current = (uniquePositions.size / ((CARD_WIDTH / 20) * (CARD_HEIGHT / 20))) * 100;
+      return newScratches;
+    });
   }, []);
 
   const checkScratchProgress = useCallback(() => {
     if (isRevealedRef.current) return;
     
-    if (scratches.length >= 20) {
+    if (scratchPercentage.current >= 30) {
       setIsRevealed(true);
       isRevealedRef.current = true;
       
@@ -60,7 +68,7 @@ export default function ScratchCard({
         onScratchComplete();
       });
     }
-  }, [scratches.length, opacity, onScratchComplete]);
+  }, [opacity, onScratchComplete]);
 
   useEffect(() => {
     checkScratchProgress();
@@ -236,17 +244,17 @@ const styles = StyleSheet.create({
   },
   scratchHole: {
     position: 'absolute',
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: 'black',
   },
   scratchMarkWeb: {
     position: 'absolute',
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
   },
   disabledOverlay: {
     ...StyleSheet.absoluteFillObject,
