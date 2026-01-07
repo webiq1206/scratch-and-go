@@ -17,7 +17,7 @@ import { Clock, DollarSign, Calendar, CheckCircle, Trash2, Edit3, Save, X, Share
 
 export default function ActivityDetailScreen() {
   const { id } = useLocalSearchParams();
-  const { getSavedActivity, markAsCompleted, markAsIncomplete, updateRating, updateNotes, unsaveActivity, addPhoto, removePhoto, updateLocationSnapshot } = useMemoryBook();
+  const { getSavedActivity, startActivity, stopActivity, markAsCompleted, markAsIncomplete, updateRating, updateNotes, unsaveActivity, addPhoto, removePhoto, updateLocationSnapshot } = useMemoryBook();
   const { addToQueue } = useCollaborative();
   const { location } = useLocation();
   
@@ -64,21 +64,62 @@ export default function ActivityDetailScreen() {
     setIsEditingNotes(false);
   };
 
+  const handleStartActivity = () => {
+    startActivity(activity.id);
+    Alert.alert(
+      '🎉 Activity Started!',
+      'Time to make some amazing memories! Don\'t forget to take photos and add notes along the way.',
+      [{ text: 'Got it!' }]
+    );
+  };
+
+  const handleStopActivity = () => {
+    Alert.alert(
+      'Pause Activity?',
+      'You can continue this activity later.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Pause',
+          onPress: () => {
+            stopActivity(activity.id);
+            Alert.alert('Activity Paused', 'You can resume anytime!');
+          }
+        }
+      ]
+    );
+  };
+
   const handleMarkComplete = () => {
-    markAsCompleted(activity.id);
-    
     if (!activity.photos || activity.photos.length === 0) {
       Alert.alert(
-        'Memory Made!',
-        'Don\'t forget to capture this special moment with your loved ones! Add photos to preserve this memory forever.',
+        'Add Photos First?',
+        'Capture this special moment before completing! Photos help you remember this memory forever.',
         [
-          { text: 'Add Photos Now', onPress: () => handleTakePhoto() },
-          { text: 'Maybe Later', style: 'cancel' }
+          { text: 'Add Photos', onPress: () => handleTakePhoto() },
+          { 
+            text: 'Complete Without Photos', 
+            style: 'destructive',
+            onPress: () => completeActivity()
+          },
+          { text: 'Cancel', style: 'cancel' }
         ]
       );
     } else {
-      Alert.alert('Memory Complete!', 'Another beautiful moment captured with loved ones!');
+      completeActivity();
     }
+  };
+
+  const completeActivity = () => {
+    markAsCompleted(activity.id);
+    Alert.alert(
+      '✨ Memory Complete!',
+      'Would you like to share this experience?',
+      [
+        { text: 'Not Now', style: 'cancel' },
+        { text: 'Share', onPress: handleShareActivity }
+      ]
+    );
   };
 
   const handleMarkIncomplete = () => {
@@ -531,6 +572,38 @@ export default function ActivityDetailScreen() {
           </View>
 
           <View style={styles.actionsSection}>
+            {!activity.isActive && !activity.isCompleted && (
+              <TouchableOpacity
+                style={styles.startButton}
+                onPress={handleStartActivity}
+                activeOpacity={0.8}
+              >
+                <CheckCircle size={24} color={Colors.white} />
+                <Text style={styles.startButtonText}>Start Activity</Text>
+              </TouchableOpacity>
+            )}
+
+            {activity.isActive && !activity.isCompleted && (
+              <View style={styles.activeActivityBanner}>
+                <View style={styles.activeIndicator} />
+                <View style={styles.activeContent}>
+                  <Text style={styles.activeTitle}>Activity In Progress</Text>
+                  <Text style={styles.activeSubtitle}>Take photos and add notes as you go!</Text>
+                </View>
+              </View>
+            )}
+
+            {activity.isActive && (
+              <TouchableOpacity
+                style={styles.pauseButton}
+                onPress={handleStopActivity}
+                activeOpacity={0.8}
+              >
+                <X size={20} color={Colors.textLight} />
+                <Text style={styles.pauseButtonText}>Pause Activity</Text>
+              </TouchableOpacity>
+            )}
+
             <TouchableOpacity
               style={styles.calendarButton}
               onPress={() => setShowCalendarModal(true)}
@@ -559,16 +632,18 @@ export default function ActivityDetailScreen() {
               <Text style={styles.queueButtonText}>Add to Queue</Text>
             </TouchableOpacity>
 
-            {!activity.isCompleted ? (
+            {(activity.isActive || !activity.isCompleted) && (
               <TouchableOpacity
                 style={styles.completeButton}
                 onPress={handleMarkComplete}
                 activeOpacity={0.8}
               >
                 <CheckCircle size={20} color={Colors.text} />
-                <Text style={styles.completeButtonText}>Mark as Completed</Text>
+                <Text style={styles.completeButtonText}>Complete Activity</Text>
               </TouchableOpacity>
-            ) : (
+            )}
+
+            {activity.isCompleted && (
               <TouchableOpacity
                 style={styles.incompleteButton}
                 onPress={handleMarkIncomplete}
@@ -1081,6 +1156,73 @@ const styles = StyleSheet.create({
   },
   actionsSection: {
     gap: Spacing.md,
+  },
+  startButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    backgroundColor: Colors.primary,
+    paddingVertical: Spacing.xl,
+    paddingHorizontal: Spacing.xl,
+    borderRadius: BorderRadius.medium,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  startButtonText: {
+    fontSize: Typography.sizes.h3,
+    fontWeight: '600' as const,
+    color: Colors.white,
+  },
+  activeActivityBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.primary + '20',
+    paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: BorderRadius.medium,
+    borderWidth: 2,
+    borderColor: Colors.primary,
+    gap: Spacing.md,
+  },
+  activeIndicator: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: Colors.primary,
+  },
+  activeContent: {
+    flex: 1,
+  },
+  activeTitle: {
+    fontSize: Typography.sizes.body,
+    fontWeight: '600' as const,
+    color: Colors.text,
+    marginBottom: 2,
+  },
+  activeSubtitle: {
+    fontSize: Typography.sizes.caption,
+    color: Colors.textLight,
+  },
+  pauseButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    backgroundColor: Colors.cardBackground,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.xl,
+    borderRadius: BorderRadius.medium,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  pauseButtonText: {
+    fontSize: Typography.sizes.body,
+    fontWeight: '400' as const,
+    color: Colors.textLight,
   },
   shareActivityButton: {
     flexDirection: 'row',

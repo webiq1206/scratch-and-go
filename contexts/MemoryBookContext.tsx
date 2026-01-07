@@ -44,6 +44,7 @@ export const [MemoryBookProvider, useMemoryBook] = createContextHook(() => {
       ...activity,
       id: Date.now().toString() + Math.random().toString(36),
       savedAt: Date.now(),
+      isActive: false,
       isCompleted: false,
       photos: [],
       locationSnapshot: location || undefined,
@@ -65,11 +66,33 @@ export const [MemoryBookProvider, useMemoryBook] = createContextHook(() => {
     console.log('Activity removed:', activityId);
   };
 
+  const startActivity = (activityId: string) => {
+    const updated = savedActivities.map(act =>
+      act.id === activityId
+        ? { ...act, isActive: true, startedAt: Date.now() }
+        : act
+    );
+    setSavedActivities(updated);
+    saveSavedActivities(updated);
+    console.log('Activity started:', activityId);
+  };
+
+  const stopActivity = (activityId: string) => {
+    const updated = savedActivities.map(act =>
+      act.id === activityId
+        ? { ...act, isActive: false }
+        : act
+    );
+    setSavedActivities(updated);
+    saveSavedActivities(updated);
+    console.log('Activity stopped:', activityId);
+  };
+
   const markAsCompleted = (activityId: string, completedAt: number = Date.now()) => {
     const activity = savedActivities.find(a => a.id === activityId);
     const updated = savedActivities.map(act =>
       act.id === activityId
-        ? { ...act, isCompleted: true, completedAt }
+        ? { ...act, isActive: false, isCompleted: true, completedAt }
         : act
     );
     setSavedActivities(updated);
@@ -155,7 +178,11 @@ export const [MemoryBookProvider, useMemoryBook] = createContextHook(() => {
   };
 
   const getSavedActivities = (): SavedActivity[] => {
-    return savedActivities.filter(a => !a.isCompleted);
+    return savedActivities.filter(a => !a.isCompleted && !a.isActive);
+  };
+
+  const getActiveActivities = (): SavedActivity[] => {
+    return savedActivities.filter(a => a.isActive && !a.isCompleted);
   };
 
   const getCompletedActivities = (): SavedActivity[] => {
@@ -167,6 +194,8 @@ export const [MemoryBookProvider, useMemoryBook] = createContextHook(() => {
     isLoading,
     saveActivity,
     unsaveActivity,
+    startActivity,
+    stopActivity,
     markAsCompleted,
     markAsIncomplete,
     updateRating,
@@ -177,6 +206,7 @@ export const [MemoryBookProvider, useMemoryBook] = createContextHook(() => {
     isActivitySaved,
     getSavedActivity,
     getSavedActivities,
+    getActiveActivities,
     getCompletedActivities,
   };
 });

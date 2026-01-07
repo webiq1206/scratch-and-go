@@ -15,6 +15,8 @@ export type Activity = z.infer<typeof ActivitySchema>;
 export interface SavedActivity extends Activity {
   id: string;
   savedAt: number;
+  isActive: boolean;
+  startedAt?: number;
   isCompleted: boolean;
   completedAt?: number;
   rating?: number;

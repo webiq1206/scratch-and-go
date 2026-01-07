@@ -13,7 +13,7 @@ import { Heart, Clock, DollarSign, Calendar, CheckCircle, FileText, Search, X, F
 import FilterPill from '@/components/ui/FilterPill';
 import { addActivityToCalendar, calculateEndDate } from '@/utils/calendarUtils';
 
-type Tab = 'saved' | 'completed';
+type Tab = 'saved' | 'active' | 'completed';
 
 const COST_FILTERS = ['All', 'Free', '$', '$$', '$$$'];
 const CATEGORY_FILTERS = ['All', 'Chill', 'Active', 'Creative', 'Foodie', 'Adventure', 'Outdoor', 'Educational'];
@@ -27,7 +27,7 @@ const SORT_OPTIONS = [
 type SortOption = 'date-desc' | 'date-asc' | 'alphabetical' | 'rating-desc';
 
 export default function MemoryBookScreen() {
-  const [activeTab, setActiveTab] = useState<Tab>('saved');
+  const [activeTab, setActiveTab] = useState<Tab>('active');
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCost, setSelectedCost] = useState('All');
@@ -35,13 +35,14 @@ export default function MemoryBookScreen() {
   const [showFilters, setShowFilters] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>('date-desc');
   const [showSortMenu, setShowSortMenu] = useState(false);
-  const { getSavedActivities, getCompletedActivities, markAsCompleted, markAsIncomplete, unsaveActivity, updateRating } = useMemoryBook();
+  const { getSavedActivities, getActiveActivities, getCompletedActivities, markAsCompleted, markAsIncomplete, unsaveActivity, updateRating } = useMemoryBook();
 
   const savedActivities = getSavedActivities();
+  const activeActivities = getActiveActivities();
   const completedActivities = getCompletedActivities();
 
   const filteredActivities = useMemo(() => {
-    const activities = activeTab === 'saved' ? savedActivities : completedActivities;
+    const activities = activeTab === 'saved' ? savedActivities : activeTab === 'active' ? activeActivities : completedActivities;
     
     let filtered = activities;
 
@@ -86,7 +87,7 @@ export default function MemoryBookScreen() {
     });
 
     return filtered;
-  }, [activeTab, savedActivities, completedActivities, searchQuery, selectedCost, selectedCategory, sortBy]);
+  }, [activeTab, savedActivities, activeActivities, completedActivities, searchQuery, selectedCost, selectedCategory, sortBy]);
 
   const displayedActivities = filteredActivities;
 
@@ -136,6 +137,8 @@ export default function MemoryBookScreen() {
         <Text style={styles.subtitle}>
           {activeTab === 'saved' 
             ? 'Moments waiting to be made with loved ones'
+            : activeTab === 'active'
+            ? 'Activities in progress - make them count!'
             : 'Beautiful memories you\'ve created together'
           }
         </Text>
@@ -283,6 +286,20 @@ export default function MemoryBookScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity
+          style={[styles.tab, activeTab === 'active' && styles.tabActive]}
+          onPress={() => setActiveTab('active')}
+          activeOpacity={0.7}
+        >
+          <Clock 
+            size={18} 
+            color={activeTab === 'active' ? Colors.primary : Colors.textLight}
+          />
+          <Text style={[styles.tabText, activeTab === 'active' && styles.tabTextActive]}>
+            Active ({activeActivities.length})
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
           style={[styles.tab, activeTab === 'completed' && styles.tabActive]}
           onPress={() => setActiveTab('completed')}
           activeOpacity={0.7}
@@ -293,7 +310,7 @@ export default function MemoryBookScreen() {
             fill={activeTab === 'completed' ? Colors.primary : 'none'}
           />
           <Text style={[styles.tabText, activeTab === 'completed' && styles.tabTextActive]}>
-            Completed ({completedActivities.length})
+            Done ({completedActivities.length})
           </Text>
         </TouchableOpacity>
       </View>
@@ -304,7 +321,7 @@ export default function MemoryBookScreen() {
           <Text style={styles.emptyTitle}>
             {hasActiveFilters
               ? 'No matching activities'
-              : (activeTab === 'saved' ? 'No saved moments yet' : 'No memories captured yet')
+              : (activeTab === 'saved' ? 'No saved moments yet' : activeTab === 'active' ? 'No active activities' : 'No memories captured yet')
             }
           </Text>
           <Text style={styles.emptyText}>
@@ -312,6 +329,8 @@ export default function MemoryBookScreen() {
               ? 'Try adjusting your search or filters'
               : (activeTab === 'saved'
                 ? 'Start creating memories! Save activities\nyou want to experience with loved ones'
+                : activeTab === 'active'
+                ? 'No activities in progress.\nStart an activity to begin making memories!'
                 : 'Complete activities and capture photos\nto preserve your special moments together'
               )
             }
