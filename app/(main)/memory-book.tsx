@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, TextInput, Image, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, TextInput, Image, Platform, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -104,8 +104,19 @@ export default function MemoryBookScreen() {
     markAsIncomplete(activityId);
   };
 
-  const handleDelete = (activityId: string) => {
-    unsaveActivity(activityId);
+  const handleDelete = (activityId: string, activityTitle: string) => {
+    Alert.alert(
+      'Delete Activity',
+      `Are you sure you want to delete "${activityTitle}"? This cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => unsaveActivity(activityId),
+        },
+      ]
+    );
   };
 
   const handleActivityPress = (activity: SavedActivity) => {
@@ -327,7 +338,7 @@ export default function MemoryBookScreen() {
               onPress={() => handleActivityPress(activity)}
               onMarkComplete={() => handleMarkComplete(activity.id)}
               onMarkIncomplete={() => handleMarkIncomplete(activity.id)}
-              onDelete={() => handleDelete(activity.id)}
+              onDelete={() => handleDelete(activity.id, activity.title)}
               onRatingChange={(rating) => handleRatingChange(activity.id, rating)}
               isCompleted={activeTab === 'completed'}
             />
