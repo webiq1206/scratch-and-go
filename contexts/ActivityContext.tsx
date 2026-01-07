@@ -504,47 +504,133 @@ function buildSystemPrompt(params: {
     completedAndRatedActivities,
   } = params;
 
-  const parts: string[] = [
-    `You are an expert at creating unique, engaging ${filters.mode === 'couples' ? 'date night' : 'family'} activity ideas.`,
-  ];
+  const isCouples = filters.mode === 'couples';
+  const modeContext = isCouples ? 'romantic date or couples activity' : 'family activity that works for parents and kids together';
+  
+  const budgetGuide: Record<string, string> = {
+    'Free': 'completely free - no purchases required, use public spaces, home activities, or free community events',
+    '$': 'under $25 total - coffee shops, ice cream, thrift stores, budget-friendly local spots',
+    '$$': '$25-75 total - casual dining, movies, bowling, mini golf, escape rooms',
+    '$$$': '$75+ - nice restaurants, shows, experiences, day trips',
+  };
 
-  if (stronglyDislikedCategories.length > 0) {
-    parts.push(`\nNEVER suggest: ${stronglyDislikedCategories.join(', ')}`);
+  const timingGuide: Record<string, string> = {
+    'Quick (1-2h)': '1-2 hours max - something you can do on a weeknight or squeeze into a busy day',
+    'Half Day': '3-5 hours - a solid afternoon or morning adventure',
+    'Full Day': '6+ hours - make it a memorable all-day experience',
+  };
+
+  const categoryGuide: Record<string, string> = {
+    'Chill': isCouples 
+      ? 'relaxed, low-key vibes - cozy cafes, scenic walks, stargazing, movie nights, bookstore browsing'
+      : 'calm family bonding - board games, baking together, backyard camping, movie marathons, puzzle nights',
+    'Active': isCouples
+      ? 'physical activities together - hiking, biking, rock climbing, kayaking, tennis, dancing'
+      : 'energetic family fun - playground adventures, bike rides, swimming, nature trails, sports in the park',
+    'Creative': isCouples
+      ? 'make something together - pottery class, painting, cooking a new recipe, DIY projects'
+      : 'arts and crafts - painting, building projects, cooking together, making crafts, decorating',
+    'Foodie': 'culinary exploration - trying new restaurants, food markets, cooking classes, food tours, picnics with homemade food',
+    'Adventure': isCouples
+      ? 'trying new experiences - escape rooms, go-karts, new neighborhoods, spontaneous road trips'
+      : 'exciting discoveries - scavenger hunts, new parks, mini adventures, exploring somewhere new',
+    'Educational': 'learning together - science museums, aquariums, zoos, historical sites, nature centers, planetariums',
+    'Outdoor': 'nature and fresh air - hiking, beach days, picnics, nature walks, gardening, outdoor games',
+  };
+
+  const settingContext: Record<string, string> = {
+    'indoor': 'MUST be indoors - home, restaurants, museums, malls, indoor venues only',
+    'outdoor': 'MUST be outdoors - parks, trails, beaches, outdoor venues, nature',
+    'either': 'can be indoor or outdoor based on what fits best',
+  };
+
+  let prompt = `Generate a realistic, practical ${modeContext} that someone would actually want to do.
+
+CRITICAL REQUIREMENTS - Follow these exactly:
+`;
+
+  prompt += `\n1. BUDGET: ${filters.budget || 'Any'}`;
+  if (filters.budget && budgetGuide[filters.budget]) {
+    prompt += ` - ${budgetGuide[filters.budget]}`;
+  }
+  prompt += '\n   The activity MUST fit this budget. Do not suggest expensive activities for free/cheap budgets.';
+
+  prompt += `\n\n2. DURATION: ${filters.timing || 'Anytime'}`;
+  if (filters.timing && timingGuide[filters.timing]) {
+    prompt += ` - ${timingGuide[filters.timing]}`;
+  }
+  prompt += '\n   The activity duration MUST match this time constraint.';
+
+  prompt += `\n\n3. VIBE/CATEGORY: ${intelligentFilters.category || 'Any'}`;
+  if (intelligentFilters.category && categoryGuide[intelligentFilters.category]) {
+    prompt += ` - ${categoryGuide[intelligentFilters.category]}`;
   }
 
-  if (preferredCategories.length > 0) {
-    parts.push(`User enjoys: ${preferredCategories.join(', ')}`);
+  const settingKey = filters.setting || 'either';
+  prompt += `\n\n4. SETTING: ${settingKey}`;
+  if (settingContext[settingKey]) {
+    prompt += ` - ${settingContext[settingKey]}`;
   }
 
   if (currentLocation) {
-    parts.push(`Location: ${currentLocation.city}, ${currentLocation.region}`);
+    prompt += `\n\n5. LOCATION: ${currentLocation.city}, ${currentLocation.region}`;
+    prompt += '\n   Suggest activities that would realistically be available in or near this location.';
+    prompt += '\n   Reference local parks, neighborhoods, or types of venues typical for this area when relevant.';
   }
 
   if (weather) {
-    parts.push(`Weather: ${weather.temp}°F, ${weather.condition}`);
-    if (weather.condition === 'Rain' || weather.condition === 'Thunderstorm') {
-      parts.push('PRIORITY: Indoor activities');
+    prompt += `\n\n6. WEATHER: Currently ${weather.temp}°F and ${weather.condition.toLowerCase()}`;
+    if (weather.condition === 'Rain' || weather.condition === 'Thunderstorm' || weather.condition === 'Snow') {
+      prompt += '\n   Weather is poor - strongly prefer indoor activities unless user specifically chose outdoor.';
+    } else if (weather.temp < 40) {
+      prompt += "\n   It's cold - consider activities that keep people warm or are indoors.";
+    } else if (weather.temp > 90) {
+      prompt += "\n   It's very hot - consider activities with shade, AC, or water.";
     }
   }
 
-  parts.push(`Time: ${currentTimeOfDay}, Season: ${currentSeason}`);
-  parts.push(`Restrictions: ${contentRestrictions.slice(0, 3).join(', ')}`);
-  parts.push(`\nGenerate activity: ${filters.mode}, ${intelligentFilters.category}, ${intelligentFilters.budget}, ${intelligentFilters.timing}`);
-  
-  if (historyTitles) {
-    parts.push(`Avoid: ${historyTitles.split(', ').slice(0, 5).join(', ')}`);
+  prompt += `\n\n7. TIME OF DAY: ${currentTimeOfDay}, SEASON: ${currentSeason}`;
+  prompt += "\n   Make the activity appropriate for this time (e.g., don't suggest breakfast activities at night).";
+
+  if (contentRestrictions.length > 0) {
+    prompt += `\n\n8. CONTENT RESTRICTIONS: ${contentRestrictions.join(', ')}`;
+  }
+
+  prompt += `\n\nSTYLE GUIDELINES:`;
+  prompt += `\n- Be SPECIFIC: "Walk along the riverfront trail and stop at a local coffee shop" not "Go for a walk"`;
+  prompt += `\n- Be PRACTICAL: Something people can actually do today or this week`;
+  prompt += `\n- Be REALISTIC: Match the budget and time constraints exactly`;
+  prompt += `\n- Avoid cheesy or cliche suggestions (no "romantic picnic under the stars" unless it fits naturally)`;
+  prompt += `\n- ${isCouples ? 'Focus on connection and quality time together' : 'Make it engaging for both kids and adults'}`;
+  prompt += `\n- Title should be catchy but not over-the-top (3-6 words)`;
+  prompt += `\n- Description should explain what to do specifically (2-3 sentences)`;
+  prompt += `\n- Pro tip should be genuinely useful, not generic`;
+
+  if (stronglyDislikedCategories.length > 0) {
+    prompt += `\n\nAVOID THESE CATEGORIES (user dislikes): ${stronglyDislikedCategories.join(', ')}`;
   }
 
   if (notInterestedActivities.length > 0) {
-    parts.push(`Never suggest: ${notInterestedActivities.slice(0, 3).join(', ')}`);
+    prompt += `\n\nDO NOT SUGGEST these or similar: ${notInterestedActivities.slice(0, 5).join('; ')}`;
+  }
+
+  if (historyTitles) {
+    const recentHistory = historyTitles.split(', ').slice(0, 8);
+    if (recentHistory.length > 0) {
+      prompt += `\n\nAVOID REPEATING (recently suggested): ${recentHistory.join(', ')}`;
+    }
+  }
+
+  if (preferredCategories.length > 0) {
+    prompt += `\n\nUSER TENDS TO ENJOY: ${preferredCategories.join(', ')} - lean toward these if they fit the filters`;
   }
 
   if (completedAndRatedActivities.length > 0) {
-    const topActivity = completedAndRatedActivities[0];
-    parts.push(`User loved: ${topActivity.title}`);
+    const topActivities = completedAndRatedActivities.slice(0, 3).map(a => a.title);
+    prompt += `\n\nACTIVITIES USER LOVED: ${topActivities.join(', ')} - use these as inspiration for the style/type`;
   }
 
-  parts.push('Create something unique and memorable.');
+  prompt += `\n\nNow generate ONE activity that perfectly matches ALL the above requirements.`;
 
-  return parts.join('\n');
+  return prompt;
 }
