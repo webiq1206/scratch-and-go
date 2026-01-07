@@ -552,6 +552,7 @@ export default function HomeScreen() {
               <View style={styles.cardContainer}>
                 <ScratchCard
                   disabled={isGenerating}
+                  resetKey={currentActivity?.title || 'empty'}
                   onScratchStart={handleScratchStart}
                   onScratchComplete={handleScratchComplete}
                   onTouchStart={() => setScrollEnabled(false)}

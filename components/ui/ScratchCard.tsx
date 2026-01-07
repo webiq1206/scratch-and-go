@@ -7,6 +7,9 @@ import { BorderRadius } from '@/constants/design';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = SCREEN_WIDTH - 48;
 const CARD_HEIGHT = 400;
+const SCRATCH_THRESHOLD = 30;
+const SCRATCH_HOLE_SIZE = 60;
+const GRID_SIZE = 15;
 
 interface ScratchCardProps {
   onScratchStart?: () => void;
@@ -16,6 +19,7 @@ interface ScratchCardProps {
   scratchLayer: React.ReactNode;
   revealContent: React.ReactNode;
   disabled?: boolean;
+  resetKey?: string | number;
 }
 
 export default function ScratchCard({ 
@@ -25,7 +29,8 @@ export default function ScratchCard({
   onTouchEnd,
   scratchLayer,
   revealContent,
-  disabled = false
+  disabled = false,
+  resetKey
 }: ScratchCardProps) {
   const [scratches, setScratches] = useState<{ x: number; y: number }[]>([]);
   const [isRevealed, setIsRevealed] = useState(false);
@@ -34,25 +39,40 @@ export default function ScratchCard({
   const disabledRef = useRef(disabled);
   const hasStartedRef = useRef(false);
   const scratchPercentage = useRef(0);
+  const lastHapticTime = useRef(0);
+  const scratchedCells = useRef(new Set<string>());
   
   disabledRef.current = disabled;
   isRevealedRef.current = isRevealed;
 
-  const addScratch = useCallback((x: number, y: number) => {
-    setScratches((prev) => {
-      const newScratches = [...prev, { x, y }];
-      const uniquePositions = new Set(
-        newScratches.map(s => `${Math.floor(s.x / 20)},${Math.floor(s.y / 20)}`)
-      );
-      scratchPercentage.current = (uniquePositions.size / ((CARD_WIDTH / 20) * (CARD_HEIGHT / 20))) * 100;
-      return newScratches;
-    });
-  }, []);
+  useEffect(() => {
+    setScratches([]);
+    setIsRevealed(false);
+    isRevealedRef.current = false;
+    hasStartedRef.current = false;
+    scratchPercentage.current = 0;
+    scratchedCells.current.clear();
+    opacity.setValue(1);
+  }, [resetKey, opacity]);
 
-  const checkScratchProgress = useCallback(() => {
-    if (isRevealedRef.current) return;
+  const addScratch = useCallback((x: number, y: number) => {
+    if (isRevealedRef.current || disabledRef.current) return;
+
+    const cellX = Math.floor(x / GRID_SIZE);
+    const cellY = Math.floor(y / GRID_SIZE);
+    const cellKey = `${cellX},${cellY}`;
     
-    if (scratchPercentage.current >= 30) {
+    if (scratchedCells.current.has(cellKey)) return;
+    
+    scratchedCells.current.add(cellKey);
+    
+    const totalCells = Math.ceil(CARD_WIDTH / GRID_SIZE) * Math.ceil(CARD_HEIGHT / GRID_SIZE);
+    const scratchedCount = scratchedCells.current.size;
+    scratchPercentage.current = (scratchedCount / totalCells) * 100;
+    
+    setScratches((prev) => [...prev, { x, y }]);
+    
+    if (scratchPercentage.current >= SCRATCH_THRESHOLD && !isRevealedRef.current) {
       setIsRevealed(true);
       isRevealedRef.current = true;
       
@@ -70,9 +90,15 @@ export default function ScratchCard({
     }
   }, [opacity, onScratchComplete]);
 
-  useEffect(() => {
-    checkScratchProgress();
-  }, [checkScratchProgress]);
+  const triggerHaptic = useCallback(() => {
+    if (Platform.OS === 'web') return;
+    
+    const now = Date.now();
+    if (now - lastHapticTime.current > 50) {
+      lastHapticTime.current = now;
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+  }, []);
 
   const panResponder = useRef(
     PanResponder.create({
@@ -80,7 +106,7 @@ export default function ScratchCard({
         return !disabledRef.current && !isRevealedRef.current;
       },
       onStartShouldSetPanResponderCapture: () => {
-        return true;
+        return !disabledRef.current && !isRevealedRef.current;
       },
       onMoveShouldSetPanResponder: () => {
         return !disabledRef.current && !isRevealedRef.current;
@@ -107,25 +133,17 @@ export default function ScratchCard({
         }
         
         addScratch(locationX, locationY);
-        
-        if (Platform.OS !== 'web') {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        }
+        triggerHaptic();
       },
       onPanResponderMove: (evt) => {
         if (disabledRef.current || isRevealedRef.current) return;
         
         const { locationX, locationY } = evt.nativeEvent;
         addScratch(locationX, locationY);
-        
-        if (Platform.OS !== 'web') {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        }
+        triggerHaptic();
       },
       onPanResponderRelease: () => {
         if (disabledRef.current || isRevealedRef.current) return;
-        
-        checkScratchProgress();
         
         if (onTouchEnd) {
           onTouchEnd();
@@ -161,8 +179,8 @@ export default function ScratchCard({
                 style={[
                   styles.scratchMarkWeb,
                   {
-                    left: scratch.x - 30,
-                    top: scratch.y - 30,
+                    left: scratch.x - (SCRATCH_HOLE_SIZE / 2),
+                    top: scratch.y - (SCRATCH_HOLE_SIZE / 2),
                   },
                 ]}
               />
@@ -196,8 +214,8 @@ export default function ScratchCard({
                     style={[
                       styles.scratchHole,
                       {
-                        left: scratch.x - 25,
-                        top: scratch.y - 25,
+                        left: scratch.x - (SCRATCH_HOLE_SIZE / 2),
+                        top: scratch.y - (SCRATCH_HOLE_SIZE / 2),
                       },
                     ]}
                   />
@@ -244,17 +262,17 @@ const styles = StyleSheet.create({
   },
   scratchHole: {
     position: 'absolute',
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: SCRATCH_HOLE_SIZE,
+    height: SCRATCH_HOLE_SIZE,
+    borderRadius: SCRATCH_HOLE_SIZE / 2,
     backgroundColor: 'black',
   },
   scratchMarkWeb: {
     position: 'absolute',
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    width: SCRATCH_HOLE_SIZE,
+    height: SCRATCH_HOLE_SIZE,
+    borderRadius: SCRATCH_HOLE_SIZE / 2,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
   },
   disabledOverlay: {
     ...StyleSheet.absoluteFillObject,
