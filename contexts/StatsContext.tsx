@@ -132,20 +132,17 @@ export const [StatsProvider, useStats] = createContextHook(() => {
     const monthStart = new Date(currentYear, currentMonth, 1).getTime();
     const monthEnd = new Date(currentYear, currentMonth + 1, 0).getTime();
 
-    const monthActivities = activityHistory.filter(
-      activity => {
-        const activityDate = new Date(activity.title).getTime();
-        return activityDate >= monthStart && activityDate <= monthEnd;
-      }
-    );
-
     const monthCompleted = savedActivities.filter(
       activity => activity.isCompleted && activity.completedAt && 
                  activity.completedAt >= monthStart && activity.completedAt <= monthEnd
     );
 
+    const monthSaved = savedActivities.filter(
+      activity => activity.savedAt >= monthStart && activity.savedAt <= monthEnd
+    );
+
     const monthCategories: Record<string, number> = {};
-    monthActivities.forEach(activity => {
+    monthSaved.forEach(activity => {
       monthCategories[activity.category] = (monthCategories[activity.category] || 0) + 1;
     });
 
@@ -193,7 +190,7 @@ export const [StatsProvider, useStats] = createContextHook(() => {
       totalMoneySpent: monthMoneySpent,
       highlights,
     };
-  }, [activityHistory, savedActivities, scratchCount, calculateStreaks.currentStreak]);
+  }, [savedActivities, scratchCount, calculateStreaks.currentStreak]);
 
   const stats: ActivityStats = useMemo(() => ({
     totalScratched: activityHistory.length,

@@ -316,7 +316,7 @@ export default function HomeScreen() {
     
     Alert.alert(
       'Not Interested',
-      'This helps us learn your preferences. We&apos;ll avoid suggesting similar activities in the future.',
+      "This helps us learn your preferences. We'll avoid suggesting similar activities in the future.",
       [
         { text: 'Cancel', style: 'cancel' },
         { 
