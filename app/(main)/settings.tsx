@@ -20,7 +20,7 @@ type Mode = 'couples' | 'family';
 export default function SettingsScreen() {
   const router = useRouter();
   const { preferences, updatePreferences } = usePreferences();
-  const { subscriptionStatus, isPremium, isTrial, getTrialDaysRemaining, getSubscriptionEndDate, restorePurchases } = useSubscription();
+  const { isPremium, isTrial, getTrialDaysRemaining, getSubscriptionEndDate, restorePurchases } = useSubscription();
   const [mode, setMode] = useState<Mode>('couples');
   const [showReligionPicker, setShowReligionPicker] = useState(false);
 
@@ -142,13 +142,14 @@ export default function SettingsScreen() {
   const getSubscriptionStatusText = () => {
     if (isTrial) {
       const daysRemaining = getTrialDaysRemaining();
-      return `${daysRemaining} day${daysRemaining !== 1 ? 's' : ''} remaining in trial`;
+      return `${daysRemaining} day${daysRemaining === 1 ? '' : 's'} remaining in trial`;
     }
     if (isPremium) {
-      if (subscriptionStatus.cancelAtPeriodEnd) {
-        return `Expires ${formatSubscriptionEndDate()}`;
+      const endDate = formatSubscriptionEndDate();
+      if (endDate) {
+        return `Active • Renews ${endDate}`;
       }
-      return `Active • Renews ${formatSubscriptionEndDate()}`;
+      return 'Active';
     }
     return '3 free scratches per month';
   };

@@ -1,22 +1,28 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { X, Sparkles, Zap, Star, Crown, Check } from 'lucide-react-native';
+import { PurchasesPackage } from 'react-native-purchases';
 import Colors from '@/constants/colors';
 import Typography from '@/constants/typography';
 import Spacing from '@/constants/spacing';
 import { BorderRadius } from '@/constants/design';
 import { useSubscription } from '@/contexts/SubscriptionContext';
-import { SUBSCRIPTION_PLANS } from '@/types/subscription';
 
 export default function PaywallScreen() {
   const router = useRouter();
-  const { activatePremium, restorePurchases } = useSubscription();
-  const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'yearly'>('yearly');
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [isRestoring, setIsRestoring] = useState(false);
+  const { 
+    offerings, 
+    isLoading, 
+    isPurchasing, 
+    isRestoring,
+    purchasePackage, 
+    restorePurchases 
+  } = useSubscription();
+  
+  const [selectedPackage, setSelectedPackage] = useState<PurchasesPackage | null>(null);
 
   const benefits = [
     { icon: Zap, text: 'Unlimited scratches every month', color: Colors.accent },
@@ -25,12 +31,27 @@ export default function PaywallScreen() {
     { icon: Crown, text: '100% ad-free experience', color: Colors.accent },
   ];
 
+  const packages = offerings?.current?.availablePackages || [];
+  const monthlyPackage = packages.find(p => p.identifier === 'monthly' || p.identifier === '$rc_monthly');
+  const annualPackage = packages.find(p => p.identifier === 'annual' || p.identifier === '$rc_annual');
+
+  React.useEffect(() => {
+    if (annualPackage && !selectedPackage) {
+      setSelectedPackage(annualPackage);
+    } else if (monthlyPackage && !selectedPackage) {
+      setSelectedPackage(monthlyPackage);
+    }
+  }, [annualPackage, monthlyPackage, selectedPackage]);
+
   const handlePurchase = async () => {
-    setIsProcessing(true);
+    if (!selectedPackage) {
+      Alert.alert('Error', 'Please select a plan');
+      return;
+    }
+
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      await activatePremium(selectedPlan);
+      console.log('[Paywall] Starting purchase for:', selectedPackage.identifier);
+      await purchasePackage(selectedPackage);
       
       Alert.alert(
         'Welcome to Premium!',
@@ -42,19 +63,19 @@ export default function PaywallScreen() {
           },
         ]
       );
-    } catch (error) {
-      console.error('Purchase error:', error);
-      Alert.alert('Purchase Failed', 'Something went wrong. Please try again.');
-    } finally {
-      setIsProcessing(false);
+    } catch (error: any) {
+      console.error('[Paywall] Purchase error:', error);
+      if (error.userCancelled) {
+        console.log('[Paywall] User cancelled');
+        return;
+      }
+      Alert.alert('Purchase Failed', error.message || 'Something went wrong. Please try again.');
     }
   };
 
   const handleRestore = async () => {
-    setIsRestoring(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      console.log('[Paywall] Starting restore');
       const restored = await restorePurchases();
       
       if (restored) {
@@ -69,11 +90,9 @@ export default function PaywallScreen() {
           'We couldn\'t find any previous purchases to restore.'
         );
       }
-    } catch (error) {
-      console.error('Restore error:', error);
-      Alert.alert('Restore Failed', 'Something went wrong. Please try again.');
-    } finally {
-      setIsRestoring(false);
+    } catch (error: any) {
+      console.error('[Paywall] Restore error:', error);
+      Alert.alert('Restore Failed', error.message || 'Something went wrong. Please try again.');
     }
   };
 
@@ -81,8 +100,38 @@ export default function PaywallScreen() {
     router.back();
   };
 
-  const monthlyPlan = SUBSCRIPTION_PLANS.find(p => p.id === 'monthly')!;
-  const yearlyPlan = SUBSCRIPTION_PLANS.find(p => p.id === 'yearly')!;
+  const getMonthlyEquivalent = (pkg: PurchasesPackage): string | null => {
+    if (pkg.identifier === 'annual' || pkg.identifier === '$rc_annual') {
+      const yearlyPrice = pkg.product.price;
+      const monthly = yearlyPrice / 12;
+      return monthly.toFixed(2);
+    }
+    return null;
+  };
+
+  const getSavingsPercent = (): number | null => {
+    if (monthlyPackage && annualPackage) {
+      const monthlyYearly = monthlyPackage.product.price * 12;
+      const annualPrice = annualPackage.product.price;
+      const savings = Math.round((1 - annualPrice / monthlyYearly) * 100);
+      return savings > 0 ? savings : null;
+    }
+    return null;
+  };
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+        <Stack.Screen options={{ headerShown: false }} />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+          <Text style={styles.loadingText}>Loading plans...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const savingsPercent = getSavingsPercent();
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -132,87 +181,103 @@ export default function PaywallScreen() {
         </View>
 
         <View style={styles.pricingContainer}>
-          <TouchableOpacity
-            style={[
-              styles.pricingCard,
-              selectedPlan === 'yearly' && styles.pricingCardSelected,
-            ]}
-            onPress={() => setSelectedPlan('yearly')}
-            activeOpacity={0.7}
-          >
-            {yearlyPlan.discount && (
-              <View style={styles.discountBadge}>
-                <Text style={styles.discountText}>Save {yearlyPlan.discount}%</Text>
+          {annualPackage && (
+            <TouchableOpacity
+              style={[
+                styles.pricingCard,
+                selectedPackage?.identifier === annualPackage.identifier && styles.pricingCardSelected,
+              ]}
+              onPress={() => setSelectedPackage(annualPackage)}
+              activeOpacity={0.7}
+            >
+              {savingsPercent && (
+                <View style={styles.discountBadge}>
+                  <Text style={styles.discountText}>Save {savingsPercent}%</Text>
+                </View>
+              )}
+              <View style={styles.pricingHeader}>
+                <Text style={styles.pricingName}>Yearly</Text>
+                <View style={styles.checkContainer}>
+                  {selectedPackage?.identifier === annualPackage.identifier && (
+                    <LinearGradient
+                      colors={[Colors.primaryGradientStart, Colors.primaryGradientEnd]}
+                      style={styles.checkGradient}
+                    >
+                      <Check size={16} color="#1A1A1A" />
+                    </LinearGradient>
+                  )}
+                </View>
               </View>
-            )}
-            <View style={styles.pricingHeader}>
-              <Text style={styles.pricingName}>{yearlyPlan.name}</Text>
-              <View style={styles.checkContainer}>
-                {selectedPlan === 'yearly' && (
-                  <LinearGradient
-                    colors={[Colors.primaryGradientStart, Colors.primaryGradientEnd]}
-                    style={styles.checkGradient}
-                  >
-                    <Check size={16} color="#1A1A1A" />
-                  </LinearGradient>
-                )}
+              <View style={styles.pricingPriceRow}>
+                <Text style={styles.pricingPrice}>{annualPackage.product.priceString}</Text>
+                <Text style={styles.pricingInterval}>/year</Text>
               </View>
-            </View>
-            <View style={styles.pricingPriceRow}>
-              <Text style={styles.pricingPrice}>${yearlyPlan.price}</Text>
-              <Text style={styles.pricingInterval}>/year</Text>
-            </View>
-            <Text style={styles.pricingNote}>
-              Just ${(yearlyPlan.price / 12).toFixed(2)}/month
-            </Text>
-          </TouchableOpacity>
+              <Text style={styles.pricingNote}>
+                Just ${getMonthlyEquivalent(annualPackage)}/month
+              </Text>
+            </TouchableOpacity>
+          )}
 
-          <TouchableOpacity
-            style={[
-              styles.pricingCard,
-              selectedPlan === 'monthly' && styles.pricingCardSelected,
-            ]}
-            onPress={() => setSelectedPlan('monthly')}
-            activeOpacity={0.7}
-          >
-            <View style={styles.pricingHeader}>
-              <Text style={styles.pricingName}>{monthlyPlan.name}</Text>
-              <View style={styles.checkContainer}>
-                {selectedPlan === 'monthly' && (
-                  <LinearGradient
-                    colors={[Colors.primaryGradientStart, Colors.primaryGradientEnd]}
-                    style={styles.checkGradient}
-                  >
-                    <Check size={16} color="#1A1A1A" />
-                  </LinearGradient>
-                )}
+          {monthlyPackage && (
+            <TouchableOpacity
+              style={[
+                styles.pricingCard,
+                selectedPackage?.identifier === monthlyPackage.identifier && styles.pricingCardSelected,
+              ]}
+              onPress={() => setSelectedPackage(monthlyPackage)}
+              activeOpacity={0.7}
+            >
+              <View style={styles.pricingHeader}>
+                <Text style={styles.pricingName}>Monthly</Text>
+                <View style={styles.checkContainer}>
+                  {selectedPackage?.identifier === monthlyPackage.identifier && (
+                    <LinearGradient
+                      colors={[Colors.primaryGradientStart, Colors.primaryGradientEnd]}
+                      style={styles.checkGradient}
+                    >
+                      <Check size={16} color="#1A1A1A" />
+                    </LinearGradient>
+                  )}
+                </View>
               </View>
+              <View style={styles.pricingPriceRow}>
+                <Text style={styles.pricingPrice}>{monthlyPackage.product.priceString}</Text>
+                <Text style={styles.pricingInterval}>/month</Text>
+              </View>
+              <Text style={styles.pricingNote}>Billed monthly</Text>
+            </TouchableOpacity>
+          )}
+
+          {packages.length === 0 && (
+            <View style={styles.noPackagesContainer}>
+              <Text style={styles.noPackagesText}>
+                No subscription plans available at this time.
+              </Text>
             </View>
-            <View style={styles.pricingPriceRow}>
-              <Text style={styles.pricingPrice}>${monthlyPlan.price}</Text>
-              <Text style={styles.pricingInterval}>/month</Text>
-            </View>
-            <Text style={styles.pricingNote}>Billed monthly</Text>
-          </TouchableOpacity>
+          )}
         </View>
 
-        <TouchableOpacity
-          style={styles.purchaseButton}
-          onPress={handlePurchase}
-          disabled={isProcessing}
-          activeOpacity={0.8}
-        >
-          <LinearGradient
-            colors={[Colors.primaryGradientStart, Colors.primaryGradientEnd]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.purchaseGradient}
+        {packages.length > 0 && (
+          <TouchableOpacity
+            style={[styles.purchaseButton, (isPurchasing || !selectedPackage) && styles.purchaseButtonDisabled]}
+            onPress={handlePurchase}
+            disabled={isPurchasing || !selectedPackage}
+            activeOpacity={0.8}
           >
-            <Text style={styles.purchaseButtonText}>
-              {isProcessing ? 'Processing...' : 'Continue'}
-            </Text>
-          </LinearGradient>
-        </TouchableOpacity>
+            <LinearGradient
+              colors={[Colors.primaryGradientStart, Colors.primaryGradientEnd]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.purchaseGradient}
+            >
+              {isPurchasing ? (
+                <ActivityIndicator size="small" color="#1A1A1A" />
+              ) : (
+                <Text style={styles.purchaseButtonText}>Continue</Text>
+              )}
+            </LinearGradient>
+          </TouchableOpacity>
+        )}
 
         <TouchableOpacity
           style={styles.restoreButton}
@@ -248,6 +313,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.md,
+  },
+  loadingText: {
+    fontSize: Typography.sizes.body,
+    color: Colors.textLight,
   },
   closeButton: {
     position: 'absolute',
@@ -392,10 +467,22 @@ const styles = StyleSheet.create({
     fontSize: Typography.sizes.caption,
     color: Colors.textLight,
   },
+  noPackagesContainer: {
+    padding: Spacing.xl,
+    alignItems: 'center',
+  },
+  noPackagesText: {
+    fontSize: Typography.sizes.body,
+    color: Colors.textLight,
+    textAlign: 'center',
+  },
   purchaseButton: {
     marginBottom: Spacing.md,
     borderRadius: BorderRadius.large,
     overflow: 'hidden',
+  },
+  purchaseButtonDisabled: {
+    opacity: 0.6,
   },
   purchaseGradient: {
     padding: Spacing.lg,
