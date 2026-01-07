@@ -112,36 +112,67 @@ export const [LocationProvider, useLocation] = createContextHook(() => {
   };
 
   const reverseGeocode = useCallback(async (latitude: number, longitude: number): Promise<LocationData | null> => {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 8000);
+    const createFallbackLocation = (): LocationData => ({
+      city: 'Current Location',
+      region: `${latitude.toFixed(2)}, ${longitude.toFixed(2)}`,
+      country: '',
+      coords: { latitude, longitude },
+      weather: undefined,
+    });
 
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`,
-        { 
-          signal: controller.signal,
-          headers: {
-            'User-Agent': 'ScratchAndGoApp/1.0',
-            'Accept': 'application/json',
-          },
+    const tryGeocode = async (): Promise<LocationData | null> => {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&addressdetails=1`,
+          { 
+            signal: controller.signal,
+            headers: {
+              'Accept': 'application/json',
+            },
+            mode: 'cors',
+          }
+        );
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+          console.log('Geocoding response not ok:', response.status);
+          return null;
         }
-      );
-      clearTimeout(timeoutId);
-      
-      if (!response.ok) {
-        console.log('Geocoding response not ok:', response.status);
+        
+        const data = await response.json();
+
+        if (!data.address) {
+          console.log('No address data in response');
+          return null;
+        }
+
+        return {
+          city: data.address?.city || data.address?.town || data.address?.village || data.address?.municipality || data.address?.hamlet || 'Unknown City',
+          region: data.address?.state || data.address?.region || data.address?.county || 'Unknown Region',
+          country: data.address?.country || 'Unknown Country',
+          coords: { latitude, longitude },
+          weather: undefined,
+        };
+      } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') {
+          console.log('Geocoding request timed out');
+        } else {
+          console.log('Geocoding fetch error (this is normal on some browsers):', error instanceof Error ? error.message : 'Unknown error');
+        }
         return null;
       }
-      
-      const data = await response.json();
+    };
 
-      const locationData: LocationData = {
-        city: data.address?.city || data.address?.town || data.address?.village || data.address?.municipality || 'Unknown City',
-        region: data.address?.state || data.address?.region || data.address?.county || 'Unknown Region',
-        country: data.address?.country || 'Unknown Country',
-        coords: { latitude, longitude },
-        weather: undefined,
-      };
+    try {
+      let locationData = await tryGeocode();
+      
+      if (!locationData) {
+        console.log('Using coordinate-based fallback location');
+        locationData = createFallbackLocation();
+      }
 
       setLocation(locationData);
       saveLocation(locationData).catch(err => console.error('Failed to save location:', err));
@@ -149,28 +180,17 @@ export const [LocationProvider, useLocation] = createContextHook(() => {
       setTimeout(() => {
         fetchWeather(latitude, longitude).then(weather => {
           if (weather) {
-            const updatedLocation = { ...locationData, weather };
+            const updatedLocation = { ...locationData!, weather };
             setLocation(updatedLocation);
             saveLocation(updatedLocation).catch(err => console.error('Failed to save weather:', err));
           }
         }).catch(err => console.error('Weather fetch failed:', err));
-      }, 2000);
+      }, 1000);
 
       return locationData;
-    } catch (error) {
-      if (error instanceof Error && error.name === 'AbortError') {
-        console.log('Geocoding request timed out');
-      } else {
-        console.log('Reverse geocoding failed, using coordinates as fallback');
-      }
-      // Return basic location with coordinates even if geocoding fails
-      const fallbackLocation: LocationData = {
-        city: 'Current Location',
-        region: `${latitude.toFixed(2)}, ${longitude.toFixed(2)}`,
-        country: '',
-        coords: { latitude, longitude },
-        weather: undefined,
-      };
+    } catch {
+      console.log('Reverse geocoding failed completely, using fallback');
+      const fallbackLocation = createFallbackLocation();
       setLocation(fallbackLocation);
       saveLocation(fallbackLocation).catch(err => console.error('Failed to save fallback location:', err));
       return fallbackLocation;
