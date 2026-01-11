@@ -13,7 +13,7 @@ import ScratchCard from '@/components/ui/ScratchCard';
 import LocationSelector from '@/components/ui/LocationSelector';
 import { useActivity } from '@/contexts/ActivityContext';
 import { useLocation } from '@/contexts/LocationContext';
-import { useMemoryBook } from '@/contexts/MemoryBookContext';
+
 import { useSubscription } from '@/contexts/SubscriptionContext';
 
 import { Filters } from '@/types/activity';
@@ -59,9 +59,7 @@ export default function HomeScreen() {
   } = useActivity();
 
   const { location } = useLocation();
-  const { saveActivity, isActivitySaved } = useMemoryBook();
   const { isPremium } = useSubscription();
-  const [isSaved, setIsSaved] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
   const [isSavedForLater, setIsSavedForLater] = useState(false);
 
@@ -216,28 +214,27 @@ export default function HomeScreen() {
     if (hasStartedScratch) return;
     
     setHasStartedScratch(true);
-    setIsSaved(false);
     setIsSavedForLater(false);
     setScrollEnabled(false);
   };
 
-  const handleSaveActivity = useCallback(() => {
-    if (!currentActivity || isSaved) return;
+  const handleStartActivity = useCallback(() => {
+    if (!currentActivity) return;
     
-    setIsSaved(true);
-    
-    InteractionManager.runAfterInteractions(() => {
-      saveActivity(currentActivity);
-      
-      Alert.alert(
-        'Saved!',
-        'Activity saved to your Memory Book! Remember to capture photos during this special moment with your loved ones to preserve the memory forever.',
-        [
-          { text: 'Got it!', style: 'default' }
-        ]
-      );
+    router.push({
+      pathname: '/activity-in-progress' as any,
+      params: {
+        activityId: Date.now().toString(),
+        title: currentActivity.title,
+        description: currentActivity.description,
+        duration: currentActivity.duration,
+        cost: currentActivity.cost,
+        category: currentActivity.category,
+        proTip: currentActivity.proTip || '',
+        mode: mode || 'couples',
+      }
     });
-  }, [currentActivity, isSaved, saveActivity]);
+  }, [currentActivity, router, mode]);
 
   const handleShareActivity = useCallback(async () => {
     if (!currentActivity || isSharing) return;
@@ -300,7 +297,6 @@ export default function HomeScreen() {
       return;
     }
 
-    setIsSaved(false);
     setIsSavedForLater(false);
     setHasStartedScratch(false);
     await regenerateActivity();
@@ -325,7 +321,6 @@ export default function HomeScreen() {
           onPress: async () => {
             await markAsNotInterested();
             setHasStartedScratch(false);
-            setIsSaved(false);
             setScrollEnabled(true);
           }
         }
@@ -616,18 +611,13 @@ export default function HomeScreen() {
                           )}
                           <View style={styles.actionButtons}>
                             <TouchableOpacity
-                              style={[
-                                styles.saveButton,
-                                (isSaved || isActivitySaved(currentActivity.title)) && styles.saveButtonDisabled
-                              ]}
-                              onPress={handleSaveActivity}
-                              disabled={isSaved || isActivitySaved(currentActivity.title)}
+                              style={styles.startActivityButton}
+                              onPress={handleStartActivity}
                               activeOpacity={0.7}
                             >
-                              <View style={styles.saveButtonContent}>
-                                <Text style={styles.saveButtonText}>
-                                  {(isSaved || isActivitySaved(currentActivity.title)) ? 'Saved to Memory Book' : 'Save to Memory Book'}
-                                </Text>
+                              <View style={styles.startActivityButtonContent}>
+                                <Text style={styles.startActivityButtonIcon}>🚀</Text>
+                                <Text style={styles.startActivityButtonText}>Start Activity</Text>
                               </View>
                             </TouchableOpacity>
                           </View>
@@ -1268,27 +1258,31 @@ const styles = StyleSheet.create({
     marginTop: Spacing.xs,
     width: '100%',
   },
-  saveButton: {
+  startActivityButton: {
     backgroundColor: Colors.primary,
-    paddingVertical: Spacing.sm,
+    paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.md,
-    borderRadius: 10,
+    borderRadius: 12,
     width: '100%',
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  saveButtonDisabled: {
-    backgroundColor: Colors.cardBackground,
-    borderWidth: 1,
-    borderColor: Colors.cardBorder,
-  },
-  saveButtonContent: {
+  startActivityButtonContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: Spacing.sm,
   },
-  saveButtonText: {
-    fontSize: 14,
+  startActivityButtonIcon: {
+    fontSize: 18,
+  },
+  startActivityButtonText: {
+    fontSize: 16,
     fontWeight: '600' as const,
-    color: Colors.text,
+    color: Colors.backgroundDark,
     textAlign: 'center',
   },
 
