@@ -1,6 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { View, StyleSheet, PanResponder, Animated, Dimensions, Platform, Text } from 'react-native';
-
 import * as Haptics from 'expo-haptics';
 import { BorderRadius } from '@/constants/design';
 
@@ -8,8 +7,8 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = SCREEN_WIDTH - 48;
 const CARD_HEIGHT = 400;
 const SCRATCH_THRESHOLD = 75;
-const CELL_SIZE = 14;
-const BRUSH_RADIUS = 26;
+const CELL_SIZE = 20;
+const BRUSH_RADIUS = 35;
 
 const COLS = Math.ceil(CARD_WIDTH / CELL_SIZE);
 const ROWS = Math.ceil(CARD_HEIGHT / CELL_SIZE);
@@ -36,81 +35,49 @@ export default function ScratchCard({
   disabled = false,
   resetKey
 }: ScratchCardProps) {
-  const [grid, setGrid] = useState<boolean[][]>(() => 
-    Array(ROWS).fill(null).map(() => Array(COLS).fill(false))
-  );
+  const [scratchedCells, setScratchedCells] = useState<Set<string>>(new Set());
   const [isRevealed, setIsRevealed] = useState(false);
   const opacity = useRef(new Animated.Value(1)).current;
   const isRevealedRef = useRef(false);
   const disabledRef = useRef(disabled);
   const hasStartedRef = useRef(false);
-  const gridRef = useRef<boolean[][]>(grid);
-  const scratchCountRef = useRef(0);
+  const scratchedCellsRef = useRef<Set<string>>(new Set());
   const lastHapticTime = useRef(0);
   const isMouseDown = useRef(false);
-  const batchedUpdates = useRef<{row: number; col: number}[]>([]);
-  const updateScheduled = useRef(false);
   
   disabledRef.current = disabled;
   isRevealedRef.current = isRevealed;
-  gridRef.current = grid;
 
   useEffect(() => {
-    const newGrid = Array(ROWS).fill(null).map(() => Array(COLS).fill(false));
-    setGrid(newGrid);
-    gridRef.current = newGrid;
-    scratchCountRef.current = 0;
+    setScratchedCells(new Set());
+    scratchedCellsRef.current = new Set();
     setIsRevealed(false);
     isRevealedRef.current = false;
     hasStartedRef.current = false;
-    batchedUpdates.current = [];
-    updateScheduled.current = false;
     opacity.setValue(1);
   }, [resetKey, opacity]);
 
-  const flushBatchedUpdates = useCallback(() => {
-    if (batchedUpdates.current.length === 0) return;
-    
-    const updates = [...batchedUpdates.current];
-    batchedUpdates.current = [];
-    updateScheduled.current = false;
+  const checkAndReveal = useCallback(() => {
+    const percentage = (scratchedCellsRef.current.size / TOTAL_CELLS) * 100;
+    console.log(`Scratch: ${percentage.toFixed(1)}% (${scratchedCellsRef.current.size}/${TOTAL_CELLS})`);
 
-    setGrid(prevGrid => {
-      const newGrid = prevGrid.map(row => [...row]);
-      let newCount = scratchCountRef.current;
+    if (percentage >= SCRATCH_THRESHOLD && !isRevealedRef.current) {
+      console.log('75% threshold reached! Auto-revealing...');
+      setIsRevealed(true);
+      isRevealedRef.current = true;
       
-      for (const {row, col} of updates) {
-        if (!newGrid[row][col]) {
-          newGrid[row][col] = true;
-          newCount++;
-        }
+      if (Platform.OS !== 'web') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
       
-      scratchCountRef.current = newCount;
-      
-      const percentage = (newCount / TOTAL_CELLS) * 100;
-      console.log(`Scratch: ${percentage.toFixed(1)}%`);
-
-      if (percentage >= SCRATCH_THRESHOLD && !isRevealedRef.current) {
-        console.log('75% threshold reached! Auto-revealing...');
-        setIsRevealed(true);
-        isRevealedRef.current = true;
-        
-        if (Platform.OS !== 'web') {
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        }
-        
-        Animated.timing(opacity, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }).start(() => {
-          onScratchComplete();
-        });
-      }
-      
-      return newGrid;
-    });
+      Animated.timing(opacity, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start(() => {
+        onScratchComplete();
+      });
+    }
   }, [opacity, onScratchComplete]);
 
   const scratchAt = useCallback((x: number, y: number) => {
@@ -119,6 +86,8 @@ export default function ScratchCard({
     const centerCol = Math.floor(x / CELL_SIZE);
     const centerRow = Math.floor(y / CELL_SIZE);
     const cellRadius = Math.ceil(BRUSH_RADIUS / CELL_SIZE);
+    
+    const newCells: string[] = [];
 
     for (let dr = -cellRadius; dr <= cellRadius; dr++) {
       for (let dc = -cellRadius; dc <= cellRadius; dc++) {
@@ -130,24 +99,26 @@ export default function ScratchCard({
           const cellCenterY = row * CELL_SIZE + CELL_SIZE / 2;
           const distance = Math.sqrt(Math.pow(x - cellCenterX, 2) + Math.pow(y - cellCenterY, 2));
           
-          if (distance <= BRUSH_RADIUS && !gridRef.current[row][col]) {
-            batchedUpdates.current.push({row, col});
+          const key = `${row}-${col}`;
+          if (distance <= BRUSH_RADIUS && !scratchedCellsRef.current.has(key)) {
+            scratchedCellsRef.current.add(key);
+            newCells.push(key);
           }
         }
       }
     }
 
-    if (!updateScheduled.current && batchedUpdates.current.length > 0) {
-      updateScheduled.current = true;
-      requestAnimationFrame(flushBatchedUpdates);
+    if (newCells.length > 0) {
+      setScratchedCells(new Set(scratchedCellsRef.current));
+      checkAndReveal();
     }
-  }, [flushBatchedUpdates]);
+  }, [checkAndReveal]);
 
   const triggerHaptic = useCallback(() => {
     if (Platform.OS === 'web') return;
     
     const now = Date.now();
-    if (now - lastHapticTime.current > 60) {
+    if (now - lastHapticTime.current > 50) {
       lastHapticTime.current = now;
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
@@ -174,9 +145,8 @@ export default function ScratchCard({
   }, [scratchAt, triggerHaptic]);
 
   const handleScratchEnd = useCallback(() => {
-    flushBatchedUpdates();
     if (onTouchEnd) onTouchEnd();
-  }, [onTouchEnd, flushBatchedUpdates]);
+  }, [onTouchEnd]);
 
   const panResponder = useRef(
     PanResponder.create({
@@ -217,11 +187,13 @@ export default function ScratchCard({
   const webHandlers = Platform.OS === 'web' ? {
     onTouchStart: (e: any) => {
       e.preventDefault();
+      e.stopPropagation();
       const { x, y } = getLocationFromEvent(e, e.currentTarget);
       handleScratchStart(x, y);
     },
     onTouchMove: (e: any) => {
       e.preventDefault();
+      e.stopPropagation();
       const { x, y } = getLocationFromEvent(e, e.currentTarget);
       handleScratchMove(x, y);
     },
@@ -254,7 +226,7 @@ export default function ScratchCard({
     },
   } : {};
 
-  const getCellColor = useCallback((row: number, col: number) => {
+  const getCellColor = useCallback((row: number) => {
     const yPercent = row / ROWS;
     const r = Math.round(255 - (255 - 255) * yPercent);
     const g = Math.round(107 - (107 - 64) * yPercent);
@@ -262,33 +234,39 @@ export default function ScratchCard({
     return `rgb(${r}, ${g}, ${b})`;
   }, []);
 
-  const renderScratchCells = () => {
-    const cells: React.ReactNode[] = [];
+  const renderScratchGrid = useCallback(() => {
+    const rows: React.ReactNode[] = [];
     
     for (let row = 0; row < ROWS; row++) {
+      const rowCells: React.ReactNode[] = [];
+      const rowColor = getCellColor(row);
+      
       for (let col = 0; col < COLS; col++) {
-        if (!grid[row][col]) {
-          cells.push(
-            <View
-              key={`${col}-${row}`}
-              style={[
-                styles.cell,
-                {
-                  left: col * CELL_SIZE,
-                  top: row * CELL_SIZE,
-                  width: CELL_SIZE + 1,
-                  height: CELL_SIZE + 1,
-                  backgroundColor: getCellColor(row, col),
-                },
-              ]}
-            />
-          );
-        }
+        const key = `${row}-${col}`;
+        const isScratched = scratchedCells.has(key);
+        
+        rowCells.push(
+          <View
+            key={key}
+            style={[
+              styles.cell,
+              {
+                backgroundColor: isScratched ? 'transparent' : rowColor,
+              },
+            ]}
+          />
+        );
       }
+      
+      rows.push(
+        <View key={`row-${row}`} style={styles.row}>
+          {rowCells}
+        </View>
+      );
     }
     
-    return cells;
-  };
+    return rows;
+  }, [scratchedCells, getCellColor]);
 
   return (
     <View style={styles.container}>
@@ -303,7 +281,7 @@ export default function ScratchCard({
           {...(Platform.OS === 'web' ? webHandlers : {})}
         >
           <View style={styles.cellsContainer} pointerEvents="none">
-            {renderScratchCells()}
+            {renderScratchGrid()}
           </View>
           
           <View style={styles.textOverlay} pointerEvents="none">
@@ -341,9 +319,15 @@ const styles = StyleSheet.create({
   } as any,
   cellsContainer: {
     ...StyleSheet.absoluteFillObject,
+    flexDirection: 'column',
+  },
+  row: {
+    flexDirection: 'row',
+    height: CELL_SIZE,
   },
   cell: {
-    position: 'absolute',
+    width: CELL_SIZE,
+    height: CELL_SIZE,
   },
   textOverlay: {
     ...StyleSheet.absoluteFillObject,
