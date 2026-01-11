@@ -1,15 +1,19 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { View, StyleSheet, PanResponder, Animated, Dimensions, Platform } from 'react-native';
-import MaskedView from '@react-native-masked-view/masked-view';
+import { View, StyleSheet, PanResponder, Animated, Dimensions, Platform, Text } from 'react-native';
+
 import * as Haptics from 'expo-haptics';
 import { BorderRadius } from '@/constants/design';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = SCREEN_WIDTH - 48;
 const CARD_HEIGHT = 400;
-const SCRATCH_THRESHOLD = 25;
-const SCRATCH_HOLE_SIZE = 50;
-const GRID_SIZE = 12;
+const SCRATCH_THRESHOLD = 75;
+const CELL_SIZE = 14;
+const BRUSH_RADIUS = 26;
+
+const COLS = Math.ceil(CARD_WIDTH / CELL_SIZE);
+const ROWS = Math.ceil(CARD_HEIGHT / CELL_SIZE);
+const TOTAL_CELLS = COLS * ROWS;
 
 interface ScratchCardProps {
   onScratchStart?: () => void;
@@ -32,302 +36,259 @@ export default function ScratchCard({
   disabled = false,
   resetKey
 }: ScratchCardProps) {
-  const [scratches, setScratches] = useState<{ x: number; y: number }[]>([]);
+  const [grid, setGrid] = useState<boolean[][]>(() => 
+    Array(ROWS).fill(null).map(() => Array(COLS).fill(false))
+  );
   const [isRevealed, setIsRevealed] = useState(false);
   const opacity = useRef(new Animated.Value(1)).current;
   const isRevealedRef = useRef(false);
   const disabledRef = useRef(disabled);
   const hasStartedRef = useRef(false);
-  const scratchPercentage = useRef(0);
+  const gridRef = useRef<boolean[][]>(grid);
+  const scratchCountRef = useRef(0);
   const lastHapticTime = useRef(0);
-  const scratchedCells = useRef(new Set<string>());
+  const isMouseDown = useRef(false);
+  const batchedUpdates = useRef<{row: number; col: number}[]>([]);
+  const updateScheduled = useRef(false);
   
   disabledRef.current = disabled;
   isRevealedRef.current = isRevealed;
+  gridRef.current = grid;
 
   useEffect(() => {
-    setScratches([]);
+    const newGrid = Array(ROWS).fill(null).map(() => Array(COLS).fill(false));
+    setGrid(newGrid);
+    gridRef.current = newGrid;
+    scratchCountRef.current = 0;
     setIsRevealed(false);
     isRevealedRef.current = false;
     hasStartedRef.current = false;
-    scratchPercentage.current = 0;
-    scratchedCells.current.clear();
+    batchedUpdates.current = [];
+    updateScheduled.current = false;
     opacity.setValue(1);
   }, [resetKey, opacity]);
 
-  const addScratch = useCallback((x: number, y: number) => {
+  const flushBatchedUpdates = useCallback(() => {
+    if (batchedUpdates.current.length === 0) return;
+    
+    const updates = [...batchedUpdates.current];
+    batchedUpdates.current = [];
+    updateScheduled.current = false;
+
+    setGrid(prevGrid => {
+      const newGrid = prevGrid.map(row => [...row]);
+      let newCount = scratchCountRef.current;
+      
+      for (const {row, col} of updates) {
+        if (!newGrid[row][col]) {
+          newGrid[row][col] = true;
+          newCount++;
+        }
+      }
+      
+      scratchCountRef.current = newCount;
+      
+      const percentage = (newCount / TOTAL_CELLS) * 100;
+      console.log(`Scratch: ${percentage.toFixed(1)}%`);
+
+      if (percentage >= SCRATCH_THRESHOLD && !isRevealedRef.current) {
+        console.log('75% threshold reached! Auto-revealing...');
+        setIsRevealed(true);
+        isRevealedRef.current = true;
+        
+        if (Platform.OS !== 'web') {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        }
+        
+        Animated.timing(opacity, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }).start(() => {
+          onScratchComplete();
+        });
+      }
+      
+      return newGrid;
+    });
+  }, [opacity, onScratchComplete]);
+
+  const scratchAt = useCallback((x: number, y: number) => {
     if (isRevealedRef.current || disabledRef.current) return;
 
-    // Add scratches for surrounding cells to create larger scratch effect
-    const offsets = [
-      [0, 0], [-1, 0], [1, 0], [0, -1], [0, 1],
-      [-1, -1], [1, -1], [-1, 1], [1, 1],
-      [-2, 0], [2, 0], [0, -2], [0, 2]
-    ];
+    const centerCol = Math.floor(x / CELL_SIZE);
+    const centerRow = Math.floor(y / CELL_SIZE);
+    const cellRadius = Math.ceil(BRUSH_RADIUS / CELL_SIZE);
 
-    const baseCellX = Math.floor(x / GRID_SIZE);
-    const baseCellY = Math.floor(y / GRID_SIZE);
-    
-    let addedNew = false;
-    
-    for (const [ox, oy] of offsets) {
-      const cellX = baseCellX + ox;
-      const cellY = baseCellY + oy;
-      const cellKey = `${cellX},${cellY}`;
-      
-      if (!scratchedCells.current.has(cellKey)) {
-        scratchedCells.current.add(cellKey);
-        addedNew = true;
+    for (let dr = -cellRadius; dr <= cellRadius; dr++) {
+      for (let dc = -cellRadius; dc <= cellRadius; dc++) {
+        const row = centerRow + dr;
+        const col = centerCol + dc;
+        
+        if (row >= 0 && row < ROWS && col >= 0 && col < COLS) {
+          const cellCenterX = col * CELL_SIZE + CELL_SIZE / 2;
+          const cellCenterY = row * CELL_SIZE + CELL_SIZE / 2;
+          const distance = Math.sqrt(Math.pow(x - cellCenterX, 2) + Math.pow(y - cellCenterY, 2));
+          
+          if (distance <= BRUSH_RADIUS && !gridRef.current[row][col]) {
+            batchedUpdates.current.push({row, col});
+          }
+        }
       }
     }
-    
-    if (!addedNew) return;
-    
-    const totalCells = Math.ceil(CARD_WIDTH / GRID_SIZE) * Math.ceil(CARD_HEIGHT / GRID_SIZE);
-    const scratchedCount = scratchedCells.current.size;
-    scratchPercentage.current = (scratchedCount / totalCells) * 100;
-    
-    console.log(`Scratch progress: ${scratchPercentage.current.toFixed(1)}% (${scratchedCount}/${totalCells} cells)`);
-    
-    setScratches((prev) => [...prev, { x, y }]);
-    
-    if (scratchPercentage.current >= SCRATCH_THRESHOLD && !isRevealedRef.current) {
-      console.log('Scratch threshold reached! Revealing content...');
-      setIsRevealed(true);
-      isRevealedRef.current = true;
-      
-      if (Platform.OS !== 'web') {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      }
-      
-      Animated.timing(opacity, {
-        toValue: 0,
-        duration: 400,
-        useNativeDriver: true,
-      }).start(() => {
-        onScratchComplete();
-      });
+
+    if (!updateScheduled.current && batchedUpdates.current.length > 0) {
+      updateScheduled.current = true;
+      requestAnimationFrame(flushBatchedUpdates);
     }
-  }, [opacity, onScratchComplete]);
+  }, [flushBatchedUpdates]);
 
   const triggerHaptic = useCallback(() => {
     if (Platform.OS === 'web') return;
     
     const now = Date.now();
-    if (now - lastHapticTime.current > 50) {
+    if (now - lastHapticTime.current > 60) {
       lastHapticTime.current = now;
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
   }, []);
 
-
-
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => {
-        const shouldSet = !disabledRef.current && !isRevealedRef.current;
-        console.log('onStartShouldSetPanResponder:', shouldSet);
-        return shouldSet;
-      },
-      onStartShouldSetPanResponderCapture: () => {
-        return !disabledRef.current && !isRevealedRef.current;
-      },
-      onMoveShouldSetPanResponder: () => {
-        return !disabledRef.current && !isRevealedRef.current;
-      },
-      onMoveShouldSetPanResponderCapture: () => {
-        return !disabledRef.current && !isRevealedRef.current;
-      },
-      onPanResponderTerminationRequest: () => false,
-      onShouldBlockNativeResponder: () => true,
-      onPanResponderGrant: (evt) => {
-        if (disabledRef.current || isRevealedRef.current) return;
-        
-        console.log('PanResponder: Grant - Touch started');
-        
-        if (onTouchStart) {
-          onTouchStart();
-        }
-        
-        if (!hasStartedRef.current) {
-          hasStartedRef.current = true;
-          console.log('PanResponder: First scratch started');
-          if (onScratchStart) {
-            onScratchStart();
-          }
-        }
-        
-        const { locationX, locationY } = evt.nativeEvent;
-        addScratch(locationX, locationY);
-        triggerHaptic();
-      },
-      onPanResponderMove: (evt) => {
-        if (disabledRef.current || isRevealedRef.current) return;
-        
-        const { locationX, locationY } = evt.nativeEvent;
-        addScratch(locationX, locationY);
-        triggerHaptic();
-      },
-      onPanResponderRelease: () => {
-        console.log('PanResponder: Released');
-        if (onTouchEnd) {
-          onTouchEnd();
-        }
-      },
-      onPanResponderTerminate: () => {
-        console.log('PanResponder: Terminated');
-        if (onTouchEnd) {
-          onTouchEnd();
-        }
-      },
-    })
-  ).current;
-
-
-
-  // Handle web touch/mouse events directly for better compatibility
-  const handleWebTouchStart = useCallback((e: React.TouchEvent | React.MouseEvent) => {
+  const handleScratchStart = useCallback((x: number, y: number) => {
     if (disabledRef.current || isRevealedRef.current) return;
     
-    e.preventDefault();
-    e.stopPropagation();
-    
-    console.log('Web: Touch/Mouse start');
-    
-    if (onTouchStart) {
-      onTouchStart();
-    }
+    if (onTouchStart) onTouchStart();
     
     if (!hasStartedRef.current) {
       hasStartedRef.current = true;
-      console.log('Web: First scratch started');
-      if (onScratchStart) {
-        onScratchStart();
+      if (onScratchStart) onScratchStart();
+    }
+    
+    scratchAt(x, y);
+    triggerHaptic();
+  }, [onTouchStart, onScratchStart, scratchAt, triggerHaptic]);
+
+  const handleScratchMove = useCallback((x: number, y: number) => {
+    if (disabledRef.current || isRevealedRef.current) return;
+    scratchAt(x, y);
+    triggerHaptic();
+  }, [scratchAt, triggerHaptic]);
+
+  const handleScratchEnd = useCallback(() => {
+    flushBatchedUpdates();
+    if (onTouchEnd) onTouchEnd();
+  }, [onTouchEnd, flushBatchedUpdates]);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => !disabledRef.current && !isRevealedRef.current,
+      onMoveShouldSetPanResponder: () => !disabledRef.current && !isRevealedRef.current,
+      onPanResponderTerminationRequest: () => false,
+      onPanResponderGrant: (evt) => {
+        const { locationX, locationY } = evt.nativeEvent;
+        handleScratchStart(locationX, locationY);
+      },
+      onPanResponderMove: (evt) => {
+        const { locationX, locationY } = evt.nativeEvent;
+        handleScratchMove(locationX, locationY);
+      },
+      onPanResponderRelease: handleScratchEnd,
+      onPanResponderTerminate: handleScratchEnd,
+    })
+  ).current;
+
+  const getLocationFromEvent = useCallback((e: any, target: HTMLElement) => {
+    const rect = target.getBoundingClientRect();
+    let clientX: number, clientY: number;
+    
+    if (e.touches && e.touches.length > 0) {
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    } else {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
+    
+    return {
+      x: clientX - rect.left,
+      y: clientY - rect.top
+    };
+  }, []);
+
+  const webHandlers = Platform.OS === 'web' ? {
+    onTouchStart: (e: any) => {
+      e.preventDefault();
+      const { x, y } = getLocationFromEvent(e, e.currentTarget);
+      handleScratchStart(x, y);
+    },
+    onTouchMove: (e: any) => {
+      e.preventDefault();
+      const { x, y } = getLocationFromEvent(e, e.currentTarget);
+      handleScratchMove(x, y);
+    },
+    onTouchEnd: (e: any) => {
+      e.preventDefault();
+      handleScratchEnd();
+    },
+    onMouseDown: (e: any) => {
+      e.preventDefault();
+      isMouseDown.current = true;
+      const { x, y } = getLocationFromEvent(e, e.currentTarget);
+      handleScratchStart(x, y);
+    },
+    onMouseMove: (e: any) => {
+      if (!isMouseDown.current) return;
+      e.preventDefault();
+      const { x, y } = getLocationFromEvent(e, e.currentTarget);
+      handleScratchMove(x, y);
+    },
+    onMouseUp: (e: any) => {
+      e.preventDefault();
+      isMouseDown.current = false;
+      handleScratchEnd();
+    },
+    onMouseLeave: () => {
+      if (isMouseDown.current) {
+        isMouseDown.current = false;
+        handleScratchEnd();
+      }
+    },
+  } : {};
+
+  const getCellColor = useCallback((row: number, col: number) => {
+    const yPercent = row / ROWS;
+    const r = Math.round(255 - (255 - 255) * yPercent);
+    const g = Math.round(107 - (107 - 64) * yPercent);
+    const b = Math.round(138 - (138 - 129) * yPercent);
+    return `rgb(${r}, ${g}, ${b})`;
+  }, []);
+
+  const renderScratchCells = () => {
+    const cells: React.ReactNode[] = [];
+    
+    for (let row = 0; row < ROWS; row++) {
+      for (let col = 0; col < COLS; col++) {
+        if (!grid[row][col]) {
+          cells.push(
+            <View
+              key={`${col}-${row}`}
+              style={[
+                styles.cell,
+                {
+                  left: col * CELL_SIZE,
+                  top: row * CELL_SIZE,
+                  width: CELL_SIZE + 1,
+                  height: CELL_SIZE + 1,
+                  backgroundColor: getCellColor(row, col),
+                },
+              ]}
+            />
+          );
+        }
       }
     }
     
-    const target = e.currentTarget as HTMLElement;
-    const rect = target.getBoundingClientRect();
-    
-    let clientX: number, clientY: number;
-    if ('touches' in e && e.touches.length > 0) {
-      clientX = e.touches[0].clientX;
-      clientY = e.touches[0].clientY;
-    } else if ('clientX' in e) {
-      clientX = e.clientX;
-      clientY = e.clientY;
-    } else {
-      return;
-    }
-    
-    const x = clientX - rect.left;
-    const y = clientY - rect.top;
-    
-    addScratch(x, y);
-    triggerHaptic();
-  }, [onTouchStart, onScratchStart, addScratch, triggerHaptic]);
-
-  const handleWebTouchMove = useCallback((e: React.TouchEvent | React.MouseEvent) => {
-    if (disabledRef.current || isRevealedRef.current) return;
-    
-    e.preventDefault();
-    e.stopPropagation();
-    
-    const target = e.currentTarget as HTMLElement;
-    const rect = target.getBoundingClientRect();
-    
-    let clientX: number, clientY: number;
-    if ('touches' in e && e.touches.length > 0) {
-      clientX = e.touches[0].clientX;
-      clientY = e.touches[0].clientY;
-    } else if ('clientX' in e) {
-      clientX = e.clientX;
-      clientY = e.clientY;
-    } else {
-      return;
-    }
-    
-    const x = clientX - rect.left;
-    const y = clientY - rect.top;
-    
-    addScratch(x, y);
-    triggerHaptic();
-  }, [addScratch, triggerHaptic]);
-
-  const handleWebTouchEnd = useCallback((e: React.TouchEvent | React.MouseEvent) => {
-    e.preventDefault();
-    console.log('Web: Touch/Mouse end');
-    if (onTouchEnd) {
-      onTouchEnd();
-    }
-  }, [onTouchEnd]);
-
-  // Generate clip-path for web scratches
-  const getWebClipPath = useCallback(() => {
-    if (scratches.length === 0) return 'none';
-    
-    // Create circles for each scratch point
-    const circles = scratches.map((scratch) => {
-      return `circle(${SCRATCH_HOLE_SIZE / 2}px at ${scratch.x}px ${scratch.y}px)`;
-    });
-    
-    return circles.join(', ');
-  }, [scratches]);
-
-  if (Platform.OS === 'web') {
-    const clipPath = getWebClipPath();
-    const hasScratches = scratches.length > 0;
-    
-    return (
-      <View style={styles.container}>
-        {/* Reveal layer - always at the bottom */}
-        <View style={styles.revealLayer}>
-          {revealContent}
-        </View>
-
-        {/* Scratch layer with holes punched through */}
-        {!isRevealed && (
-          <Animated.View 
-            style={[styles.scratchLayerWeb, { opacity }]}
-            {...{
-              onTouchStart: handleWebTouchStart,
-              onTouchMove: handleWebTouchMove,
-              onTouchEnd: handleWebTouchEnd,
-              onMouseDown: handleWebTouchStart,
-              onMouseMove: (e: any) => {
-                if (e.buttons === 1) {
-                  handleWebTouchMove(e);
-                }
-              },
-              onMouseUp: handleWebTouchEnd,
-              onMouseLeave: handleWebTouchEnd,
-            } as any}
-          >
-            {/* Main scratch layer content */}
-            <View style={styles.scratchLayerContent}>
-              {scratchLayer}
-            </View>
-            
-            {/* Scratch holes - rendered as transparent circles that show reveal content */}
-            {hasScratches && (
-              <View 
-                style={[
-                  styles.scratchHolesContainer,
-                  {
-                    clipPath: clipPath,
-                    WebkitClipPath: clipPath,
-                  } as any
-                ]}
-              >
-                {revealContent}
-              </View>
-            )}
-          </Animated.View>
-        )}
-        {disabled && <View style={styles.disabledOverlay} />}
-      </View>
-    );
-  }
+    return cells;
+  };
 
   return (
     <View style={styles.container}>
@@ -337,35 +298,21 @@ export default function ScratchCard({
 
       {!isRevealed && (
         <Animated.View 
-          style={[StyleSheet.absoluteFill, { opacity }]}
-          {...panResponder.panHandlers}
+          style={[styles.scratchLayer, { opacity }]}
+          {...(Platform.OS !== 'web' ? panResponder.panHandlers : {})}
+          {...(Platform.OS === 'web' ? webHandlers : {})}
         >
-          <MaskedView
-            style={StyleSheet.absoluteFill}
-            maskElement={
-              <View style={styles.maskContainer}>
-                <View style={styles.maskBase} />
-                {scratches.map((scratch, index) => (
-                  <View
-                    key={index}
-                    style={[
-                      styles.scratchHole,
-                      {
-                        left: scratch.x - (SCRATCH_HOLE_SIZE / 2),
-                        top: scratch.y - (SCRATCH_HOLE_SIZE / 2),
-                      },
-                    ]}
-                  />
-                ))}
-              </View>
-            }
-          >
-            <View style={StyleSheet.absoluteFill}>
-              {scratchLayer}
-            </View>
-          </MaskedView>
+          <View style={styles.cellsContainer} pointerEvents="none">
+            {renderScratchCells()}
+          </View>
+          
+          <View style={styles.textOverlay} pointerEvents="none">
+            <Text style={styles.scratchTitle}>Scratch to Reveal</Text>
+            <Text style={styles.scratchSubtitle}>Your adventure awaits</Text>
+          </View>
         </Animated.View>
       )}
+      
       {disabled && <View style={styles.disabledOverlay} />}
     </View>
   );
@@ -388,35 +335,37 @@ const styles = StyleSheet.create({
   },
   scratchLayer: {
     ...StyleSheet.absoluteFillObject,
-  },
-  scratchLayerWeb: {
-    ...StyleSheet.absoluteFillObject,
     cursor: 'crosshair',
     touchAction: 'none',
     userSelect: 'none',
   } as any,
-  scratchLayerContent: {
+  cellsContainer: {
     ...StyleSheet.absoluteFillObject,
   },
-  maskContainer: {
-    flex: 1,
-    backgroundColor: 'transparent',
-  },
-  maskBase: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'white',
-  },
-  scratchHole: {
+  cell: {
     position: 'absolute',
-    width: SCRATCH_HOLE_SIZE,
-    height: SCRATCH_HOLE_SIZE,
-    borderRadius: SCRATCH_HOLE_SIZE / 2,
-    backgroundColor: 'black',
   },
-  scratchHolesContainer: {
+  textOverlay: {
     ...StyleSheet.absoluteFillObject,
-    pointerEvents: 'none',
-  } as any,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  scratchTitle: {
+    fontSize: 28,
+    fontWeight: '700' as const,
+    color: '#FFFFFF',
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+  },
+  scratchSubtitle: {
+    fontSize: 16,
+    color: 'rgba(255,255,255,0.9)',
+    marginTop: 8,
+    textShadowColor: 'rgba(0,0,0,0.2)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
   disabledOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'transparent',
