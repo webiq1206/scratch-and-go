@@ -616,8 +616,8 @@ export default function HomeScreen() {
                               activeOpacity={0.7}
                             >
                               <View style={styles.startActivityButtonContent}>
-                                <Text style={styles.startActivityButtonIcon}>🚀</Text>
-                                <Text style={styles.startActivityButtonText}>Start Activity</Text>
+                                <Text style={styles.startActivityButtonIcon}>💕</Text>
+                                <Text style={styles.startActivityButtonText}>{mode === 'couples' ? 'Start Date' : 'Start Activity'}</Text>
                               </View>
                             </TouchableOpacity>
                           </View>
