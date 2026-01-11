@@ -397,11 +397,11 @@ export default function HomeScreen() {
                 />
               </View>
               <Text style={styles.welcomeTitle}>
-                Let&apos;s create a{mode === 'couples' ? ' romantic' : 'n unforgettable'} moment
+                {`Let's create a${mode === 'couples' ? ' romantic' : 'n unforgettable'} moment`}
               </Text>
               <Text style={styles.welcomeDescription}>
                 {mode === 'couples' 
-                  ? 'Answer a few quick questions and we&apos;ll find the perfect experience to share with your partner'
+                  ? "Answer a few quick questions and we'll find the perfect experience to share with your partner"
                   : 'Answer a few questions to discover the perfect family activity everyone will love'
                 }
               </Text>
@@ -410,7 +410,7 @@ export default function HomeScreen() {
                 onPress={handleStartWizard}
                 activeOpacity={0.8}
               >
-                <Text style={styles.startButtonText}>Let&apos;s Go!</Text>
+                <Text style={styles.startButtonText}>{"Let's Go!"}</Text>
               </TouchableOpacity>
             </View>
           </Animated.View>
@@ -458,7 +458,7 @@ export default function HomeScreen() {
           <Animated.View style={[styles.wizardContent, { transform: [{ translateX: slideTransform }], opacity }]}>
             <View style={styles.questionContainer}>
               <Text style={styles.questionNumber}>Question 2 of 4</Text>
-              <Text style={styles.questionTitle}>What&apos;s your budget for this?</Text>
+              <Text style={styles.questionTitle}>{"What's your budget for this?"}</Text>
               <Text style={styles.questionSubtitle}>Be honest - every budget makes memories</Text>
               
               <View style={styles.optionsGrid}>
