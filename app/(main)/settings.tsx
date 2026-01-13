@@ -4,13 +4,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Settings as SettingsIcon, User, Heart, Crown, RefreshCw, Edit, Shield, FileText } from 'lucide-react-native';
+import { Settings as SettingsIcon, User, Heart, Crown, RefreshCw, Edit, Shield, FileText, LogOut } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import Typography from '@/constants/typography';
 import Spacing from '@/constants/spacing';
 import { BorderRadius } from '@/constants/design';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { useSubscription } from '@/contexts/SubscriptionContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { RELIGIONS } from '@/types/preferences';
 
 const MODE_KEY = 'scratch_and_go_mode';
@@ -21,6 +22,7 @@ export default function SettingsScreen() {
   const router = useRouter();
   const { preferences, updatePreferences } = usePreferences();
   const { isPremium, isTrial, getTrialDaysRemaining, getSubscriptionEndDate, restorePurchases } = useSubscription();
+  const { user, logout, isAuthenticated } = useAuth();
   const [mode, setMode] = useState<Mode>('couples');
   const [showReligionPicker, setShowReligionPicker] = useState(false);
 
@@ -29,16 +31,26 @@ export default function SettingsScreen() {
   }, []);
 
   const loadMode = async () => {
-    const savedMode = await AsyncStorage.getItem(MODE_KEY);
-    if (savedMode) {
-      setMode(savedMode as Mode);
+    try {
+      const savedMode = await AsyncStorage.getItem(MODE_KEY);
+      if (savedMode) {
+        setMode(savedMode as Mode);
+      }
+    } catch (error) {
+      console.error('Error loading mode:', error);
+      // Continue with default mode if loading fails
     }
   };
 
   const handleModeChange = async (newMode: Mode) => {
-    await AsyncStorage.setItem(MODE_KEY, newMode);
-    setMode(newMode);
-    Alert.alert('Mode Updated', `Switched to ${newMode === 'couples' ? 'Couples' : 'Family'} mode`);
+    try {
+      await AsyncStorage.setItem(MODE_KEY, newMode);
+      setMode(newMode);
+      Alert.alert('Mode Updated', `Switched to ${newMode === 'couples' ? 'Couples' : 'Family'} mode`);
+    } catch (error) {
+      console.error('Error saving mode:', error);
+      Alert.alert('Error', 'Failed to save mode. Please try again.');
+    }
   };
 
   const handleToggle = async (key: keyof typeof preferences, value: boolean) => {
@@ -86,18 +98,23 @@ export default function SettingsScreen() {
   };
 
   const handleRestorePurchases = async () => {
-    Alert.alert(
-      'Restore Purchases',
-      'Checking for previous purchases...',
-      [{ text: 'Cancel', style: 'cancel' }]
-    );
-    
-    const restored = await restorePurchases();
-    
-    if (restored) {
-      Alert.alert('Success', 'Your purchases have been restored!');
-    } else {
-      Alert.alert('No Purchases Found', 'We couldn\'t find any previous purchases to restore.');
+    try {
+      Alert.alert(
+        'Restore Purchases',
+        'Checking for previous purchases...',
+        [{ text: 'Cancel', style: 'cancel' }]
+      );
+      
+      const restored = await restorePurchases();
+      
+      if (restored) {
+        Alert.alert('Success', 'Your purchases have been restored!');
+      } else {
+        Alert.alert('No Purchases Found', 'We couldn\'t find any previous purchases to restore.');
+      }
+    } catch (error) {
+      console.error('Error restoring purchases:', error);
+      Alert.alert('Error', 'Failed to restore purchases. Please try again.');
     }
   };
 
@@ -121,6 +138,30 @@ export default function SettingsScreen() {
               religion: undefined,
             });
             Alert.alert('Preferences Reset', 'Your content preferences have been reset to defaults.');
+          },
+        },
+      ]
+    );
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out? You can sign back in anytime.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await logout();
+              // Navigate to welcome screen after logout
+              router.replace('/welcome' as any);
+            } catch (error) {
+              console.error('Error logging out:', error);
+              Alert.alert('Error', 'Failed to sign out. Please try again.');
+            }
           },
         },
       ]
@@ -511,6 +552,31 @@ export default function SettingsScreen() {
 
         <View style={styles.divider} />
 
+        {isAuthenticated && (
+          <>
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <User size={20} color={Colors.primary} />
+                <Text style={styles.sectionTitle}>Account</Text>
+              </View>
+              <Text style={styles.sectionDescription}>
+                {user?.email ? `Signed in as ${user.email}` : 'Manage your account'}
+              </Text>
+              
+              <TouchableOpacity
+                style={styles.logoutButton}
+                onPress={handleLogout}
+                activeOpacity={0.7}
+              >
+                <LogOut size={18} color={Colors.error || '#FF4444'} />
+                <Text style={styles.logoutButtonText}>Sign Out</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.divider} />
+          </>
+        )}
+
         <View style={styles.section}>
           <Text style={styles.footerNote}>
             These settings help personalize your activity suggestions. Changes take effect immediately.
@@ -786,6 +852,23 @@ const styles = StyleSheet.create({
     fontSize: Typography.sizes.body,
     fontWeight: '400' as const,
     color: Colors.text,
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.medium,
+    backgroundColor: '#1A1A1A',
+    borderWidth: 1,
+    borderColor: '#3A3A3A',
+    marginTop: Spacing.md,
+  },
+  logoutButtonText: {
+    fontSize: Typography.sizes.body,
+    fontWeight: '400' as const,
+    color: Colors.error || '#FF4444',
   },
   legalLinks: {
     gap: Spacing.md,

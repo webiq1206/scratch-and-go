@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, KeyboardAvoidingView, Platform, Image as RNImage } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, KeyboardAvoidingView, Platform, Image as RNImage, Dimensions, NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, Stack, router } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -7,13 +7,15 @@ import { Image } from 'expo-image';
 import { useMemoryBook } from '@/contexts/MemoryBookContext';
 import { useCollaborative } from '@/contexts/CollaborativeContext';
 import { useLocation } from '@/contexts/LocationContext';
-import { shareActivity } from '@/utils/shareActivity';
+import { shareActivity, shareMemory, shareMemoryToFacebook, shareMemoryToInstagram } from '@/utils/shareActivity';
 import { addActivityToCalendar, calculateEndDate } from '@/utils/calendarUtils';
 import Colors from '@/constants/colors';
 import Typography from '@/constants/typography';
 import Spacing from '@/constants/spacing';
 import { BorderRadius } from '@/constants/design';
-import { Clock, DollarSign, Calendar, CheckCircle, Trash2, Edit3, Save, X, Share2, Users, CalendarPlus, Camera, MapPin, Plus } from 'lucide-react-native';
+import { Clock, DollarSign, Calendar, CheckCircle, Trash2, Edit3, Save, X, Share2, Users, CalendarPlus, Camera, MapPin, Plus, ChevronLeft, ChevronRight, FileText, Facebook, Instagram } from 'lucide-react-native';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function ActivityDetailScreen() {
   const { id } = useLocalSearchParams();
@@ -21,10 +23,12 @@ export default function ActivityDetailScreen() {
   const { addToQueue } = useCollaborative();
   const { location } = useLocation();
   
-  const activity = getSavedActivity(id as string);
+  // Handle id as string or array (Expo Router can return arrays)
+  const activityId = Array.isArray(id) ? id[0] : id;
+  const activity = activityId ? getSavedActivity(activityId) : null;
   
   const [isEditingNotes, setIsEditingNotes] = useState(false);
-  const [notesText, setNotesText] = useState(activity?.notes || '');
+  const [notesText, setNotesText] = useState('');
   const [isSharing, setIsSharing] = useState(false);
   const [showQueueModal, setShowQueueModal] = useState(false);
   const [queueNote, setQueueNote] = useState('');
@@ -34,6 +38,48 @@ export default function ActivityDetailScreen() {
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [isAddingToCalendar, setIsAddingToCalendar] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const photosScrollRef = useRef<ScrollView>(null);
+  const [isSharingMemory, setIsSharingMemory] = useState(false);
+
+  // Sync notesText when activity changes
+  useEffect(() => {
+    if (activity?.notes !== undefined) {
+      setNotesText(activity.notes || '');
+    }
+  }, [activity?.notes]);
+
+  // Check if this is a completed memory (only after null check)
+  const isMemory = activity?.isCompleted || false;
+  const photos = activity?.photos || [];
+  const hasPhotos = photos.length > 0;
+
+  const formatMemoryTimestamp = (timestamp?: number): string => {
+    if (!timestamp) return '';
+    const date = new Date(timestamp);
+    const options: Intl.DateTimeFormatOptions = { 
+      month: 'long', 
+      day: 'numeric', 
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    };
+    return date.toLocaleDateString('en-US', options);
+  };
+
+  const handlePhotoScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const contentOffsetX = event.nativeEvent.contentOffset.x;
+    const index = Math.round(contentOffsetX / SCREEN_WIDTH);
+    setCurrentPhotoIndex(index);
+  };
+
+  const scrollToPhoto = (index: number) => {
+    photosScrollRef.current?.scrollTo({
+      x: index * SCREEN_WIDTH,
+      animated: true,
+    });
+  };
 
   if (!activity) {
     return (
@@ -54,26 +100,40 @@ export default function ActivityDetailScreen() {
   }
 
   const handleSaveNotes = () => {
-    updateNotes(activity.id, notesText);
-    setIsEditingNotes(false);
-    Alert.alert('Saved', 'Your notes have been saved');
+    if (!activity) return;
+    try {
+      updateNotes(activity.id, notesText);
+      setIsEditingNotes(false);
+      Alert.alert('Saved', 'Your notes have been saved');
+    } catch (error) {
+      console.error('Error saving notes:', error);
+      Alert.alert('Error', 'Failed to save notes. Please try again.');
+    }
   };
 
   const handleCancelEdit = () => {
+    if (!activity) return;
     setNotesText(activity.notes || '');
     setIsEditingNotes(false);
   };
 
   const handleStartActivity = () => {
-    startActivity(activity.id);
-    Alert.alert(
-      '🎉 Activity Started!',
-      'Time to make some amazing memories! Don\'t forget to take photos and add notes along the way.',
-      [{ text: 'Got it!' }]
-    );
+    if (!activity) return;
+    try {
+      startActivity(activity.id);
+      Alert.alert(
+        '🎉 Activity Started!',
+        'Time to make some amazing memories! Don\'t forget to take photos and add notes along the way.',
+        [{ text: 'Got it!' }]
+      );
+    } catch (error) {
+      console.error('Error starting activity:', error);
+      Alert.alert('Error', 'Failed to start activity. Please try again.');
+    }
   };
 
   const handleStopActivity = () => {
+    if (!activity) return;
     Alert.alert(
       'Pause Activity?',
       'You can continue this activity later.',
@@ -82,8 +142,13 @@ export default function ActivityDetailScreen() {
         {
           text: 'Pause',
           onPress: () => {
-            stopActivity(activity.id);
-            Alert.alert('Activity Paused', 'You can resume anytime!');
+            try {
+              stopActivity(activity.id);
+              Alert.alert('Activity Paused', 'You can resume anytime!');
+            } catch (error) {
+              console.error('Error pausing activity:', error);
+              Alert.alert('Error', 'Failed to pause activity. Please try again.');
+            }
           }
         }
       ]
@@ -91,6 +156,7 @@ export default function ActivityDetailScreen() {
   };
 
   const handleMarkComplete = () => {
+    if (!activity) return;
     if (!activity.photos || activity.photos.length === 0) {
       Alert.alert(
         'Add Photos First?',
@@ -111,23 +177,36 @@ export default function ActivityDetailScreen() {
   };
 
   const completeActivity = () => {
-    markAsCompleted(activity.id);
-    Alert.alert(
-      '✨ Memory Complete!',
-      'Would you like to share this experience?',
-      [
-        { text: 'Not Now', style: 'cancel' },
-        { text: 'Share', onPress: handleShareActivity }
-      ]
-    );
+    if (!activity) return;
+    try {
+      markAsCompleted(activity.id);
+      Alert.alert(
+        '✨ Memory Complete!',
+        'Would you like to share this experience?',
+        [
+          { text: 'Not Now', style: 'cancel' },
+          { text: 'Share', onPress: handleShareActivity }
+        ]
+      );
+    } catch (error) {
+      console.error('Error completing activity:', error);
+      Alert.alert('Error', 'Failed to mark activity as complete. Please try again.');
+    }
   };
 
   const handleMarkIncomplete = () => {
-    markAsIncomplete(activity.id);
-    Alert.alert('Unmarked', 'Activity marked as incomplete');
+    if (!activity) return;
+    try {
+      markAsIncomplete(activity.id);
+      Alert.alert('Unmarked', 'Activity marked as incomplete');
+    } catch (error) {
+      console.error('Error marking incomplete:', error);
+      Alert.alert('Error', 'Failed to update activity. Please try again.');
+    }
   };
 
   const handleDelete = () => {
+    if (!activity) return;
     Alert.alert(
       'Delete Activity',
       'Are you sure you want to delete this activity? This cannot be undone.',
@@ -137,8 +216,13 @@ export default function ActivityDetailScreen() {
           text: 'Delete',
           style: 'destructive',
           onPress: () => {
-            unsaveActivity(activity.id);
-            router.back();
+            try {
+              unsaveActivity(activity.id);
+              router.back();
+            } catch (error) {
+              console.error('Error deleting activity:', error);
+              Alert.alert('Error', 'Failed to delete activity. Please try again.');
+            }
           },
         },
       ]
@@ -146,11 +230,17 @@ export default function ActivityDetailScreen() {
   };
 
   const handleRatingPress = (rating: number) => {
-    updateRating(activity.id, rating);
+    if (!activity) return;
+    try {
+      updateRating(activity.id, rating);
+    } catch (error) {
+      console.error('Error updating rating:', error);
+      Alert.alert('Error', 'Failed to update rating. Please try again.');
+    }
   };
 
   const handleShareActivity = async () => {
-    if (isSharing) return;
+    if (isSharing || !activity) return;
     
     setIsSharing(true);
     try {
@@ -168,6 +258,7 @@ export default function ActivityDetailScreen() {
   };
 
   const handleAddToQueue = async () => {
+    if (!activity) return;
     await addToQueue(activity, queueNote);
     setShowQueueModal(false);
     setQueueNote('');
@@ -175,7 +266,7 @@ export default function ActivityDetailScreen() {
   };
 
   const handleAddToCalendar = async () => {
-    if (isAddingToCalendar) return;
+    if (isAddingToCalendar || !activity) return;
     
     setIsAddingToCalendar(true);
     try {
@@ -213,6 +304,7 @@ export default function ActivityDetailScreen() {
   };
 
   const handlePickPhoto = async () => {
+    if (!activity) return;
     try {
       if (Platform.OS !== 'web') {
         const { launchImageLibraryAsync, requestMediaLibraryPermissionsAsync, MediaTypeOptions } = await import('expo-image-picker');
@@ -244,7 +336,7 @@ export default function ActivityDetailScreen() {
           if (file) {
             const reader = new FileReader();
             reader.onload = (event) => {
-              if (event.target?.result) {
+              if (event.target?.result && activity) {
                 addPhoto(activity.id, event.target.result as string);
                 Alert.alert('Success', 'Photo added successfully!');
               }
@@ -263,6 +355,7 @@ export default function ActivityDetailScreen() {
   };
 
   const handleTakePhoto = async () => {
+    if (!activity) return;
     try {
       if (Platform.OS !== 'web') {
         const { launchCameraAsync, requestCameraPermissionsAsync, MediaTypeOptions } = await import('expo-image-picker');
@@ -297,6 +390,7 @@ export default function ActivityDetailScreen() {
   };
 
   const handleRemovePhoto = (photoUri: string) => {
+    if (!activity) return;
     Alert.alert(
       'Remove Photo',
       'Are you sure you want to remove this photo?',
@@ -312,8 +406,47 @@ export default function ActivityDetailScreen() {
   };
 
   const handleUpdateLocation = () => {
+    if (!activity) return;
     updateLocationSnapshot(activity.id);
     Alert.alert('Updated', 'Location snapshot updated to current location');
+  };
+
+  const handleShareMemory = async () => {
+    if (isSharingMemory || !activity) return;
+    setIsSharingMemory(true);
+    try {
+      await shareMemory(activity);
+    } catch (error) {
+      console.error('Error sharing memory:', error);
+    } finally {
+      setIsSharingMemory(false);
+    }
+  };
+
+  const handleShareToFacebook = async () => {
+    if (isSharingMemory || !activity) return;
+    setIsSharingMemory(true);
+    try {
+      await shareMemoryToFacebook(activity);
+    } catch (error) {
+      console.error('Error sharing to Facebook:', error);
+      Alert.alert('Error', 'Failed to share to Facebook');
+    } finally {
+      setIsSharingMemory(false);
+    }
+  };
+
+  const handleShareToInstagram = async () => {
+    if (isSharingMemory || !activity) return;
+    setIsSharingMemory(true);
+    try {
+      await shareMemoryToInstagram(activity);
+    } catch (error) {
+      console.error('Error sharing to Instagram:', error);
+      Alert.alert('Error', 'Failed to share to Instagram');
+    } finally {
+      setIsSharingMemory(false);
+    }
   };
 
   return (
@@ -338,8 +471,117 @@ export default function ActivityDetailScreen() {
           contentContainerStyle={styles.contentContainer}
           showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.title}>{activity.title}</Text>
-          <Text style={styles.description}>{activity.description}</Text>
+          {/* Photo Slideshow for Completed Memories */}
+          {isMemory && (
+            <View style={styles.slideshowContainer}>
+              {hasPhotos ? (
+                <>
+              <ScrollView
+                ref={photosScrollRef}
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                onScroll={handlePhotoScroll}
+                scrollEventThrottle={16}
+                style={styles.slideshowScroll}
+              >
+                {photos.map((photoUri, index) => (
+                  <View key={index} style={styles.slide}>
+                    <Image
+                      source={{ uri: photoUri }}
+                      style={styles.slideImage}
+                      contentFit="cover"
+                    />
+                  </View>
+                ))}
+              </ScrollView>
+
+              {/* Photo Indicators */}
+              {photos.length > 1 && (
+                <View style={styles.photoIndicators}>
+                  {photos.map((_, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      style={[
+                        styles.indicator,
+                        index === currentPhotoIndex && styles.indicatorActive
+                      ]}
+                      onPress={() => scrollToPhoto(index)}
+                      activeOpacity={0.7}
+                    />
+                  ))}
+                </View>
+              )}
+
+              {/* Photo Counter */}
+              {photos.length > 1 && (
+                <View style={styles.photoCounter}>
+                  <Text style={styles.photoCounterText}>
+                    {currentPhotoIndex + 1} / {photos.length}
+                  </Text>
+                </View>
+              )}
+
+              {/* Navigation Arrows */}
+              {photos.length > 1 && (
+                <>
+                  {currentPhotoIndex > 0 && (
+                    <TouchableOpacity
+                      style={[styles.navArrow, styles.navArrowLeft]}
+                      onPress={() => scrollToPhoto(currentPhotoIndex - 1)}
+                      activeOpacity={0.7}
+                    >
+                      <ChevronLeft size={24} color={Colors.white} />
+                    </TouchableOpacity>
+                  )}
+                  {currentPhotoIndex < photos.length - 1 && (
+                    <TouchableOpacity
+                      style={[styles.navArrow, styles.navArrowRight]}
+                      onPress={() => scrollToPhoto(currentPhotoIndex + 1)}
+                      activeOpacity={0.7}
+                    >
+                      <ChevronRight size={24} color={Colors.white} />
+                    </TouchableOpacity>
+                  )}
+                </>
+              )}
+                </>
+              ) : (
+                <View style={styles.emptyPhotoContainer}>
+                  <View style={styles.emptyPhotoIconContainer}>
+                    <Camera size={48} color={Colors.textLight} />
+                  </View>
+                  <Text style={styles.emptyPhotoTitle}>No Photos Yet</Text>
+                  <Text style={styles.emptyPhotoText}>
+                    This memory doesn't have any photos yet. Add photos to make it even more special!
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* Memory Header for Completed Memories */}
+          {isMemory && (
+            <View style={styles.memoryHeader}>
+              <Text style={styles.memoryTitle}>{activity.title}</Text>
+              {activity.completedAt && (
+                <View style={styles.memoryTimestamp}>
+                  <Calendar size={16} color={Colors.textLight} />
+                  <Text style={styles.memoryTimestampText}>
+                    {formatMemoryTimestamp(activity.completedAt)}
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* Regular Title for Non-Memories */}
+          {!isMemory && (
+            <>
+              <Text style={styles.title}>{activity.title}</Text>
+              <Text style={styles.description}>{activity.description}</Text>
+            </>
+          )}
 
           {activity.locationSnapshot && (
             <View style={styles.locationSection}>
@@ -454,122 +696,232 @@ export default function ActivityDetailScreen() {
             </View>
           )}
 
-          <View style={styles.notesSection}>
-            <View style={styles.notesSectionHeader}>
-              <Text style={styles.sectionLabel}>Notes</Text>
-              {!isEditingNotes ? (
-                <TouchableOpacity 
-                  onPress={() => setIsEditingNotes(true)}
-                  activeOpacity={0.7}
-                  style={styles.editButton}
-                >
-                  <Edit3 size={16} color={Colors.primary} />
-                  <Text style={styles.editButtonText}>Edit</Text>
-                </TouchableOpacity>
+          {/* Notes Section - Prominent for Memories */}
+          {isMemory && (
+            <View style={styles.memoryNotesSection}>
+              <View style={styles.memoryNotesHeader}>
+                <FileText size={20} color={Colors.primary} />
+                <Text style={styles.memoryNotesTitle}>Memory Notes</Text>
+              </View>
+              {activity.notes ? (
+                <Text style={styles.memoryNotesText}>{activity.notes}</Text>
               ) : (
-                <View style={styles.editActions}>
+                <Text style={styles.memoryNotesEmpty}>
+                  No notes captured for this memory
+                </Text>
+              )}
+            </View>
+          )}
+
+          {/* Regular Notes Section for Non-Memories */}
+          {!isMemory && (
+            <View style={styles.notesSection}>
+              <View style={styles.notesSectionHeader}>
+                <Text style={styles.sectionLabel}>Notes</Text>
+                {!isEditingNotes ? (
                   <TouchableOpacity 
-                    onPress={handleCancelEdit}
+                    onPress={() => setIsEditingNotes(true)}
                     activeOpacity={0.7}
-                    style={styles.cancelButton}
+                    style={styles.editButton}
                   >
-                    <X size={16} color={Colors.textLight} />
+                    <Edit3 size={16} color={Colors.primary} />
+                    <Text style={styles.editButtonText}>Edit</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity 
-                    onPress={handleSaveNotes}
-                    activeOpacity={0.7}
-                    style={styles.saveButton}
+                ) : (
+                  <View style={styles.editActions}>
+                    <TouchableOpacity 
+                      onPress={handleCancelEdit}
+                      activeOpacity={0.7}
+                      style={styles.cancelButton}
+                    >
+                      <X size={16} color={Colors.textLight} />
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      onPress={handleSaveNotes}
+                      activeOpacity={0.7}
+                      style={styles.saveButton}
+                    >
+                      <Save size={16} color={Colors.primary} />
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+              
+              {isEditingNotes ? (
+                <TextInput
+                  style={styles.notesInput}
+                  value={notesText}
+                  onChangeText={setNotesText}
+                  placeholder="Capture this memory... What made this moment special with your loved ones?"
+                  placeholderTextColor={Colors.textLight}
+                  multiline
+                  numberOfLines={6}
+                  textAlignVertical="top"
+                  autoFocus
+                />
+              ) : (
+                <View style={styles.notesDisplay}>
+                  {activity.notes ? (
+                    <Text style={styles.notesText}>{activity.notes}</Text>
+                  ) : (
+                    <Text style={styles.notesPlaceholder}>Capture the memory! What made this moment with loved ones special?</Text>
+                  )}
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* Activity Details Section for Memories */}
+          {isMemory && (
+            <View style={styles.memoryDetailsSection}>
+              <Text style={styles.memoryDetailsTitle}>Activity Details</Text>
+              <Text style={styles.memoryDescription}>{activity.description}</Text>
+              
+              <View style={styles.memoryDetailsGrid}>
+                <View style={styles.memoryDetailCard}>
+                  <Clock size={20} color={Colors.primary} />
+                  <Text style={styles.memoryDetailLabel}>Duration</Text>
+                  <Text style={styles.memoryDetailValue}>{activity.duration}</Text>
+                </View>
+                <View style={styles.memoryDetailCard}>
+                  <DollarSign size={20} color={Colors.accent} />
+                  <Text style={styles.memoryDetailLabel}>Cost</Text>
+                  <Text style={styles.memoryDetailValue}>
+                    {activity.cost === 'free' ? 'Free' : activity.cost}
+                  </Text>
+                </View>
+              </View>
+
+              {activity.proTip && (
+                <View style={styles.memoryProTip}>
+                  <Text style={styles.memoryProTipLabel}>💡 Pro Tip</Text>
+                  <Text style={styles.memoryProTipText}>{activity.proTip}</Text>
+                </View>
+              )}
+
+              {activity.locationSnapshot && (
+                <View style={styles.memoryLocation}>
+                  <MapPin size={16} color={Colors.textLight} />
+                  <Text style={styles.memoryLocationText}>
+                    {activity.locationSnapshot.city}, {activity.locationSnapshot.region}
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* Social Sharing Section for Memories */}
+          {isMemory && (
+            <View style={styles.socialSharingSection}>
+              <Text style={styles.socialSharingTitle}>Share This Memory</Text>
+              <Text style={styles.socialSharingSubtitle}>
+                Spread the joy and help others discover their next adventure
+              </Text>
+              
+              <View style={styles.socialButtonsRow}>
+                <TouchableOpacity
+                  style={[styles.socialButton, styles.facebookButton]}
+                  onPress={handleShareToFacebook}
+                  disabled={isSharingMemory}
+                  activeOpacity={0.8}
+                >
+                  <Facebook size={20} color={Colors.white} />
+                  <Text style={styles.socialButtonText}>Facebook</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.socialButton, styles.instagramButton]}
+                  onPress={handleShareToInstagram}
+                  disabled={isSharingMemory}
+                  activeOpacity={0.8}
+                >
+                  <Instagram size={20} color={Colors.white} />
+                  <Text style={styles.socialButtonText}>Instagram</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.socialButton, styles.genericShareButton]}
+                  onPress={handleShareMemory}
+                  disabled={isSharingMemory}
+                  activeOpacity={0.8}
+                >
+                  <Share2 size={20} color={Colors.text} />
+                  <Text style={[styles.socialButtonText, styles.genericShareButtonText]}>More</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.brandingNote}>
+                <Text style={styles.brandingNoteText}>
+                  💫 Shared with Scratch & Go
+                </Text>
+              </View>
+            </View>
+          )}
+
+          {/* Regular Photos Section for Non-Memories */}
+          {!isMemory && (
+            <View style={styles.photosSection}>
+              <View style={styles.photosSectionHeader}>
+                <Text style={styles.sectionLabel}>Moments with Loved Ones</Text>
+                <View style={styles.photoButtons}>
+                  {Platform.OS !== 'web' && (
+                    <TouchableOpacity
+                      onPress={handleTakePhoto}
+                      style={styles.photoActionButton}
+                      disabled={isUploadingPhoto}
+                    >
+                      <Camera size={16} color={Colors.primary} />
+                    </TouchableOpacity>
+                  )}
+                  <TouchableOpacity
+                    onPress={handlePickPhoto}
+                    style={styles.photoActionButton}
+                    disabled={isUploadingPhoto}
                   >
-                    <Save size={16} color={Colors.primary} />
+                    <Plus size={16} color={Colors.primary} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+              
+              {activity.photos && activity.photos.length > 0 ? (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.photosScroll}
+                  contentContainerStyle={styles.photosScrollContent}
+                >
+                  {activity.photos.map((photoUri, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      onLongPress={() => handleRemovePhoto(photoUri)}
+                      activeOpacity={0.8}
+                      style={styles.photoContainer}
+                    >
+                      <Image
+                        source={{ uri: photoUri }}
+                        style={styles.photo}
+                        contentFit="cover"
+                      />
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              ) : (
+                <View style={styles.noPhotosContainer}>
+                  <Camera size={40} color={Colors.primary} />
+                  <Text style={styles.noPhotosText}>Capture This Moment!</Text>
+                  <Text style={styles.noPhotosSubtext}>Take a photo with your loved ones to remember this moment forever</Text>
+                  <TouchableOpacity
+                    style={styles.addPhotoPromptButton}
+                    onPress={handleTakePhoto}
+                    activeOpacity={0.8}
+                  >
+                    <Camera size={18} color={Colors.white} />
+                    <Text style={styles.addPhotoPromptText}>Take Photo</Text>
                   </TouchableOpacity>
                 </View>
               )}
             </View>
-            
-            {isEditingNotes ? (
-              <TextInput
-                style={styles.notesInput}
-                value={notesText}
-                onChangeText={setNotesText}
-                placeholder="Capture this memory... What made this moment special with your loved ones?"
-                placeholderTextColor={Colors.textLight}
-                multiline
-                numberOfLines={6}
-                textAlignVertical="top"
-                autoFocus
-              />
-            ) : (
-              <View style={styles.notesDisplay}>
-                {activity.notes ? (
-                  <Text style={styles.notesText}>{activity.notes}</Text>
-                ) : (
-                  <Text style={styles.notesPlaceholder}>Capture the memory! What made this moment with loved ones special?</Text>
-                )}
-              </View>
-            )}
-          </View>
-
-          <View style={styles.photosSection}>
-            <View style={styles.photosSectionHeader}>
-              <Text style={styles.sectionLabel}>Moments with Loved Ones</Text>
-              <View style={styles.photoButtons}>
-                {Platform.OS !== 'web' && (
-                  <TouchableOpacity
-                    onPress={handleTakePhoto}
-                    style={styles.photoActionButton}
-                    disabled={isUploadingPhoto}
-                  >
-                    <Camera size={16} color={Colors.primary} />
-                  </TouchableOpacity>
-                )}
-                <TouchableOpacity
-                  onPress={handlePickPhoto}
-                  style={styles.photoActionButton}
-                  disabled={isUploadingPhoto}
-                >
-                  <Plus size={16} color={Colors.primary} />
-                </TouchableOpacity>
-              </View>
-            </View>
-            
-            {activity.photos && activity.photos.length > 0 ? (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.photosScroll}
-                contentContainerStyle={styles.photosScrollContent}
-              >
-                {activity.photos.map((photoUri, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    onLongPress={() => handleRemovePhoto(photoUri)}
-                    activeOpacity={0.8}
-                    style={styles.photoContainer}
-                  >
-                    <Image
-                      source={{ uri: photoUri }}
-                      style={styles.photo}
-                      contentFit="cover"
-                    />
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            ) : (
-              <View style={styles.noPhotosContainer}>
-                <Camera size={40} color={Colors.primary} />
-                <Text style={styles.noPhotosText}>Capture This Moment!</Text>
-                <Text style={styles.noPhotosSubtext}>Take a photo with your loved ones to remember this moment forever</Text>
-                <TouchableOpacity
-                  style={styles.addPhotoPromptButton}
-                  onPress={handleTakePhoto}
-                  activeOpacity={0.8}
-                >
-                  <Camera size={18} color={Colors.white} />
-                  <Text style={styles.addPhotoPromptText}>Take Photo</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
+          )}
 
           <View style={styles.actionsSection}>
             {!activity.isActive && !activity.isCompleted && (
@@ -1443,5 +1795,308 @@ const styles = StyleSheet.create({
     fontSize: Typography.sizes.body,
     fontWeight: '400' as const,
     color: Colors.white,
+  },
+  // Slideshow Styles
+  slideshowContainer: {
+    width: SCREEN_WIDTH,
+    minHeight: 400,
+    marginBottom: Spacing.xl,
+    marginHorizontal: -Spacing.lg, // Negative margin to extend full width
+    position: 'relative',
+    borderRadius: 0, // No border radius for full-width slideshow
+    overflow: 'hidden',
+    backgroundColor: Colors.cardBackground,
+  },
+  emptyPhotoContainer: {
+    width: '100%',
+    height: 400,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.xl,
+    backgroundColor: Colors.backgroundDark,
+  },
+  emptyPhotoIconContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: Colors.cardBackground,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing.lg,
+    borderWidth: 2,
+    borderColor: Colors.cardBorder,
+    borderStyle: 'dashed',
+  },
+  emptyPhotoTitle: {
+    fontSize: Typography.sizes.h3,
+    fontWeight: Typography.weights.semibold,
+    color: Colors.text,
+    marginBottom: Spacing.sm,
+    textAlign: 'center',
+  },
+  emptyPhotoText: {
+    fontSize: Typography.sizes.body,
+    color: Colors.textLight,
+    textAlign: 'center',
+    lineHeight: 22,
+    maxWidth: 300,
+  },
+  slideshowScroll: {
+    width: '100%',
+    height: '100%',
+  },
+  slide: {
+    width: SCREEN_WIDTH,
+    height: 400,
+  },
+  slideImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: BorderRadius.large,
+  },
+  photoIndicators: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    position: 'absolute',
+    bottom: Spacing.lg,
+    left: 0,
+    right: 0,
+  },
+  indicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.white,
+    opacity: 0.4,
+  },
+  indicatorActive: {
+    opacity: 1,
+    width: 24,
+    backgroundColor: Colors.primary,
+  },
+  photoCounter: {
+    position: 'absolute',
+    top: Spacing.md,
+    right: Spacing.md,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.medium,
+  },
+  photoCounterText: {
+    fontSize: Typography.sizes.caption,
+    color: Colors.white,
+    fontWeight: '500' as const,
+  },
+  navArrow: {
+    position: 'absolute',
+    top: '50%',
+    transform: [{ translateY: -20 }],
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderRadius: 20,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  navArrowLeft: {
+    left: Spacing.md,
+  },
+  navArrowRight: {
+    right: Spacing.md,
+  },
+  // Memory Header Styles
+  memoryHeader: {
+    marginBottom: Spacing.xl,
+    paddingBottom: Spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.cardBorder,
+  },
+  memoryTitle: {
+    fontSize: Typography.sizes.h1,
+    fontWeight: Typography.weights.bold,
+    color: Colors.text,
+    marginBottom: Spacing.sm,
+  },
+  memoryTimestamp: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
+  memoryTimestampText: {
+    fontSize: Typography.sizes.body,
+    color: Colors.textLight,
+  },
+  // Memory Notes Styles
+  memoryNotesSection: {
+    backgroundColor: Colors.cardBackground,
+    borderRadius: BorderRadius.large,
+    padding: Spacing.xl,
+    marginBottom: Spacing.xl,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  memoryNotesHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  memoryNotesTitle: {
+    fontSize: Typography.sizes.h3,
+    fontWeight: Typography.weights.semibold,
+    color: Colors.text,
+  },
+  memoryNotesText: {
+    fontSize: Typography.sizes.body,
+    color: Colors.text,
+    lineHeight: 24,
+  },
+  memoryNotesEmpty: {
+    fontSize: Typography.sizes.body,
+    color: Colors.textLight,
+    fontStyle: 'italic' as const,
+  },
+  // Memory Details Styles
+  memoryDetailsSection: {
+    backgroundColor: Colors.cardBackground,
+    borderRadius: BorderRadius.large,
+    padding: Spacing.xl,
+    marginBottom: Spacing.xl,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  memoryDetailsTitle: {
+    fontSize: Typography.sizes.h3,
+    fontWeight: Typography.weights.semibold,
+    color: Colors.text,
+    marginBottom: Spacing.md,
+  },
+  memoryDescription: {
+    fontSize: Typography.sizes.body,
+    color: Colors.text,
+    lineHeight: 24,
+    marginBottom: Spacing.lg,
+  },
+  memoryDetailsGrid: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+    marginBottom: Spacing.lg,
+  },
+  memoryDetailCard: {
+    flex: 1,
+    backgroundColor: Colors.backgroundDark,
+    borderRadius: BorderRadius.medium,
+    padding: Spacing.md,
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
+  memoryDetailLabel: {
+    fontSize: Typography.sizes.caption,
+    color: Colors.textLight,
+    textTransform: 'uppercase' as const,
+    letterSpacing: 0.5,
+  },
+  memoryDetailValue: {
+    fontSize: Typography.sizes.body,
+    fontWeight: Typography.weights.semibold,
+    color: Colors.text,
+  },
+  memoryProTip: {
+    backgroundColor: Colors.backgroundDark,
+    borderRadius: BorderRadius.medium,
+    padding: Spacing.md,
+    marginBottom: Spacing.md,
+  },
+  memoryProTipLabel: {
+    fontSize: Typography.sizes.body,
+    fontWeight: Typography.weights.semibold,
+    color: Colors.text,
+    marginBottom: Spacing.xs,
+  },
+  memoryProTipText: {
+    fontSize: Typography.sizes.body,
+    color: Colors.textLight,
+    lineHeight: 20,
+  },
+  memoryLocation: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
+  memoryLocationText: {
+    fontSize: Typography.sizes.body,
+    color: Colors.textLight,
+  },
+  // Social Sharing Styles
+  socialSharingSection: {
+    backgroundColor: Colors.cardBackground,
+    borderRadius: BorderRadius.large,
+    padding: Spacing.xl,
+    marginBottom: Spacing.xl,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  socialSharingTitle: {
+    fontSize: Typography.sizes.h3,
+    fontWeight: Typography.weights.semibold,
+    color: Colors.text,
+    marginBottom: Spacing.xs,
+    textAlign: 'center',
+  },
+  socialSharingSubtitle: {
+    fontSize: Typography.sizes.caption,
+    color: Colors.textLight,
+    textAlign: 'center',
+    marginBottom: Spacing.lg,
+  },
+  socialButtonsRow: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+    marginBottom: Spacing.md,
+  },
+  socialButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.xs,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.medium,
+    minHeight: 48,
+  },
+  facebookButton: {
+    backgroundColor: '#1877F2',
+  },
+  instagramButton: {
+    backgroundColor: '#E4405F',
+  },
+  genericShareButton: {
+    backgroundColor: Colors.cardBackground,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  socialButtonText: {
+    fontSize: Typography.sizes.body,
+    fontWeight: Typography.weights.semibold,
+    color: Colors.white,
+  },
+  genericShareButtonText: {
+    color: Colors.text,
+  },
+  brandingNote: {
+    alignItems: 'center',
+    paddingTop: Spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: Colors.cardBorder,
+  },
+  brandingNoteText: {
+    fontSize: Typography.sizes.caption,
+    color: Colors.textLight,
+    fontStyle: 'italic' as const,
   },
 });

@@ -28,14 +28,26 @@ export default function WelcomeScreen() {
 
   useEffect(() => {
     const checkExistingMode = async () => {
-      const savedMode = await AsyncStorage.getItem(MODE_KEY);
-      const savedPreferences = await AsyncStorage.getItem(PREFERENCES_KEY);
-      
-      if (savedMode && savedPreferences) {
-        const prefs = JSON.parse(savedPreferences);
-        if (prefs.completedOnboarding) {
-          router.replace('/(main)/(home)' as any);
+      try {
+        const savedMode = await AsyncStorage.getItem(MODE_KEY);
+        const savedPreferences = await AsyncStorage.getItem(PREFERENCES_KEY);
+        
+        if (savedMode && savedPreferences) {
+          try {
+            const prefs = JSON.parse(savedPreferences);
+            if (prefs && prefs.completedOnboarding) {
+              router.replace('/(main)/(home)' as any);
+            }
+          } catch (parseError) {
+            console.error('Error parsing saved preferences:', parseError);
+            // If preferences are corrupted, clear them and start fresh
+            await AsyncStorage.removeItem(PREFERENCES_KEY);
+            await AsyncStorage.removeItem(MODE_KEY);
+          }
         }
+      } catch (error) {
+        console.error('Error checking existing mode:', error);
+        // Continue with onboarding if there's an error
       }
     };
     
@@ -53,6 +65,9 @@ export default function WelcomeScreen() {
     setIsLoggingIn(true);
     try {
       await loginWithGoogle();
+    } catch (error) {
+      console.error('Google login error:', error);
+      // Error handling is managed by AuthContext, but we ensure loading state is cleared
     } finally {
       setIsLoggingIn(false);
     }
@@ -62,6 +77,9 @@ export default function WelcomeScreen() {
     setIsLoggingIn(true);
     try {
       await loginWithFacebook();
+    } catch (error) {
+      console.error('Facebook login error:', error);
+      // Error handling is managed by AuthContext, but we ensure loading state is cleared
     } finally {
       setIsLoggingIn(false);
     }
@@ -70,6 +88,12 @@ export default function WelcomeScreen() {
 
 
   const handlePreferenceAnswer = (value: boolean) => {
+    // Safety check: ensure question index is valid
+    if (currentQuestionIndex >= ONBOARDING_QUESTIONS.length) {
+      completeOnboarding(preferences);
+      return;
+    }
+    
     const currentQuestion = ONBOARDING_QUESTIONS[currentQuestionIndex];
     const updatedPreferences = {
       ...preferences,
@@ -105,14 +129,22 @@ export default function WelcomeScreen() {
   };
 
   const completeOnboarding = async (finalPreferences: UserPreferences) => {
-    const preferencesWithFlag = {
-      ...finalPreferences,
-      completedOnboarding: true,
-    };
-    
-    await AsyncStorage.setItem(MODE_KEY, selectedMode!);
-    await AsyncStorage.setItem(PREFERENCES_KEY, JSON.stringify(preferencesWithFlag));
-    router.replace('/(main)/(home)' as any);
+    try {
+      const preferencesWithFlag = {
+        ...finalPreferences,
+        completedOnboarding: true,
+      };
+      
+      // Ensure mode is set (default to 'couples' if not selected)
+      const modeToSave = selectedMode || 'couples';
+      await AsyncStorage.setItem(MODE_KEY, modeToSave);
+      await AsyncStorage.setItem(PREFERENCES_KEY, JSON.stringify(preferencesWithFlag));
+      router.replace('/(main)/(home)' as any);
+    } catch (error) {
+      console.error('Error completing onboarding:', error);
+      // Still navigate to home even if storage fails - user can retry later
+      router.replace('/(main)/(home)' as any);
+    }
   };
 
   if (step === 'religion') {
@@ -163,6 +195,12 @@ export default function WelcomeScreen() {
   }
 
   if (step === 'preferences') {
+    // Safety check: ensure question index is valid
+    if (currentQuestionIndex >= ONBOARDING_QUESTIONS.length) {
+      completeOnboarding(preferences);
+      return null;
+    }
+    
     const currentQuestion = ONBOARDING_QUESTIONS[currentQuestionIndex];
     const progress = ((currentQuestionIndex + 1) / ONBOARDING_QUESTIONS.length) * 100;
 

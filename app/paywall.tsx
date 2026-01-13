@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, ActivityIndicator, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -50,7 +50,6 @@ export default function PaywallScreen() {
     }
 
     try {
-      console.log('[Paywall] Starting purchase for:', selectedPackage.identifier);
       await purchasePackage(selectedPackage);
       
       Alert.alert(
@@ -66,7 +65,7 @@ export default function PaywallScreen() {
     } catch (error: any) {
       console.error('[Paywall] Purchase error:', error);
       if (error.userCancelled) {
-        console.log('[Paywall] User cancelled');
+        // User cancelled - no action needed
         return;
       }
       Alert.alert('Purchase Failed', error.message || 'Something went wrong. Please try again.');
@@ -75,7 +74,6 @@ export default function PaywallScreen() {
 
   const handleRestore = async () => {
     try {
-      console.log('[Paywall] Starting restore');
       const restored = await restorePurchases();
       
       if (restored) {
@@ -295,11 +293,11 @@ export default function PaywallScreen() {
             Subscription automatically renews unless auto-renew is turned off at least 24 hours before the end of the current period.
           </Text>
           <View style={styles.legalLinks}>
-            <TouchableOpacity onPress={() => console.log('Terms pressed')}>
+            <TouchableOpacity onPress={() => Linking.openURL('https://scratchandgo.app/terms')}>
               <Text style={styles.legalLink}>Terms of Service</Text>
             </TouchableOpacity>
             <Text style={styles.legalSeparator}>•</Text>
-            <TouchableOpacity onPress={() => console.log('Privacy pressed')}>
+            <TouchableOpacity onPress={() => Linking.openURL('https://scratchandgo.app/privacy')}>
               <Text style={styles.legalLink}>Privacy Policy</Text>
             </TouchableOpacity>
           </View>

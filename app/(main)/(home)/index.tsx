@@ -40,10 +40,10 @@ export default function HomeScreen() {
   const [wizardStep, setWizardStep] = useState<WizardStep>('welcome');
   const [wizardAnswers, setWizardAnswers] = useState<WizardAnswers>({});
   const [hasStartedScratch, setHasStartedScratch] = useState(false);
-  const shimmerAnim = useState(new Animated.Value(0))[0];
   const slideAnim = useState(new Animated.Value(0))[0];
   const scrollViewRef = useRef<ScrollView>(null);
   const [scrollEnabled, setScrollEnabled] = useState(true);
+  const scratchCardKeyRef = useRef<string>(`card-${Date.now()}`);
   
   const { 
     currentActivity, 
@@ -55,13 +55,45 @@ export default function HomeScreen() {
     isLimitReached, 
     remainingScratches,
     markAsNotInterested,
-    clearCurrentActivity
+    clearCurrentActivity,
+    generationError
   } = useActivity();
 
   const { location } = useLocation();
   const { isPremium } = useSubscription();
   const [isSharing, setIsSharing] = useState(false);
   const [isSavedForLater, setIsSavedForLater] = useState(false);
+
+  // Show error alert when generation fails
+  useEffect(() => {
+    if (generationError) {
+      Alert.alert(
+        'Generation Failed',
+        generationError,
+        [
+          {
+            text: 'Try Again',
+            onPress: async () => {
+              if (wizardStep === 'summary' && wizardAnswers.setting) {
+                const filters: Filters = {
+                  mode: mode || 'couples',
+                  category: wizardAnswers.category || 'Any',
+                  budget: wizardAnswers.budget || 'Any',
+                  timing: wizardAnswers.timing || 'Any',
+                  setting: wizardAnswers.setting,
+                  location: location || undefined,
+                };
+                await generateActivity(filters);
+              } else {
+                await regenerateActivity();
+              }
+            }
+          },
+          { text: 'OK', style: 'cancel' }
+        ]
+      );
+    }
+  }, [generationError, wizardStep, wizardAnswers, mode, location, generateActivity, regenerateActivity]);
 
   useEffect(() => {
     InteractionManager.runAfterInteractions(() => {
@@ -87,22 +119,6 @@ export default function HomeScreen() {
     }).start();
   }, [wizardStep, slideAnim]);
 
-  useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(shimmerAnim, {
-          toValue: 1,
-          duration: 2000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(shimmerAnim, {
-          toValue: 0,
-          duration: 2000,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-  }, [shimmerAnim]);
 
   const loadMode = async () => {
     const savedMode = await AsyncStorage.getItem(MODE_KEY);
@@ -154,7 +170,7 @@ export default function HomeScreen() {
     }
 
     if (key === 'setting' && mode) {
-      if (isLimitReached) {
+      if (isLimitReached && !isPremium) {
         Alert.alert(
           'Scratch Limit Reached',
           `You've used your 3 free scratches this month! Upgrade to premium for unlimited scratches.`,
@@ -171,8 +187,8 @@ export default function HomeScreen() {
           mode,
           category: updatedAnswers.category || 'Any',
           budget: updatedAnswers.budget || 'Any',
-          timing: updatedAnswers.timing || 'Anytime',
-          setting: updatedAnswers.setting,
+          timing: updatedAnswers.timing || 'Any',
+          setting: updatedAnswers.setting || 'either',
           location: location || undefined,
         };
         
@@ -200,6 +216,8 @@ export default function HomeScreen() {
     setWizardAnswers({});
     setWizardStep('welcome');
     setHasStartedScratch(false);
+    // Reset scratcher when restarting wizard
+    scratchCardKeyRef.current = `card-${Date.now()}`;
     clearCurrentActivity();
   }, [clearCurrentActivity]);
 
@@ -285,7 +303,7 @@ export default function HomeScreen() {
   const handleRegenerateActivity = async () => {
     if (isGenerating) return;
 
-    if (isLimitReached) {
+    if (isLimitReached && !isPremium) {
       Alert.alert(
         'Scratch Limit Reached',
         `You've used your 3 free scratches this month! Upgrade to premium for unlimited scratches.`,
@@ -299,15 +317,27 @@ export default function HomeScreen() {
 
     setIsSavedForLater(false);
     setHasStartedScratch(false);
+    // Update reset key when regenerating to reset the scratcher
+    scratchCardKeyRef.current = `card-${Date.now()}`;
     await regenerateActivity();
   };
 
   const handleScratchComplete = useCallback(() => {
-    console.log('Scratch complete - activity revealed');
+    // Validate that activity exists before allowing reveal
+    if (!currentActivity) {
+      Alert.alert(
+        'Activity Not Ready',
+        'The activity is still being generated. Please wait a moment and try again.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+    
+    // Activity revealed after scratch completion
     setScrollEnabled(true);
-  }, []);
+  }, [currentActivity]);
 
-  const handleNotInterested = () => {
+  const handleNotInterested = async () => {
     if (!currentActivity) return;
     
     Alert.alert(
@@ -322,6 +352,20 @@ export default function HomeScreen() {
             await markAsNotInterested();
             setHasStartedScratch(false);
             setScrollEnabled(true);
+            scratchCardKeyRef.current = `card-${Date.now()}`;
+            // Regenerate a new activity after marking as not interested
+            if (isLimitReached && !isPremium) {
+              Alert.alert(
+                'Scratch Limit Reached',
+                `You've used your 3 free scratches this month! Upgrade to premium for unlimited scratches.`,
+                [
+                  { text: 'Not Now', style: 'cancel' },
+                  { text: 'Upgrade', onPress: () => router.push('/paywall' as any) }
+                ]
+              );
+            } else {
+              await regenerateActivity();
+            }
           }
         }
       ]
@@ -363,10 +407,6 @@ export default function HomeScreen() {
     { label: 'Either', value: 'either' as const, description: 'Surprise me!' },
   ];
 
-  const shimmerTranslate = shimmerAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [-100, 100],
-  });
 
   const renderWizardContent = () => {
     const slideTransform = slideAnim.interpolate({
@@ -547,32 +587,12 @@ export default function HomeScreen() {
               <View style={styles.cardContainer}>
                 <ScratchCard
                   disabled={isGenerating}
-                  resetKey={currentActivity?.title || 'empty'}
+                  resetKey={scratchCardKeyRef.current}
+                  isActivityReady={!!currentActivity && !isGenerating}
                   onScratchStart={handleScratchStart}
                   onScratchComplete={handleScratchComplete}
                   onTouchStart={() => setScrollEnabled(false)}
                   onTouchEnd={() => setScrollEnabled(true)}
-                  scratchLayer={
-                    <LinearGradient
-                      colors={[Colors.primaryGradientStart, Colors.primary, Colors.primaryDark, Colors.primaryGradientEnd]}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={styles.scratchLayer}
-                    >
-                      <Animated.View
-                        style={[
-                          styles.shimmer,
-                          {
-                            transform: [{ translateX: shimmerTranslate }],
-                          },
-                        ]}
-                      />
-                      <View style={styles.scratchContent}>
-                        <Text style={styles.scratchText}>Scratch to Reveal</Text>
-                        <Text style={styles.scratchSubtext}>Your adventure awaits</Text>
-                      </View>
-                    </LinearGradient>
-                  }
                   revealContent={
                     <View style={styles.revealContent}>
                       {isGenerating || !currentActivity ? (
@@ -643,20 +663,6 @@ export default function HomeScreen() {
                             <View style={styles.actionDivider} />
                             <TouchableOpacity
                               style={styles.actionLink}
-                              onPress={handleSaveForLater}
-                              disabled={isSavedForLater || isActivitySavedForLater(currentActivity.title)}
-                              activeOpacity={0.7}
-                            >
-                              <Text style={[
-                                styles.actionLinkText,
-                                (isSavedForLater || isActivitySavedForLater(currentActivity.title)) && styles.actionLinkTextDisabled
-                              ]}>
-                                {(isSavedForLater || isActivitySavedForLater(currentActivity.title)) ? 'Saved for Later' : 'Save for Later'}
-                              </Text>
-                            </TouchableOpacity>
-                            <View style={styles.actionDivider} />
-                            <TouchableOpacity
-                              style={styles.actionLink}
                               onPress={handleNotInterested}
                               activeOpacity={0.7}
                             >
@@ -716,68 +722,72 @@ export default function HomeScreen() {
             >
               <View style={styles.modeCardImageContainer}>
                 <View style={styles.polaroidGrid}>
+                  {/* Column 1: Romantic moments - holding hands, sunset walks */}
                   <View style={[styles.polaroidColumn, styles.column1]}>
                     <View style={[styles.polaroidFrame, { transform: [{ rotate: '-12deg' }], marginTop: 5 }]}>
                       <Image 
-                        source={{ uri: 'https://images.unsplash.com/photo-1609902726285-00668009f004?w=400&q=80' }}
+                        source={{ uri: 'https://images.unsplash.com/photo-1518568814500-bf0f8d125f46?w=400&h=500&fit=crop' }}
                         style={styles.polaroidPhoto}
                         resizeMode="cover"
                       />
                     </View>
                     <View style={[styles.polaroidFrame, { transform: [{ rotate: '8deg' }], marginTop: -5 }]}>
                       <Image 
-                        source={{ uri: 'https://images.unsplash.com/photo-1511988617509-a57c8a288659?w=400&q=80' }}
+                        source={{ uri: 'https://images.unsplash.com/photo-1518621012428-6d7e0e04a2d0?w=400&h=500&fit=crop' }}
                         style={styles.polaroidPhoto}
                         resizeMode="cover"
                       />
                     </View>
                   </View>
                   
+                  {/* Column 2: Date activities - dining, coffee, picnics */}
                   <View style={[styles.polaroidColumn, styles.column2]}>
                     <View style={[styles.polaroidFrame, { transform: [{ rotate: '6deg' }], marginTop: 40 }]}>
                       <Image 
-                        source={{ uri: 'https://images.unsplash.com/photo-1606502726235-c3b91576e196?w=400&q=80' }}
+                        source={{ uri: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&h=500&fit=crop' }}
                         style={styles.polaroidPhoto}
                         resizeMode="cover"
                       />
                     </View>
                     <View style={[styles.polaroidFrame, { transform: [{ rotate: '-7deg' }], marginTop: 8 }]}>
                       <Image 
-                        source={{ uri: 'https://images.unsplash.com/photo-1543364195-bfe6e4932397?w=400&q=80' }}
+                        source={{ uri: 'https://images.unsplash.com/photo-1464207687429-7505649dae38?w=400&h=500&fit=crop' }}
                         style={styles.polaroidPhoto}
                         resizeMode="cover"
                       />
                     </View>
                   </View>
                   
+                  {/* Column 3: Intimate moments - cuddling, laughing together */}
                   <View style={[styles.polaroidColumn, styles.column3]}>
                     <View style={[styles.polaroidFrame, { transform: [{ rotate: '-9deg' }], marginTop: 18 }]}>
                       <Image 
-                        source={{ uri: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&q=80' }}
+                        source={{ uri: 'https://images.unsplash.com/photo-1522673607200-164d1b6ce486?w=400&h=500&fit=crop' }}
                         style={styles.polaroidPhoto}
                         resizeMode="cover"
                       />
                     </View>
                     <View style={[styles.polaroidFrame, { transform: [{ rotate: '5deg' }], marginTop: -3 }]}>
                       <Image 
-                        source={{ uri: 'https://images.unsplash.com/photo-1495020689067-958852a7765e?w=400&q=80' }}
+                        source={{ uri: 'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?w=400&h=500&fit=crop' }}
                         style={styles.polaroidPhoto}
                         resizeMode="cover"
                       />
                     </View>
                   </View>
                   
+                  {/* Column 4: Adventure together - traveling, exploring */}
                   <View style={[styles.polaroidColumn, styles.column4]}>
                     <View style={[styles.polaroidFrame, { transform: [{ rotate: '11deg' }], marginTop: 52 }]}>
                       <Image 
-                        source={{ uri: 'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?w=400&q=80' }}
+                        source={{ uri: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=500&fit=crop' }}
                         style={styles.polaroidPhoto}
                         resizeMode="cover"
                       />
                     </View>
                     <View style={[styles.polaroidFrame, { transform: [{ rotate: '-6deg' }], marginTop: 10 }]}>
                       <Image 
-                        source={{ uri: 'https://images.unsplash.com/photo-1529473814998-077b4fec6770?w=400&q=80' }}
+                        source={{ uri: 'https://images.unsplash.com/photo-1529258283598-8e0c02a5499a?w=400&h=500&fit=crop' }}
                         style={styles.polaroidPhoto}
                         resizeMode="cover"
                       />
@@ -796,68 +806,72 @@ export default function HomeScreen() {
             >
               <View style={styles.modeCardImageContainer}>
                 <View style={styles.polaroidGrid}>
+                  {/* Column 1: Family activities - playing, cooking together */}
                   <View style={[styles.polaroidColumn, styles.column1]}>
                     <View style={[styles.polaroidFrame, { transform: [{ rotate: '10deg' }], marginTop: 8 }]}>
                       <Image 
-                        source={{ uri: 'https://images.unsplash.com/photo-1611689037241-d8dfe4280835?w=400&q=80' }}
+                        source={{ uri: 'https://images.unsplash.com/photo-1511895426328-dc8714191300?w=400&h=500&fit=crop' }}
                         style={styles.polaroidPhoto}
                         resizeMode="cover"
                       />
                     </View>
                     <View style={[styles.polaroidFrame, { transform: [{ rotate: '-9deg' }], marginTop: -2 }]}>
                       <Image 
-                        source={{ uri: 'https://images.unsplash.com/photo-1609220136736-443140cffec6?w=400&q=80' }}
+                        source={{ uri: 'https://images.unsplash.com/photo-1609220136736-443140cffec6?w=400&h=500&fit=crop' }}
                         style={styles.polaroidPhoto}
                         resizeMode="cover"
                       />
                     </View>
                   </View>
                   
+                  {/* Column 2: Outdoor family fun - parks, beaches, nature */}
                   <View style={[styles.polaroidColumn, styles.column2]}>
                     <View style={[styles.polaroidFrame, { transform: [{ rotate: '-5deg' }], marginTop: 45 }]}>
                       <Image 
-                        source={{ uri: 'https://images.unsplash.com/photo-1567653418876-5bb0e566e1c2?w=400&q=80' }}
+                        source={{ uri: 'https://images.unsplash.com/photo-1516627145497-ae6968895b74?w=400&h=500&fit=crop' }}
                         style={styles.polaroidPhoto}
                         resizeMode="cover"
                       />
                     </View>
                     <View style={[styles.polaroidFrame, { transform: [{ rotate: '7deg' }], marginTop: 5 }]}>
                       <Image 
-                        source={{ uri: 'https://images.unsplash.com/photo-1541781774459-bb2af2f05b55?w=400&q=80' }}
+                        source={{ uri: 'https://images.unsplash.com/photo-1541781774459-bb2af2f05b55?w=400&h=500&fit=crop' }}
                         style={styles.polaroidPhoto}
                         resizeMode="cover"
                       />
                     </View>
                   </View>
                   
+                  {/* Column 3: Learning and creativity - reading, arts, games */}
                   <View style={[styles.polaroidColumn, styles.column3]}>
                     <View style={[styles.polaroidFrame, { transform: [{ rotate: '4deg' }], marginTop: 22 }]}>
                       <Image 
-                        source={{ uri: 'https://images.unsplash.com/photo-1593197497196-e08d95058347?w=400&q=80' }}
+                        source={{ uri: 'https://images.unsplash.com/photo-1593197497196-e08d95058347?w=400&h=500&fit=crop' }}
                         style={styles.polaroidPhoto}
                         resizeMode="cover"
                       />
                     </View>
                     <View style={[styles.polaroidFrame, { transform: [{ rotate: '-8deg' }], marginTop: -5 }]}>
                       <Image 
-                        source={{ uri: 'https://images.unsplash.com/photo-1543035038-f1f6155e2dc2?w=400&q=80' }}
+                        source={{ uri: 'https://images.unsplash.com/photo-1543035038-f1f6155e2dc2?w=400&h=500&fit=crop' }}
                         style={styles.polaroidPhoto}
                         resizeMode="cover"
                       />
                     </View>
                   </View>
                   
+                  {/* Column 4: Special moments - celebrations, holidays, milestones */}
                   <View style={[styles.polaroidColumn, styles.column4]}>
                     <View style={[styles.polaroidFrame, { transform: [{ rotate: '-7deg' }], marginTop: 58 }]}>
                       <Image 
-                        source={{ uri: 'https://images.unsplash.com/photo-1504052434569-70ad5836ab65?w=400&q=80' }}
+                        source={{ uri: 'https://images.unsplash.com/photo-1504052434569-70ad5836ab65?w=400&h=500&fit=crop' }}
                         style={styles.polaroidPhoto}
                         resizeMode="cover"
                       />
                     </View>
                     <View style={[styles.polaroidFrame, { transform: [{ rotate: '9deg' }], marginTop: 8 }]}>
                       <Image 
-                        source={{ uri: 'https://images.unsplash.com/photo-1560785477-d43d2b34e0df?w=400&q=80' }}
+                        source={{ uri: 'https://images.unsplash.com/photo-1560785477-d43d2b34e0df?w=400&h=500&fit=crop' }}
                         style={styles.polaroidPhoto}
                         resizeMode="cover"
                       />

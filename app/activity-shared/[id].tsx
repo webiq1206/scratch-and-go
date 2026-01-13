@@ -43,7 +43,6 @@ export default function ActivitySharedScreen() {
       const decoded = decodeURIComponent(encodedId);
       const activityData = JSON.parse(atob(decoded));
       setActivity(activityData);
-      console.log('Loaded shared activity:', activityData);
     } catch (error) {
       console.error('Error decoding activity:', error);
       Alert.alert('Error', 'Invalid activity link');

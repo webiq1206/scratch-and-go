@@ -33,6 +33,7 @@ export const [ActivityProvider, useActivity] = createContextHook(() => {
   });
   const [scratchCount, setScratchCount] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generationError, setGenerationError] = useState<string | null>(null);
 
   useEffect(() => {
     loadHistory();
@@ -303,9 +304,20 @@ export const [ActivityProvider, useActivity] = createContextHook(() => {
       console.error('Activity generation failed:', error);
       setIsGenerating(false);
       
-      if (error instanceof Error && error.message.includes('timeout')) {
-        console.log('Generation timed out');
+      let errorMessage = 'Failed to generate activity. Please try again.';
+      if (error instanceof Error) {
+        if (error.message.includes('timeout')) {
+          errorMessage = 'Request timed out. Please check your connection and try again.';
+        } else if (error.message.includes('network') || error.message.includes('fetch')) {
+          errorMessage = 'Network error. Please check your connection and try again.';
+        } else {
+          errorMessage = error.message || errorMessage;
+        }
       }
+      setGenerationError(errorMessage);
+      
+      // Clear error after 5 seconds
+      setTimeout(() => setGenerationError(null), 5000);
     },
     retry: 2,
     retryDelay: 1000,
@@ -318,6 +330,7 @@ export const [ActivityProvider, useActivity] = createContextHook(() => {
     }
 
     setIsGenerating(true);
+    setGenerationError(null); // Clear any previous errors
     setCurrentFilters(filters);
     await incrementScratchCount();
     generateActivityMutation.mutate(filters);
@@ -336,6 +349,7 @@ export const [ActivityProvider, useActivity] = createContextHook(() => {
     }
 
     setIsGenerating(true);
+    setGenerationError(null); // Clear any previous errors
     await incrementScratchCount();
     generateActivityMutation.mutate(currentFilters);
     return true;
@@ -443,6 +457,7 @@ export const [ActivityProvider, useActivity] = createContextHook(() => {
     learningProfile,
     scratchCount,
     isGenerating,
+    generationError,
     generateActivity,
     regenerateActivity,
     saveForLaterActivity,

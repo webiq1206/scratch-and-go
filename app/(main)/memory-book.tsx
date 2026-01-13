@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, TextInput, Image, Platform, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, TextInput, Platform, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -9,7 +9,8 @@ import Colors from '@/constants/colors';
 import { BorderRadius } from '@/constants/design';
 import { useMemoryBook } from '@/contexts/MemoryBookContext';
 import { SavedActivity } from '@/types/activity';
-import { Heart, Clock, DollarSign, Calendar, CheckCircle, FileText, Search, X, Filter, ArrowUpDown, CalendarPlus } from 'lucide-react-native';
+import { Heart, Clock, DollarSign, Calendar, CheckCircle, FileText, Search, X, Filter, ArrowUpDown, CalendarPlus, Image as ImageIcon } from 'lucide-react-native';
+import { Image } from 'expo-image';
 import FilterPill from '@/components/ui/FilterPill';
 import { addActivityToCalendar, calculateEndDate } from '@/utils/calendarUtils';
 
@@ -59,7 +60,11 @@ export default function MemoryBookScreen() {
       filtered = filtered.filter(activity => {
         const cost = activity.cost.toLowerCase();
         const filter = selectedCost.toLowerCase();
-        return cost === filter || (filter === 'free' && cost === 'free');
+        // Handle 'free' vs cost values like 'free', '$', '$$', '$$$'
+        if (filter === 'free') {
+          return cost === 'free';
+        }
+        return cost === filter;
       });
     }
 
@@ -121,6 +126,10 @@ export default function MemoryBookScreen() {
   };
 
   const handleActivityPress = (activity: SavedActivity) => {
+    if (!activity?.id) {
+      Alert.alert('Error', 'Invalid activity. Cannot open details.');
+      return;
+    }
     router.push(`/activity/${activity.id}` as any);
   };
 
@@ -290,7 +299,7 @@ export default function MemoryBookScreen() {
           onPress={() => setActiveTab('active')}
           activeOpacity={0.7}
         >
-          <Clock 
+          <ImageIcon 
             size={18} 
             color={activeTab === 'active' ? Colors.primary : Colors.textLight}
           />
@@ -310,7 +319,7 @@ export default function MemoryBookScreen() {
             fill={activeTab === 'completed' ? Colors.primary : 'none'}
           />
           <Text style={[styles.tabText, activeTab === 'completed' && styles.tabTextActive]}>
-            Done ({completedActivities.length})
+            Memories ({completedActivities.length})
           </Text>
         </TouchableOpacity>
       </View>
@@ -350,21 +359,134 @@ export default function MemoryBookScreen() {
             />
           }
         >
-          {displayedActivities.map((activity) => (
-            <ActivityCard
-              key={activity.id}
-              activity={activity}
-              onPress={() => handleActivityPress(activity)}
-              onMarkComplete={() => handleMarkComplete(activity.id)}
-              onMarkIncomplete={() => handleMarkIncomplete(activity.id)}
-              onDelete={() => handleDelete(activity.id, activity.title)}
-              onRatingChange={(rating) => handleRatingChange(activity.id, rating)}
-              isCompleted={activeTab === 'completed'}
-            />
-          ))}
+          {displayedActivities.map((activity) => {
+            if (activeTab === 'completed') {
+              // Show memory card for completed activities
+              return (
+                <MemoryCard
+                  key={activity.id}
+                  activity={activity}
+                  onPress={() => handleActivityPress(activity)}
+                />
+              );
+            } else {
+              // Show regular activity card for saved/active
+              return (
+                <ActivityCard
+                  key={activity.id}
+                  activity={activity}
+                  onPress={() => handleActivityPress(activity)}
+                  onMarkComplete={() => handleMarkComplete(activity.id)}
+                  onMarkIncomplete={() => handleMarkIncomplete(activity.id)}
+                  onDelete={() => handleDelete(activity.id, activity.title)}
+                  onRatingChange={(rating) => handleRatingChange(activity.id, rating)}
+                  isCompleted={false}
+                />
+              );
+            }
+          })}
         </ScrollView>
       )}
     </SafeAreaView>
+  );
+}
+
+interface MemoryCardProps {
+  activity: SavedActivity;
+  onPress: () => void;
+}
+
+function MemoryCard({ activity, onPress }: MemoryCardProps) {
+  const generateMemoryTitle = (activityTitle: string): string => {
+    // Extract emoji if present, otherwise add default
+    const hasEmoji = /[\u{1F300}-\u{1F9FF}]/u.test(activityTitle);
+    if (hasEmoji) {
+      return activityTitle;
+    }
+    // Add heart emoji for memories
+    return `💕 ${activityTitle}`;
+  };
+
+  const formatMemoryTimestamp = (timestamp?: number): string => {
+    if (!timestamp) return '';
+    const date = new Date(timestamp);
+    const options: Intl.DateTimeFormatOptions = { 
+      month: 'short', 
+      day: 'numeric', 
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    };
+    return date.toLocaleDateString('en-US', options);
+  };
+
+  const memoryTitle = generateMemoryTitle(activity.title);
+  const timestamp = activity.completedAt ? formatMemoryTimestamp(activity.completedAt) : '';
+  const hasPhotos = activity.photos && activity.photos.length > 0;
+  const hasNotes = activity.notes && activity.notes.trim().length > 0;
+  const firstPhoto = hasPhotos ? activity.photos![0] : null;
+
+  return (
+    <TouchableOpacity
+      style={styles.memoryCard}
+      onPress={onPress}
+      activeOpacity={0.8}
+    >
+      {/* Photo Thumbnail */}
+      {firstPhoto ? (
+        <Image 
+          source={{ uri: firstPhoto }} 
+          style={styles.memoryPhoto}
+          contentFit="cover"
+        />
+      ) : (
+        <View style={styles.memoryPhotoPlaceholder}>
+          <ImageIcon size={32} color={Colors.textLight} />
+        </View>
+      )}
+
+      {/* Photo Count Badge */}
+      {hasPhotos && activity.photos!.length > 1 && (
+        <View style={styles.photoCountBadge}>
+          <ImageIcon size={14} color={Colors.white} />
+          <Text style={styles.photoCountText}>{activity.photos!.length}</Text>
+        </View>
+      )}
+
+      {/* Memory Content */}
+      <View style={styles.memoryContent}>
+        <Text style={styles.memoryTitle} numberOfLines={2}>
+          {memoryTitle}
+        </Text>
+        
+        {timestamp && (
+          <View style={styles.memoryTimestamp}>
+            <Calendar size={14} color={Colors.textLight} />
+            <Text style={styles.memoryTimestampText}>{timestamp}</Text>
+          </View>
+        )}
+
+        <View style={styles.memoryMeta}>
+          <View style={styles.memoryMetaItem}>
+            <Clock size={12} color={Colors.textLight} />
+            <Text style={styles.memoryMetaText}>{activity.duration}</Text>
+          </View>
+          <View style={styles.memoryMetaItem}>
+            <DollarSign size={12} color={Colors.textLight} />
+            <Text style={styles.memoryMetaText}>
+              {activity.cost === 'free' ? 'Free' : activity.cost}
+            </Text>
+          </View>
+          {hasNotes && (
+            <View style={styles.memoryMetaItem}>
+              <FileText size={12} color={Colors.accent} />
+              <Text style={[styles.memoryMetaText, { color: Colors.accent }]}>Notes</Text>
+            </View>
+          )}
+        </View>
+      </View>
+    </TouchableOpacity>
   );
 }
 
@@ -1099,5 +1221,83 @@ const styles = StyleSheet.create({
     fontSize: Typography.sizes.caption,
     fontWeight: '400' as const,
     color: Colors.text,
+  },
+  memoryCard: {
+    backgroundColor: Colors.cardBackground,
+    borderRadius: BorderRadius.large,
+    marginBottom: Spacing.md,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  memoryPhoto: {
+    width: '100%',
+    height: 200,
+    backgroundColor: Colors.background,
+  },
+  memoryPhotoPlaceholder: {
+    width: '100%',
+    height: 200,
+    backgroundColor: Colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoCountBadge: {
+    position: 'absolute',
+    top: Spacing.md,
+    right: Spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.full,
+  },
+  photoCountText: {
+    fontSize: Typography.sizes.small,
+    color: Colors.white,
+    fontWeight: '400' as const,
+  },
+  memoryContent: {
+    padding: Spacing.lg,
+  },
+  memoryTitle: {
+    fontSize: Typography.sizes.h2,
+    fontWeight: '400' as const,
+    color: Colors.text,
+    marginBottom: Spacing.sm,
+    lineHeight: 28,
+  },
+  memoryTimestamp: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    marginBottom: Spacing.md,
+  },
+  memoryTimestampText: {
+    fontSize: Typography.sizes.caption,
+    color: Colors.textLight,
+    fontWeight: '400' as const,
+  },
+  memoryMeta: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.md,
+  },
+  memoryMetaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
+  memoryMetaText: {
+    fontSize: Typography.sizes.small,
+    color: Colors.textLight,
+    fontWeight: '400' as const,
   },
 });

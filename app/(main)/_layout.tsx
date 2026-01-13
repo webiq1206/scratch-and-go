@@ -1,8 +1,8 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Home, Heart, Settings } from 'lucide-react-native';
 import Colors from '@/constants/colors';
-import { HandDrawnHome, HandDrawnBookHeart, HandDrawnSettings } from '@/components/ui/HandDrawnIcons';
 
 export default function MainLayout() {
   const insets = useSafeAreaInsets();
@@ -14,19 +14,26 @@ export default function MainLayout() {
         tabBarInactiveTintColor: Colors.textSecondary,
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: '#000000',
-          borderTopColor: Colors.backgroundDark,
+          backgroundColor: Colors.backgroundDark,
+          borderTopColor: Colors.cardBorder,
           borderTopWidth: 1,
-          paddingBottom: insets.bottom > 0 ? insets.bottom : 8,
-          paddingTop: 8,
+          paddingBottom: insets.bottom > 0 ? insets.bottom - 4 : 10,
+          paddingTop: 10,
+          height: insets.bottom > 0 ? 60 + insets.bottom : 60,
+          elevation: 8,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 8,
         },
         tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: '500' as const,
-          marginTop: 4,
+          fontSize: 12,
+          fontWeight: '600' as const,
+          marginTop: 2,
+          letterSpacing: 0.3,
         },
         tabBarIconStyle: {
-          marginTop: 4,
+          marginTop: 0,
         },
       }}
     >
@@ -34,8 +41,12 @@ export default function MainLayout() {
         name="(home)"
         options={{
           title: 'Home',
-          tabBarIcon: ({ color, size }) => (
-            <HandDrawnHome size={size || 24} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <Home 
+              size={focused ? 26 : 24} 
+              color={color}
+              strokeWidth={focused ? 2.5 : 2}
+            />
           ),
         }}
       />
@@ -43,8 +54,13 @@ export default function MainLayout() {
         name="memory-book"
         options={{
           title: 'Memories',
-          tabBarIcon: ({ color, size }) => (
-            <HandDrawnBookHeart size={size || 24} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <Heart 
+              size={focused ? 26 : 24} 
+              color={color}
+              strokeWidth={focused ? 2.5 : 2}
+              fill={focused ? color : 'none'}
+            />
           ),
         }}
       />
@@ -52,8 +68,12 @@ export default function MainLayout() {
         name="settings"
         options={{
           title: 'Settings',
-          tabBarIcon: ({ color, size }) => (
-            <HandDrawnSettings size={size || 24} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <Settings 
+              size={focused ? 26 : 24} 
+              color={color}
+              strokeWidth={focused ? 2.5 : 2}
+            />
           ),
         }}
       />
@@ -77,6 +97,12 @@ export default function MainLayout() {
       />
       <Tabs.Screen
         name="activity"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="activity-in-progress"
         options={{
           href: null,
         }}

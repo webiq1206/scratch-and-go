@@ -27,8 +27,6 @@ function RootLayoutNav() {
   const hasNavigated = React.useRef(false);
 
   useEffect(() => {
-    console.log('[Navigation] isLoading:', isLoading, 'completedOnboarding:', preferences.completedOnboarding, 'segments:', segments);
-    
     if (isLoading) return;
     if (hasNavigated.current) return;
 
@@ -39,26 +37,20 @@ function RootLayoutNav() {
         const inWelcome = firstSegment === 'welcome';
         const inActivityShared = firstSegment === 'activity-shared';
 
-        console.log('[Navigation] inMain:', inMain, 'inWelcome:', inWelcome, 'inActivityShared:', inActivityShared);
-
         if (inActivityShared) {
-          console.log('[Navigation] Opening shared activity, skipping onboarding check');
           hasNavigated.current = true;
           await SplashScreen.hideAsync();
           return;
         }
 
         if (!preferences.completedOnboarding && !inWelcome) {
-          console.log('[Navigation] Navigating to welcome');
           router.replace('/welcome' as any);
         } else if (preferences.completedOnboarding && !inMain) {
-          console.log('[Navigation] Navigating to main');
           router.replace('/(main)/(home)' as any);
         }
 
         hasNavigated.current = true;
         await SplashScreen.hideAsync();
-        console.log('[Navigation] Splash screen hidden');
       } catch (error) {
         console.error('[Navigation] Error:', error);
         await SplashScreen.hideAsync();
@@ -96,29 +88,29 @@ export default function RootLayout() {
     <ErrorBoundary>
       <trpc.Provider client={trpcClient} queryClient={queryClient}>
         <QueryClientProvider client={queryClient}>
-        <AnalyticsProvider>
-          <AuthContext>
-            <PreferencesProvider>
-          <SubscriptionProvider>
-            <LocationProvider>
-              <ActivityProvider>
-                <MemoryBookProvider>
-                  <CollaborativeProvider>
-                    <StatsProvider>
-                      <YearRecapProvider>
-                        <GestureHandlerRootView style={{ flex: 1 }}>
-                          <RootLayoutNav />
-                        </GestureHandlerRootView>
-                      </YearRecapProvider>
-                    </StatsProvider>
-                  </CollaborativeProvider>
-                </MemoryBookProvider>
-              </ActivityProvider>
-            </LocationProvider>
-          </SubscriptionProvider>
-            </PreferencesProvider>
-          </AuthContext>
-        </AnalyticsProvider>
+          <AnalyticsProvider>
+            <AuthContext>
+              <PreferencesProvider>
+                <SubscriptionProvider>
+                  <LocationProvider>
+                    <ActivityProvider>
+                      <MemoryBookProvider>
+                        <CollaborativeProvider>
+                          <StatsProvider>
+                            <YearRecapProvider>
+                              <GestureHandlerRootView style={{ flex: 1 }}>
+                                <RootLayoutNav />
+                              </GestureHandlerRootView>
+                            </YearRecapProvider>
+                          </StatsProvider>
+                        </CollaborativeProvider>
+                      </MemoryBookProvider>
+                    </ActivityProvider>
+                  </LocationProvider>
+                </SubscriptionProvider>
+              </PreferencesProvider>
+            </AuthContext>
+          </AnalyticsProvider>
         </QueryClientProvider>
       </trpc.Provider>
     </ErrorBoundary>

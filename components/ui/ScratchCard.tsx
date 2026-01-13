@@ -1,122 +1,191 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { View, StyleSheet, PanResponder, Animated, Dimensions, Platform, Text } from 'react-native';
+import { View, StyleSheet, PanResponder, Animated, Dimensions, Platform } from 'react-native';
+import Svg, { Circle, Defs, Mask, Rect, LinearGradient, Stop } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 import { BorderRadius } from '@/constants/design';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = SCREEN_WIDTH - 48;
 const CARD_HEIGHT = 400;
-const SCRATCH_THRESHOLD = 75;
-const CELL_SIZE = 20;
-const BRUSH_RADIUS = 35;
-
-const COLS = Math.ceil(CARD_WIDTH / CELL_SIZE);
-const ROWS = Math.ceil(CARD_HEIGHT / CELL_SIZE);
-const TOTAL_CELLS = COLS * ROWS;
+const SCRATCH_THRESHOLD = 80; // Auto-reveal at 80%
+const BRUSH_RADIUS = 35; // Circular brush radius in pixels
+const INTERPOLATION_STEP = 3; // Pixels between interpolated points for smooth lines
+const GRID_SIZE = 5; // Grid size for accurate area calculation (5px grid)
 
 interface ScratchCardProps {
   onScratchStart?: () => void;
   onScratchComplete: () => void;
   onTouchStart?: () => void;
   onTouchEnd?: () => void;
-  scratchLayer: React.ReactNode;
   revealContent: React.ReactNode;
   disabled?: boolean;
   resetKey?: string | number;
+  isActivityReady?: boolean; // New prop to ensure activity is ready
 }
 
-export default function ScratchCard({ 
+export default function ScratchCard({
   onScratchStart,
   onScratchComplete,
   onTouchStart,
   onTouchEnd,
-  scratchLayer,
   revealContent,
   disabled = false,
-  resetKey
+  resetKey,
+  isActivityReady = true, // Default to true for backward compatibility
 }: ScratchCardProps) {
-  const [scratchedCells, setScratchedCells] = useState<Set<string>>(new Set());
+  const [renderTrigger, setRenderTrigger] = useState(0); // Counter to force re-renders
   const [isRevealed, setIsRevealed] = useState(false);
   const opacity = useRef(new Animated.Value(1)).current;
   const isRevealedRef = useRef(false);
   const disabledRef = useRef(disabled);
   const hasStartedRef = useRef(false);
-  const scratchedCellsRef = useRef<Set<string>>(new Set());
   const lastHapticTime = useRef(0);
   const isMouseDown = useRef(false);
+  const lastPoint = useRef<{ x: number; y: number } | null>(null);
+  const scratchCirclesRef = useRef<Array<{ x: number; y: number; r: number; id: number }>>([]);
+  const circleIdCounter = useRef(0);
+  // Pixel-based tracking for accurate area calculation
+  const scratchedGridRef = useRef<Set<string>>(new Set());
   
+  // Calculate total grid cells
+  const totalGridCells = Math.ceil(CARD_WIDTH / GRID_SIZE) * Math.ceil(CARD_HEIGHT / GRID_SIZE);
+
   disabledRef.current = disabled;
   isRevealedRef.current = isRevealed;
 
+  // Reset when resetKey changes (NOT when opacity changes!)
   useEffect(() => {
-    setScratchedCells(new Set());
-    scratchedCellsRef.current = new Set();
+    scratchCirclesRef.current = [];
+    scratchedGridRef.current = new Set();
+    circleIdCounter.current = 0;
+    setRenderTrigger(0);
     setIsRevealed(false);
     isRevealedRef.current = false;
     hasStartedRef.current = false;
+    lastPoint.current = null;
     opacity.setValue(1);
-  }, [resetKey, opacity]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resetKey]); // Only reset when resetKey changes, not opacity!
 
+  // Calculate scratched percentage using accurate pixel-based method
+  const calculateScratchedPercentage = useCallback(() => {
+    const scratchedCount = scratchedGridRef.current.size;
+    const percentage = (scratchedCount / totalGridCells) * 100;
+    return percentage;
+  }, [totalGridCells]);
+
+  // Check threshold and auto-reveal
   const checkAndReveal = useCallback(() => {
-    const percentage = (scratchedCellsRef.current.size / TOTAL_CELLS) * 100;
-    console.log(`Scratch: ${percentage.toFixed(1)}% (${scratchedCellsRef.current.size}/${TOTAL_CELLS})`);
+    if (isRevealedRef.current) return;
+    
+    // Don't reveal if activity is not ready
+    if (!isActivityReady) {
+      return;
+    }
+
+    const percentage = calculateScratchedPercentage();
 
     if (percentage >= SCRATCH_THRESHOLD && !isRevealedRef.current) {
-      console.log('75% threshold reached! Auto-revealing...');
       setIsRevealed(true);
       isRevealedRef.current = true;
-      
+
       if (Platform.OS !== 'web') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
-      
+
       Animated.timing(opacity, {
         toValue: 0,
-        duration: 300,
+        duration: 200,
         useNativeDriver: true,
       }).start(() => {
         onScratchComplete();
       });
     }
-  }, [opacity, onScratchComplete]);
+  }, [opacity, onScratchComplete, calculateScratchedPercentage, isActivityReady]);
 
-  const scratchAt = useCallback((x: number, y: number) => {
-    if (isRevealedRef.current || disabledRef.current) return;
+  // Add scratched grid cells for accurate area calculation
+  const addScratchedGridCells = useCallback((x: number, y: number) => {
+    // Clamp coordinates to card bounds
+    const clampedX = Math.max(0, Math.min(CARD_WIDTH, x));
+    const clampedY = Math.max(0, Math.min(CARD_HEIGHT, y));
 
-    const centerCol = Math.floor(x / CELL_SIZE);
-    const centerRow = Math.floor(y / CELL_SIZE);
-    const cellRadius = Math.ceil(BRUSH_RADIUS / CELL_SIZE);
-    
-    const newCells: string[] = [];
+    // Calculate grid bounds for the circle
+    const minGridX = Math.max(0, Math.floor((clampedX - BRUSH_RADIUS) / GRID_SIZE));
+    const maxGridX = Math.min(Math.ceil(CARD_WIDTH / GRID_SIZE) - 1, Math.ceil((clampedX + BRUSH_RADIUS) / GRID_SIZE));
+    const minGridY = Math.max(0, Math.floor((clampedY - BRUSH_RADIUS) / GRID_SIZE));
+    const maxGridY = Math.min(Math.ceil(CARD_HEIGHT / GRID_SIZE) - 1, Math.ceil((clampedY + BRUSH_RADIUS) / GRID_SIZE));
 
-    for (let dr = -cellRadius; dr <= cellRadius; dr++) {
-      for (let dc = -cellRadius; dc <= cellRadius; dc++) {
-        const row = centerRow + dr;
-        const col = centerCol + dc;
+    // Check each grid cell within the circle
+    for (let gridY = minGridY; gridY <= maxGridY; gridY++) {
+      for (let gridX = minGridX; gridX <= maxGridX; gridX++) {
+        // Calculate center of grid cell
+        const cellCenterX = gridX * GRID_SIZE + GRID_SIZE / 2;
+        const cellCenterY = gridY * GRID_SIZE + GRID_SIZE / 2;
         
-        if (row >= 0 && row < ROWS && col >= 0 && col < COLS) {
-          const cellCenterX = col * CELL_SIZE + CELL_SIZE / 2;
-          const cellCenterY = row * CELL_SIZE + CELL_SIZE / 2;
-          const distance = Math.sqrt(Math.pow(x - cellCenterX, 2) + Math.pow(y - cellCenterY, 2));
-          
-          const key = `${row}-${col}`;
-          if (distance <= BRUSH_RADIUS && !scratchedCellsRef.current.has(key)) {
-            scratchedCellsRef.current.add(key);
-            newCells.push(key);
+        // Check if cell center is within circle radius
+        const distance = Math.sqrt(
+          Math.pow(clampedX - cellCenterX, 2) + 
+          Math.pow(clampedY - cellCenterY, 2)
+        );
+        
+        if (distance <= BRUSH_RADIUS) {
+          const gridKey = `${gridX},${gridY}`;
+          if (!scratchedGridRef.current.has(gridKey)) {
+            scratchedGridRef.current.add(gridKey);
           }
         }
       }
     }
+  }, []);
 
-    if (newCells.length > 0) {
-      setScratchedCells(new Set(scratchedCellsRef.current));
-      checkAndReveal();
+  // Add scratch point and update circles
+  const addScratchPoint = useCallback((x: number, y: number) => {
+    if (isRevealedRef.current || disabledRef.current) return;
+
+    // Clamp to card bounds
+    const clampedX = Math.max(BRUSH_RADIUS, Math.min(CARD_WIDTH - BRUSH_RADIUS, x));
+    const clampedY = Math.max(BRUSH_RADIUS, Math.min(CARD_HEIGHT - BRUSH_RADIUS, y));
+
+    // Add circle with unique ID
+    const newCircle = { 
+      x: clampedX, 
+      y: clampedY, 
+      r: BRUSH_RADIUS,
+      id: circleIdCounter.current++
+    };
+    scratchCirclesRef.current.push(newCircle);
+    
+    // Add to grid for accurate area calculation
+    addScratchedGridCells(clampedX, clampedY);
+    
+    // Don't limit circles - keep ALL of them for complete scratch persistence
+    // Update render trigger periodically to force re-renders (every 3 circles)
+    // This triggers React to re-render and show new circles from the ref
+    if (scratchCirclesRef.current.length % 3 === 0 || scratchCirclesRef.current.length === 1) {
+      setRenderTrigger(prev => prev + 1);
     }
-  }, [checkAndReveal]);
+    
+    // Check for auto-reveal (throttled to avoid excessive checks)
+    checkAndReveal();
+  }, [addScratchedGridCells, checkAndReveal]);
 
+  // Interpolate between two points for smooth continuous scratching
+  const scratchBetween = useCallback((x1: number, y1: number, x2: number, y2: number) => {
+    const distance = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+    const steps = Math.max(1, Math.ceil(distance / INTERPOLATION_STEP));
+
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      const x = x1 + (x2 - x1) * t;
+      const y = y1 + (y2 - y1) * t;
+      addScratchPoint(x, y);
+    }
+  }, [addScratchPoint]);
+
+  // Haptic feedback with throttling
   const triggerHaptic = useCallback(() => {
     if (Platform.OS === 'web') return;
-    
+
     const now = Date.now();
     if (now - lastHapticTime.current > 50) {
       lastHapticTime.current = now;
@@ -126,28 +195,43 @@ export default function ScratchCard({
 
   const handleScratchStart = useCallback((x: number, y: number) => {
     if (disabledRef.current || isRevealedRef.current) return;
-    
+
     if (onTouchStart) onTouchStart();
-    
+
     if (!hasStartedRef.current) {
       hasStartedRef.current = true;
       if (onScratchStart) onScratchStart();
     }
-    
-    scratchAt(x, y);
+
+    lastPoint.current = { x, y };
+    addScratchPoint(x, y);
     triggerHaptic();
-  }, [onTouchStart, onScratchStart, scratchAt, triggerHaptic]);
+  }, [onTouchStart, onScratchStart, addScratchPoint, triggerHaptic]);
 
   const handleScratchMove = useCallback((x: number, y: number) => {
     if (disabledRef.current || isRevealedRef.current) return;
-    scratchAt(x, y);
+
+    if (lastPoint.current) {
+      // Interpolate between last point and current for smooth continuous scratching
+      scratchBetween(lastPoint.current.x, lastPoint.current.y, x, y);
+    } else {
+      addScratchPoint(x, y);
+    }
+
+    lastPoint.current = { x, y };
     triggerHaptic();
-  }, [scratchAt, triggerHaptic]);
+  }, [addScratchPoint, scratchBetween, triggerHaptic]);
 
   const handleScratchEnd = useCallback(() => {
+    lastPoint.current = null;
+    
+    // Force final re-render to ensure ALL circles are shown
+    setRenderTrigger(prev => prev + 1);
+    
     if (onTouchEnd) onTouchEnd();
   }, [onTouchEnd]);
 
+  // PanResponder for native platforms
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => !disabledRef.current && !isRevealedRef.current,
@@ -166,18 +250,22 @@ export default function ScratchCard({
     })
   ).current;
 
+  // Web event handlers
   const getLocationFromEvent = useCallback((e: any, target: HTMLElement) => {
     const rect = target.getBoundingClientRect();
     let clientX: number, clientY: number;
-    
+
     if (e.touches && e.touches.length > 0) {
       clientX = e.touches[0].clientX;
       clientY = e.touches[0].clientY;
+    } else if (e.changedTouches && e.changedTouches.length > 0) {
+      clientX = e.changedTouches[0].clientX;
+      clientY = e.changedTouches[0].clientY;
     } else {
       clientX = e.clientX;
       clientY = e.clientY;
     }
-    
+
     return {
       x: clientX - rect.left,
       y: clientY - rect.top
@@ -226,48 +314,6 @@ export default function ScratchCard({
     },
   } : {};
 
-  const getCellColor = useCallback((row: number) => {
-    const yPercent = row / ROWS;
-    const r = Math.round(255 - (255 - 255) * yPercent);
-    const g = Math.round(107 - (107 - 64) * yPercent);
-    const b = Math.round(138 - (138 - 129) * yPercent);
-    return `rgb(${r}, ${g}, ${b})`;
-  }, []);
-
-  const renderScratchGrid = useCallback(() => {
-    const rows: React.ReactNode[] = [];
-    
-    for (let row = 0; row < ROWS; row++) {
-      const rowCells: React.ReactNode[] = [];
-      const rowColor = getCellColor(row);
-      
-      for (let col = 0; col < COLS; col++) {
-        const key = `${row}-${col}`;
-        const isScratched = scratchedCells.has(key);
-        
-        rowCells.push(
-          <View
-            key={key}
-            style={[
-              styles.cell,
-              {
-                backgroundColor: isScratched ? 'transparent' : rowColor,
-              },
-            ]}
-          />
-        );
-      }
-      
-      rows.push(
-        <View key={`row-${row}`} style={styles.row}>
-          {rowCells}
-        </View>
-      );
-    }
-    
-    return rows;
-  }, [scratchedCells, getCellColor]);
-
   return (
     <View style={styles.container}>
       <View style={styles.revealLayer}>
@@ -275,22 +321,50 @@ export default function ScratchCard({
       </View>
 
       {!isRevealed && (
-        <Animated.View 
+        <Animated.View
           style={[styles.scratchLayer, { opacity }]}
           {...(Platform.OS !== 'web' ? panResponder.panHandlers : {})}
           {...(Platform.OS === 'web' ? webHandlers : {})}
         >
-          <View style={styles.cellsContainer} pointerEvents="none">
-            {renderScratchGrid()}
-          </View>
-          
-          <View style={styles.textOverlay} pointerEvents="none">
-            <Text style={styles.scratchTitle}>Scratch to Reveal</Text>
-            <Text style={styles.scratchSubtitle}>Your adventure awaits</Text>
-          </View>
+          <Svg
+            width={CARD_WIDTH}
+            height={CARD_HEIGHT}
+            style={StyleSheet.absoluteFill}
+            pointerEvents="none"
+          >
+            <Defs>
+              <LinearGradient id="scratchGradient" x1="0" y1="0" x2="0" y2={CARD_HEIGHT}>
+                <Stop offset="0" stopColor="#FF6B9D" stopOpacity="1" />
+                <Stop offset="0.5" stopColor="#FF4A8A" stopOpacity="1" />
+                <Stop offset="1" stopColor="#FFB3D9" stopOpacity="1" />
+              </LinearGradient>
+              <Mask id="scratchMask">
+                {/* White background - everything visible */}
+                <Rect width={CARD_WIDTH} height={CARD_HEIGHT} fill="white" />
+                {/* Black circles - scratched areas (hidden) */}
+                {/* Render directly from ref to ensure persistence */}
+                {scratchCirclesRef.current.map((circle) => (
+                  <Circle
+                    key={circle.id}
+                    cx={circle.x}
+                    cy={circle.y}
+                    r={circle.r}
+                    fill="black"
+                  />
+                ))}
+              </Mask>
+            </Defs>
+            {/* Scratch layer with gradient */}
+            <Rect
+              width={CARD_WIDTH}
+              height={CARD_HEIGHT}
+              fill="url(#scratchGradient)"
+              mask="url(#scratchMask)"
+            />
+          </Svg>
         </Animated.View>
       )}
-      
+
       {disabled && <View style={styles.disabledOverlay} />}
     </View>
   );
@@ -317,39 +391,6 @@ const styles = StyleSheet.create({
     touchAction: 'none',
     userSelect: 'none',
   } as any,
-  cellsContainer: {
-    ...StyleSheet.absoluteFillObject,
-    flexDirection: 'column',
-  },
-  row: {
-    flexDirection: 'row',
-    height: CELL_SIZE,
-  },
-  cell: {
-    width: CELL_SIZE,
-    height: CELL_SIZE,
-  },
-  textOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  scratchTitle: {
-    fontSize: 28,
-    fontWeight: '700' as const,
-    color: '#FFFFFF',
-    textShadowColor: 'rgba(0,0,0,0.3)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
-  },
-  scratchSubtitle: {
-    fontSize: 16,
-    color: 'rgba(255,255,255,0.9)',
-    marginTop: 8,
-    textShadowColor: 'rgba(0,0,0,0.2)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
-  },
   disabledOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'transparent',

@@ -6,23 +6,38 @@ import type { AppRouter } from "@/backend/trpc/app-router";
 
 export const trpc = createTRPCReact<AppRouter>();
 
-const getBaseUrl = () => {
+const getBaseUrl = (): string | null => {
   const url = process.env.EXPO_PUBLIC_RORK_API_BASE_URL;
 
   if (!url) {
-    throw new Error(
-      "Rork did not set EXPO_PUBLIC_RORK_API_BASE_URL, please use support",
+    // Return null instead of throwing - allows app to function without TRPC
+    console.warn(
+      "EXPO_PUBLIC_RORK_API_BASE_URL not set. TRPC features will be disabled."
     );
+    return null;
   }
 
   return url;
 };
 
-export const trpcClient = trpc.createClient({
-  links: [
-    httpLink({
-      url: `${getBaseUrl()}/api/trpc`,
-      transformer: superjson,
-    }),
-  ],
-});
+// Create a safe client that handles missing base URL
+const baseUrl = getBaseUrl();
+
+export const trpcClient = baseUrl
+  ? trpc.createClient({
+      links: [
+        httpLink({
+          url: `${baseUrl}/api/trpc`,
+          transformer: superjson,
+        }),
+      ],
+    })
+  : // Create a dummy client that won't crash the app
+    trpc.createClient({
+      links: [
+        httpLink({
+          url: "http://localhost:3000/api/trpc", // Dummy URL - won't be used
+          transformer: superjson,
+        }),
+      ],
+    });
