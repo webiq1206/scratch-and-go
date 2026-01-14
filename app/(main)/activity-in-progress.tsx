@@ -11,7 +11,7 @@ import Colors from '@/constants/colors';
 import Typography from '@/constants/typography';
 import Spacing from '@/constants/spacing';
 import { BorderRadius } from '@/constants/design';
-import { Clock, DollarSign, X, MapPin, Sparkles, Edit3, FileText, Camera, Image as ImageIcon, Trash2, CheckCircle, Heart } from 'lucide-react-native';
+import { Clock, DollarSign, X, MapPin, Sparkles, Edit3, FileText, Camera, Image as ImageIcon, Trash2, CheckCircle, Heart, Users, Save, CloudSun } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 export default function ActivityInProgressScreen() {
@@ -320,7 +320,7 @@ export default function ActivityInProgressScreen() {
                 setNotesText(savedActivity.notes || '');
               }
               Alert.alert(
-                '🎉 Completed!',
+                'Completed!',
                 mode === 'couples'
                   ? 'Great date! Save it to your Memory Book to keep this memory forever.'
                   : 'Great activity! Save it to your Memory Book to keep this memory forever.',
@@ -338,7 +338,7 @@ export default function ActivityInProgressScreen() {
   };
 
   const generateMemoryTitle = (activityTitle: string, mode: string): string => {
-    // Create a cute, personalized memory title
+    // Create a personalized memory title
     const date = new Date();
     const timeOfDay = date.getHours();
     let timeGreeting = '';
@@ -348,22 +348,11 @@ export default function ActivityInProgressScreen() {
     else if (timeOfDay < 21) timeGreeting = 'Evening';
     else timeGreeting = 'Night';
 
-    // Use activity title as base, add personal touch
+    // Use activity title as base
     const baseTitle = activityTitle;
     
-    // Add emoji based on mode
-    const emoji = mode === 'couples' ? '💕' : '👨‍👩‍👧‍👦';
-    
-    // Create cute title variations
-    const titles = [
-      `${emoji} ${baseTitle}`,
-      `${baseTitle} ${timeGreeting}`,
-      `Our ${baseTitle}`,
-      `${baseTitle} Memory`,
-    ];
-    
-    // Return a simple, cute version
-    return `${emoji} ${baseTitle}`;
+    // Return a clean title
+    return `${baseTitle} - ${timeGreeting}`;
   };
 
   const formatTimestamp = (timestamp: number): { date: string; time: string; full: string } => {
@@ -438,7 +427,7 @@ export default function ActivityInProgressScreen() {
     // Memory entry created successfully
 
     Alert.alert(
-      '💕 Saved to Memory Book!',
+      'Saved to Memory Book!',
       `"${memoryTitle}"\n\n${timestamp.full}\n\nThis memory has been saved with all your photos and notes. You can view it anytime in your Memory Book.`,
       [
         {
@@ -519,8 +508,12 @@ export default function ActivityInProgressScreen() {
         >
           {/* Activity Header Card */}
           <View style={styles.headerCard}>
-            <View style={styles.emojiContainer}>
-              <Text style={styles.emoji}>{mode === 'couples' ? '💕' : '👨‍👩‍👧‍👦'}</Text>
+            <View style={styles.iconContainer}>
+              {mode === 'couples' ? (
+                <Heart size={40} color={Colors.primary} />
+              ) : (
+                <Users size={40} color={Colors.primary} />
+              )}
             </View>
             <Text style={styles.activityTitle}>{activity.title}</Text>
             <Text style={styles.activityCategory}>{activity.category}</Text>
@@ -576,9 +569,9 @@ export default function ActivityInProgressScreen() {
               </Text>
               {location.weather && (
                 <View style={styles.weatherInfo}>
-                  <Text style={styles.weatherIcon}>{location.weather.icon}</Text>
+                  <CloudSun size={18} color={Colors.textLight} />
                   <Text style={styles.weatherText}>
-                    {location.weather.temp}°F • {location.weather.condition}
+                    {location.weather.temp}°F - {location.weather.condition}
                   </Text>
                 </View>
               )}
@@ -649,9 +642,10 @@ export default function ActivityInProgressScreen() {
             )}
 
             {isEditingNotes && (
-              <Text style={styles.autoSaveHint}>
-                💾 Auto-saving as you type...
-              </Text>
+              <View style={styles.autoSaveHint}>
+                <Save size={12} color={Colors.textSecondary} />
+                <Text style={styles.autoSaveText}>Auto-saving as you type...</Text>
+              </View>
             )}
           </View>
 
@@ -835,7 +829,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.cardBorder,
   },
-  emojiContainer: {
+  iconContainer: {
     width: 80,
     height: 80,
     borderRadius: 40,
@@ -843,9 +837,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: Spacing.md,
-  },
-  emoji: {
-    fontSize: 48,
   },
   activityTitle: {
     fontSize: Typography.sizes.h1,
@@ -951,9 +942,6 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: Colors.cardBorder,
   },
-  weatherIcon: {
-    fontSize: 20,
-  },
   weatherText: {
     fontSize: Typography.sizes.caption,
     color: Colors.textLight,
@@ -1029,10 +1017,15 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   autoSaveHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.xs,
+    marginTop: Spacing.sm,
+  },
+  autoSaveText: {
     fontSize: Typography.sizes.small,
     color: Colors.textSecondary,
-    marginTop: Spacing.sm,
-    textAlign: 'center',
   },
   photosHeader: {
     flexDirection: 'row',

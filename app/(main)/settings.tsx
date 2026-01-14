@@ -4,7 +4,24 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Settings as SettingsIcon, User, Heart, Crown, RefreshCw, Edit, Shield, FileText, LogOut } from 'lucide-react-native';
+import { 
+  Crown, 
+  Heart, 
+  Users, 
+  Settings as SettingsIcon, 
+  RefreshCw, 
+  Shield, 
+  FileText, 
+  LogOut, 
+  ChevronRight,
+  Wine,
+  Church,
+  Baby,
+  TreePine,
+  Palette,
+  Music,
+  Sparkles
+} from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import Typography from '@/constants/typography';
 import Spacing from '@/constants/spacing';
@@ -25,6 +42,7 @@ export default function SettingsScreen() {
   const { user, logout, isAuthenticated } = useAuth();
   const [mode, setMode] = useState<Mode>('couples');
   const [showReligionPicker, setShowReligionPicker] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
 
   useEffect(() => {
     loadMode();
@@ -38,7 +56,6 @@ export default function SettingsScreen() {
       }
     } catch (error) {
       console.error('Error loading mode:', error);
-      // Continue with default mode if loading fails
     }
   };
 
@@ -46,7 +63,6 @@ export default function SettingsScreen() {
     try {
       await AsyncStorage.setItem(MODE_KEY, newMode);
       setMode(newMode);
-      Alert.alert('Mode Updated', `Switched to ${newMode === 'couples' ? 'Couples' : 'Family'} mode`);
     } catch (error) {
       console.error('Error saving mode:', error);
       Alert.alert('Error', 'Failed to save mode. Please try again.');
@@ -80,16 +96,16 @@ export default function SettingsScreen() {
 
   const handleManageSubscription = () => {
     const message = Platform.select({
-      ios: 'To manage your subscription, open the App Store, tap your profile icon, then tap Subscriptions.',
-      android: 'To manage your subscription, open the Google Play Store, tap Menu → Subscriptions.',
+      ios: 'To manage your subscription, open the Settings app, tap your Apple ID, then Subscriptions.',
+      android: 'To manage your subscription, open the Google Play Store, tap Menu, then Subscriptions.',
       default: 'Subscription management is available through the app store on mobile devices.',
     });
     
     Alert.alert('Manage Subscription', message, [
       { text: 'OK', style: 'default' },
       Platform.OS === 'ios' ? {
-        text: 'Open App Store',
-        onPress: () => Linking.openURL('itms-apps://apps.apple.com/account/subscriptions'),
+        text: 'Open Settings',
+        onPress: () => Linking.openURL('App-Prefs:root=STORE'),
       } : Platform.OS === 'android' ? {
         text: 'Open Play Store',
         onPress: () => Linking.openURL('https://play.google.com/store/account/subscriptions'),
@@ -98,30 +114,27 @@ export default function SettingsScreen() {
   };
 
   const handleRestorePurchases = async () => {
+    if (isRestoring) return;
+    
+    setIsRestoring(true);
     try {
-      Alert.alert(
-        'Restore Purchases',
-        'Checking for previous purchases...',
-        [{ text: 'Cancel', style: 'cancel' }]
-      );
-      
       const restored = await restorePurchases();
-      
       if (restored) {
         Alert.alert('Success', 'Your purchases have been restored!');
       } else {
         Alert.alert('No Purchases Found', 'We couldn\'t find any previous purchases to restore.');
       }
     } catch (error) {
-      console.error('Error restoring purchases:', error);
       Alert.alert('Error', 'Failed to restore purchases. Please try again.');
+    } finally {
+      setIsRestoring(false);
     }
   };
 
   const handleResetPreferences = () => {
     Alert.alert(
       'Reset Preferences',
-      'This will clear your content preferences and you can set them up again. Continue?',
+      'This will reset all content preferences to defaults. Continue?',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -137,7 +150,7 @@ export default function SettingsScreen() {
               includeLiveEntertainment: true,
               religion: undefined,
             });
-            Alert.alert('Preferences Reset', 'Your content preferences have been reset to defaults.');
+            Alert.alert('Done', 'Preferences have been reset.');
           },
         },
       ]
@@ -147,7 +160,7 @@ export default function SettingsScreen() {
   const handleLogout = () => {
     Alert.alert(
       'Sign Out',
-      'Are you sure you want to sign out? You can sign back in anytime.',
+      'Are you sure you want to sign out?',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -156,10 +169,8 @@ export default function SettingsScreen() {
           onPress: async () => {
             try {
               await logout();
-              // Navigate to welcome screen after logout
               router.replace('/welcome' as any);
             } catch (error) {
-              console.error('Error logging out:', error);
               Alert.alert('Error', 'Failed to sign out. Please try again.');
             }
           },
@@ -171,36 +182,22 @@ export default function SettingsScreen() {
   const formatSubscriptionEndDate = () => {
     const endDate = getSubscriptionEndDate();
     if (!endDate) return null;
-    
-    const options: Intl.DateTimeFormatOptions = { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
-    };
-    return endDate.toLocaleDateString(undefined, options);
+    return endDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
   const getSubscriptionStatusText = () => {
     if (isTrial) {
       const daysRemaining = getTrialDaysRemaining();
-      return `${daysRemaining} day${daysRemaining === 1 ? '' : 's'} remaining in trial`;
+      return `${daysRemaining} day${daysRemaining === 1 ? '' : 's'} left in trial`;
     }
     if (isPremium) {
       const endDate = formatSubscriptionEndDate();
-      if (endDate) {
-        return `Active • Renews ${endDate}`;
-      }
-      return 'Active';
+      return endDate ? `Renews ${endDate}` : 'Active';
     }
     return '3 free scratches per month';
   };
 
-  const getSubscriptionTierLabel = () => {
-    if (isTrial) return 'Premium Trial';
-    if (isPremium) return 'Premium';
-    return 'Free';
-  };
-
+  // Religion Picker Screen
   if (showReligionPicker) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
@@ -209,7 +206,7 @@ export default function SettingsScreen() {
           title: 'Select Religion',
           headerStyle: { backgroundColor: Colors.background },
           headerTintColor: Colors.text,
-          headerTitleStyle: { fontWeight: '400' as const },
+          headerTitleStyle: { fontWeight: '500' as const },
         }} />
         <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
           <Text style={styles.pickerTitle}>What is your religion?</Text>
@@ -234,6 +231,9 @@ export default function SettingsScreen() {
                 ]}>
                   {religion.label}
                 </Text>
+                {preferences.religion === religion.id && (
+                  <View style={styles.religionCheck} />
+                )}
               </TouchableOpacity>
             ))}
           </View>
@@ -249,44 +249,39 @@ export default function SettingsScreen() {
         title: 'Settings',
         headerStyle: { backgroundColor: Colors.background },
         headerTintColor: Colors.text,
-        headerTitleStyle: { fontWeight: '400' as const },
+        headerTitleStyle: { fontWeight: '500' as const },
       }} />
       
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        {/* Subscription Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Crown size={20} color={Colors.primary} />
+            <Crown size={18} color={Colors.primary} />
             <Text style={styles.sectionTitle}>Subscription</Text>
           </View>
           
           <View style={styles.subscriptionCard}>
-            <View style={styles.subscriptionHeader}>
-              <View style={styles.subscriptionInfo}>
-                <Text style={styles.subscriptionTier}>{getSubscriptionTierLabel()}</Text>
-                {(isPremium || isTrial) && (
-                  <View style={styles.premiumBadge}>
-                    <LinearGradient
-                      colors={[Colors.primaryGradientStart, Colors.primaryGradientEnd]}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      style={styles.premiumBadgeGradient}
-                    >
-                      <Crown size={12} color="#1A1A1A" />
-                      <Text style={styles.premiumBadgeText}>PREMIUM</Text>
-                    </LinearGradient>
-                  </View>
-                )}
+            <View style={styles.subscriptionRow}>
+              <View>
+                <Text style={styles.subscriptionTier}>
+                  {isTrial ? 'Premium Trial' : isPremium ? 'Premium' : 'Free'}
+                </Text>
+                <Text style={styles.subscriptionStatus}>{getSubscriptionStatusText()}</Text>
               </View>
+              {(isPremium || isTrial) && (
+                <View style={styles.premiumBadge}>
+                  <Crown size={12} color={Colors.backgroundDark} />
+                  <Text style={styles.premiumBadgeText}>PRO</Text>
+                </View>
+              )}
             </View>
-            
-            <Text style={styles.subscriptionStatus}>{getSubscriptionStatusText()}</Text>
             
             <View style={styles.subscriptionActions}>
               {!isPremium && !isTrial ? (
                 <TouchableOpacity
                   style={styles.upgradeButton}
                   onPress={handleUpgradeToPremium}
-                  activeOpacity={0.7}
+                  activeOpacity={0.8}
                 >
                   <LinearGradient
                     colors={[Colors.primaryGradientStart, Colors.primaryGradientEnd]}
@@ -294,7 +289,7 @@ export default function SettingsScreen() {
                     end={{ x: 1, y: 0 }}
                     style={styles.upgradeButtonGradient}
                   >
-                    <Crown size={18} color="#1A1A1A" />
+                    <Sparkles size={16} color={Colors.backgroundDark} />
                     <Text style={styles.upgradeButtonText}>Upgrade to Premium</Text>
                   </LinearGradient>
                 </TouchableOpacity>
@@ -311,25 +306,24 @@ export default function SettingsScreen() {
               <TouchableOpacity
                 style={styles.restoreButton}
                 onPress={handleRestorePurchases}
+                disabled={isRestoring}
                 activeOpacity={0.7}
               >
-                <RefreshCw size={16} color={Colors.textLight} />
-                <Text style={styles.restoreButtonText}>Restore Purchases</Text>
+                <RefreshCw size={14} color={Colors.textMuted} />
+                <Text style={styles.restoreButtonText}>
+                  {isRestoring ? 'Restoring...' : 'Restore Purchases'}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
 
-        <View style={styles.divider} />
-
+        {/* Mode Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <User size={20} color={Colors.primary} />
+            <SettingsIcon size={18} color={Colors.primary} />
             <Text style={styles.sectionTitle}>Mode</Text>
           </View>
-          <Text style={styles.sectionDescription}>
-            Choose between date night ideas or family activities
-          </Text>
           
           <View style={styles.modeContainer}>
             <TouchableOpacity
@@ -337,22 +331,10 @@ export default function SettingsScreen() {
               onPress={() => handleModeChange('couples')}
               activeOpacity={0.7}
             >
-              {mode === 'couples' ? (
-                <LinearGradient
-                  colors={[Colors.primaryGradientStart, Colors.primaryGradientEnd]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.modeGradient}
-                >
-                  <Heart size={20} color="#1A1A1A" />
-                  <Text style={styles.modeButtonTextActive}>Couples</Text>
-                </LinearGradient>
-              ) : (
-                <>
-                  <Heart size={20} color={Colors.textLight} />
-                  <Text style={styles.modeButtonText}>Couples</Text>
-                </>
-              )}
+              <Heart size={20} color={mode === 'couples' ? Colors.primary : Colors.textLight} />
+              <Text style={[styles.modeButtonText, mode === 'couples' && styles.modeButtonTextActive]}>
+                Couples
+              </Text>
             </TouchableOpacity>
             
             <TouchableOpacity
@@ -360,231 +342,176 @@ export default function SettingsScreen() {
               onPress={() => handleModeChange('family')}
               activeOpacity={0.7}
             >
-              {mode === 'family' ? (
-                <LinearGradient
-                  colors={[Colors.primaryGradientStart, Colors.primaryGradientEnd]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.modeGradient}
-                >
-                  <User size={20} color="#1A1A1A" />
-                  <Text style={styles.modeButtonTextActive}>Family</Text>
-                </LinearGradient>
-              ) : (
-                <>
-                  <User size={20} color={Colors.textLight} />
-                  <Text style={styles.modeButtonText}>Family</Text>
-                </>
-              )}
+              <Users size={20} color={mode === 'family' ? Colors.primary : Colors.textLight} />
+              <Text style={[styles.modeButtonText, mode === 'family' && styles.modeButtonTextActive]}>
+                Family
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        <View style={styles.divider} />
-
+        {/* Content Preferences Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <SettingsIcon size={20} color={Colors.primary} />
+            <Sparkles size={18} color={Colors.primary} />
             <Text style={styles.sectionTitle}>Content Preferences</Text>
           </View>
-          <Text style={styles.sectionDescription}>
-            Customize what types of activities you&apos;d like to see
-          </Text>
 
           <View style={styles.preferencesList}>
-            <View style={styles.preferenceItem}>
-              <View style={styles.preferenceInfo}>
-                <Text style={styles.preferenceTitle}>Alcohol Activities</Text>
-                <Text style={styles.preferenceDescription}>
-                  Bars, breweries, wine tastings
-                </Text>
-              </View>
-              <Switch
-                value={preferences.includeAlcohol}
-                onValueChange={(value) => handleToggle('includeAlcohol', value)}
-                trackColor={{ false: '#3A3A3A', true: Colors.primary }}
-                thumbColor="#FFFFFF"
-              />
-            </View>
+            <PreferenceToggle
+              icon={<Wine size={18} color={Colors.textLight} />}
+              title="Alcohol Activities"
+              description="Bars, breweries, wine tastings"
+              value={preferences.includeAlcohol}
+              onToggle={(value) => handleToggle('includeAlcohol', value)}
+            />
 
-            <View style={styles.preferenceItem}>
-              <View style={styles.preferenceInfo}>
-                <View style={styles.preferenceHeader}>
-                  <Text style={styles.preferenceTitle}>Religious Activities</Text>
-                  {preferences.includeReligious && (
-                    <TouchableOpacity
-                      onPress={() => setShowReligionPicker(true)}
-                      style={styles.editButton}
-                    >
-                      <Text style={styles.editButtonText}>Edit</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-                <Text style={styles.preferenceDescription}>
-                  {preferences.includeReligious 
-                    ? `Churches, temples, faith events • ${getSelectedReligionLabel()}`
-                    : 'Churches, temples, faith events'
-                  }
-                </Text>
-              </View>
-              <Switch
-                value={preferences.includeReligious}
-                onValueChange={(value) => handleToggle('includeReligious', value)}
-                trackColor={{ false: '#3A3A3A', true: Colors.primary }}
-                thumbColor="#FFFFFF"
-              />
-            </View>
+            <PreferenceToggle
+              icon={<Church size={18} color={Colors.textLight} />}
+              title="Religious Activities"
+              description={preferences.includeReligious ? `Faith events - ${getSelectedReligionLabel()}` : 'Churches, temples, faith events'}
+              value={preferences.includeReligious}
+              onToggle={(value) => handleToggle('includeReligious', value)}
+              onEdit={preferences.includeReligious ? () => setShowReligionPicker(true) : undefined}
+            />
 
-            <View style={styles.preferenceItem}>
-              <View style={styles.preferenceInfo}>
-                <Text style={styles.preferenceTitle}>Kid-Friendly Activities</Text>
-                <Text style={styles.preferenceDescription}>
-                  Playgrounds, family parks, kid-friendly museums
-                </Text>
-              </View>
-              <Switch
-                value={preferences.includeKidFriendly}
-                onValueChange={(value) => handleToggle('includeKidFriendly', value)}
-                trackColor={{ false: '#3A3A3A', true: Colors.primary }}
-                thumbColor="#FFFFFF"
-              />
-            </View>
+            <PreferenceToggle
+              icon={<Baby size={18} color={Colors.textLight} />}
+              title="Kid-Friendly"
+              description="Playgrounds, family parks, museums"
+              value={preferences.includeKidFriendly}
+              onToggle={(value) => handleToggle('includeKidFriendly', value)}
+            />
 
-            <View style={styles.preferenceItem}>
-              <View style={styles.preferenceInfo}>
-                <Text style={styles.preferenceTitle}>Outdoor Adventures</Text>
-                <Text style={styles.preferenceDescription}>
-                  Hiking trails, nature walks, beaches, parks
-                </Text>
-              </View>
-              <Switch
-                value={preferences.includeOutdoorAdventures}
-                onValueChange={(value) => handleToggle('includeOutdoorAdventures', value)}
-                trackColor={{ false: '#3A3A3A', true: Colors.primary }}
-                thumbColor="#FFFFFF"
-              />
-            </View>
+            <PreferenceToggle
+              icon={<TreePine size={18} color={Colors.textLight} />}
+              title="Outdoor Adventures"
+              description="Hiking, nature walks, beaches"
+              value={preferences.includeOutdoorAdventures}
+              onToggle={(value) => handleToggle('includeOutdoorAdventures', value)}
+            />
 
-            <View style={styles.preferenceItem}>
-              <View style={styles.preferenceInfo}>
-                <Text style={styles.preferenceTitle}>Arts & Culture</Text>
-                <Text style={styles.preferenceDescription}>
-                  Museums, galleries, theaters, cultural experiences
-                </Text>
-              </View>
-              <Switch
-                value={preferences.includeArtsAndCulture}
-                onValueChange={(value) => handleToggle('includeArtsAndCulture', value)}
-                trackColor={{ false: '#3A3A3A', true: Colors.primary }}
-                thumbColor="#FFFFFF"
-              />
-            </View>
+            <PreferenceToggle
+              icon={<Palette size={18} color={Colors.textLight} />}
+              title="Arts & Culture"
+              description="Museums, galleries, theaters"
+              value={preferences.includeArtsAndCulture}
+              onToggle={(value) => handleToggle('includeArtsAndCulture', value)}
+            />
 
-            <View style={styles.preferenceItem}>
-              <View style={styles.preferenceInfo}>
-                <Text style={styles.preferenceTitle}>Live Entertainment</Text>
-                <Text style={styles.preferenceDescription}>
-                  Concerts, live music, comedy shows, performances
-                </Text>
-              </View>
-              <Switch
-                value={preferences.includeLiveEntertainment}
-                onValueChange={(value) => handleToggle('includeLiveEntertainment', value)}
-                trackColor={{ false: '#3A3A3A', true: Colors.primary }}
-                thumbColor="#FFFFFF"
-              />
-            </View>
+            <PreferenceToggle
+              icon={<Music size={18} color={Colors.textLight} />}
+              title="Live Entertainment"
+              description="Concerts, comedy shows, performances"
+              value={preferences.includeLiveEntertainment}
+              onToggle={(value) => handleToggle('includeLiveEntertainment', value)}
+            />
           </View>
         </View>
 
-        <View style={styles.divider} />
-
+        {/* Legal Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Edit size={20} color={Colors.primary} />
-            <Text style={styles.sectionTitle}>Manage Preferences</Text>
+            <Shield size={18} color={Colors.primary} />
+            <Text style={styles.sectionTitle}>Legal</Text>
           </View>
-          <Text style={styles.sectionDescription}>
-            Reset your content preferences to start fresh
-          </Text>
           
+          <View style={styles.legalLinks}>
+            <TouchableOpacity
+              style={styles.linkButton}
+              onPress={() => router.push('/privacy-policy' as any)}
+              activeOpacity={0.7}
+            >
+              <Shield size={18} color={Colors.textLight} />
+              <Text style={styles.linkButtonText}>Privacy Policy</Text>
+              <ChevronRight size={18} color={Colors.textMuted} />
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.linkButton}
+              onPress={() => router.push('/terms-of-service' as any)}
+              activeOpacity={0.7}
+            >
+              <FileText size={18} color={Colors.textLight} />
+              <Text style={styles.linkButtonText}>Terms of Service</Text>
+              <ChevronRight size={18} color={Colors.textMuted} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Account Section */}
+        {isAuthenticated && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Users size={18} color={Colors.primary} />
+              <Text style={styles.sectionTitle}>Account</Text>
+            </View>
+            
+            {user?.email && (
+              <Text style={styles.accountEmail}>{user.email}</Text>
+            )}
+            
+            <TouchableOpacity
+              style={styles.logoutButton}
+              onPress={handleLogout}
+              activeOpacity={0.7}
+            >
+              <LogOut size={18} color={Colors.error} />
+              <Text style={styles.logoutButtonText}>Sign Out</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Reset Section */}
+        <View style={styles.section}>
           <TouchableOpacity
             style={styles.resetButton}
             onPress={handleResetPreferences}
             activeOpacity={0.7}
           >
-            <RefreshCw size={18} color={Colors.text} />
+            <RefreshCw size={16} color={Colors.textMuted} />
             <Text style={styles.resetButtonText}>Reset All Preferences</Text>
           </TouchableOpacity>
         </View>
 
-        <View style={styles.divider} />
-
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Shield size={20} color={Colors.primary} />
-            <Text style={styles.sectionTitle}>Legal & Privacy</Text>
-          </View>
-          <Text style={styles.sectionDescription}>
-            Review our policies and terms
-          </Text>
-          
-          <View style={styles.legalLinks}>
-            <TouchableOpacity
-              style={styles.legalButton}
-              onPress={() => router.push('/privacy-policy' as any)}
-              activeOpacity={0.7}
-            >
-              <Shield size={18} color={Colors.textLight} />
-              <Text style={styles.legalButtonText}>Privacy Policy</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={styles.legalButton}
-              onPress={() => router.push('/terms-of-service' as any)}
-              activeOpacity={0.7}
-            >
-              <FileText size={18} color={Colors.textLight} />
-              <Text style={styles.legalButtonText}>Terms of Service</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        <View style={styles.divider} />
-
-        {isAuthenticated && (
-          <>
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <User size={20} color={Colors.primary} />
-                <Text style={styles.sectionTitle}>Account</Text>
-              </View>
-              <Text style={styles.sectionDescription}>
-                {user?.email ? `Signed in as ${user.email}` : 'Manage your account'}
-              </Text>
-              
-              <TouchableOpacity
-                style={styles.logoutButton}
-                onPress={handleLogout}
-                activeOpacity={0.7}
-              >
-                <LogOut size={18} color={Colors.error || '#FF4444'} />
-                <Text style={styles.logoutButtonText}>Sign Out</Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.divider} />
-          </>
-        )}
-
-        <View style={styles.section}>
-          <Text style={styles.footerNote}>
-            These settings help personalize your activity suggestions. Changes take effect immediately.
-          </Text>
-          <Text style={styles.versionText}>Version 1.0.0</Text>
-        </View>
+        {/* Version */}
+        <Text style={styles.versionText}>Version 1.0.0</Text>
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+interface PreferenceToggleProps {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  value: boolean;
+  onToggle: (value: boolean) => void;
+  onEdit?: () => void;
+}
+
+function PreferenceToggle({ icon, title, description, value, onToggle, onEdit }: PreferenceToggleProps) {
+  return (
+    <View style={styles.preferenceItem}>
+      <View style={styles.preferenceIcon}>{icon}</View>
+      <View style={styles.preferenceInfo}>
+        <View style={styles.preferenceHeader}>
+          <Text style={styles.preferenceTitle}>{title}</Text>
+          {onEdit && (
+            <TouchableOpacity onPress={onEdit} activeOpacity={0.7}>
+              <Text style={styles.editButton}>Edit</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+        <Text style={styles.preferenceDescription}>{description}</Text>
+      </View>
+      <Switch
+        value={value}
+        onValueChange={onToggle}
+        trackColor={{ false: Colors.backgroundLight, true: Colors.primary }}
+        thumbColor={Colors.white}
+      />
+    </View>
   );
 }
 
@@ -598,200 +525,62 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: Spacing.lg,
-    paddingBottom: Spacing.xxl,
+    paddingBottom: Spacing.xxxl,
   },
+  
+  // Sections
   section: {
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.xl,
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
-    marginBottom: Spacing.sm,
+    marginBottom: Spacing.md,
   },
   sectionTitle: {
-    fontSize: Typography.sizes.h3,
-    fontWeight: '400' as const,
+    fontSize: Typography.sizes.body,
+    fontWeight: '600' as const,
     color: Colors.text,
   },
-  sectionDescription: {
-    fontSize: Typography.sizes.caption,
-    color: Colors.textLight,
-    marginBottom: Spacing.lg,
-    lineHeight: 20,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#262626',
-    marginVertical: Spacing.lg,
-  },
-  modeContainer: {
-    flexDirection: 'row',
-    gap: Spacing.md,
-  },
-  modeButton: {
-    flex: 1,
-    padding: Spacing.lg,
-    borderRadius: BorderRadius.large,
-    backgroundColor: '#1A1A1A',
-    borderWidth: 1,
-    borderColor: '#3A3A3A',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.sm,
-  },
-  modeButtonActive: {
-    backgroundColor: 'transparent',
-    borderColor: 'transparent',
-  },
-  modeGradient: {
-    width: '100%',
-    padding: Spacing.lg,
-    borderRadius: BorderRadius.large,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.sm,
-  },
-  modeButtonText: {
-    fontSize: Typography.sizes.body,
-    fontWeight: '400' as const,
-    color: Colors.textLight,
-  },
-  modeButtonTextActive: {
-    fontSize: Typography.sizes.body,
-    fontWeight: '400' as const,
-    color: '#1A1A1A',
-  },
-  preferencesList: {
-    gap: Spacing.lg,
-  },
-  preferenceItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: Spacing.lg,
-    backgroundColor: '#1A1A1A',
-    borderRadius: BorderRadius.medium,
-    borderWidth: 1,
-    borderColor: '#262626',
-  },
-  preferenceInfo: {
-    flex: 1,
-    marginRight: Spacing.md,
-  },
-  preferenceHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-  },
-  preferenceTitle: {
-    fontSize: Typography.sizes.body,
-    fontWeight: '400' as const,
-    color: Colors.text,
-    marginBottom: 4,
-  },
-  preferenceDescription: {
-    fontSize: Typography.sizes.caption,
-    color: Colors.textLight,
-    lineHeight: 18,
-  },
-  editButton: {
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 2,
-  },
-  editButtonText: {
-    fontSize: Typography.sizes.small,
-    color: Colors.primary,
-    fontWeight: '400' as const,
-  },
-  footerNote: {
-    fontSize: Typography.sizes.caption,
-    color: Colors.textLight,
-    textAlign: 'center',
-    lineHeight: 20,
-    fontStyle: 'italic',
-  },
-  pickerTitle: {
-    fontSize: Typography.sizes.h2,
-    fontWeight: '400' as const,
-    color: Colors.text,
-    textAlign: 'center',
-    marginBottom: Spacing.sm,
-  },
-  pickerDescription: {
-    fontSize: Typography.sizes.body,
-    color: Colors.textLight,
-    textAlign: 'center',
-    marginBottom: Spacing.xl,
-    lineHeight: 22,
-  },
-  religionList: {
-    gap: Spacing.md,
-  },
-  religionOption: {
-    padding: Spacing.lg,
-    borderRadius: BorderRadius.medium,
-    backgroundColor: '#1A1A1A',
-    borderWidth: 1,
-    borderColor: '#3A3A3A',
-  },
-  religionOptionSelected: {
-    borderColor: Colors.primary,
-    backgroundColor: 'rgba(255, 107, 157, 0.1)',
-  },
-  religionOptionText: {
-    fontSize: Typography.sizes.body,
-    fontWeight: '400' as const,
-    color: Colors.text,
-    textAlign: 'center',
-  },
-  religionOptionTextSelected: {
-    color: Colors.primary,
-  },
+  
+  // Subscription
   subscriptionCard: {
+    backgroundColor: Colors.cardBackground,
+    borderRadius: BorderRadius.large,
     padding: Spacing.lg,
-    backgroundColor: '#1A1A1A',
-    borderRadius: BorderRadius.medium,
     borderWidth: 1,
-    borderColor: '#262626',
+    borderColor: Colors.cardBorder,
   },
-  subscriptionHeader: {
+  subscriptionRow: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: Spacing.sm,
-  },
-  subscriptionInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
+    alignItems: 'flex-start',
+    marginBottom: Spacing.lg,
   },
   subscriptionTier: {
     fontSize: Typography.sizes.h3,
-    fontWeight: '400' as const,
+    fontWeight: '600' as const,
     color: Colors.text,
+    marginBottom: 4,
+  },
+  subscriptionStatus: {
+    fontSize: Typography.sizes.small,
+    color: Colors.textLight,
   },
   premiumBadge: {
-    borderRadius: BorderRadius.small,
-    overflow: 'hidden',
-  },
-  premiumBadgeGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    backgroundColor: Colors.primary,
     paddingHorizontal: Spacing.sm,
     paddingVertical: 4,
+    borderRadius: BorderRadius.small,
   },
   premiumBadgeText: {
-    fontSize: Typography.sizes.small,
-    fontWeight: '400' as const,
-    color: '#1A1A1A',
-  },
-  subscriptionStatus: {
-    fontSize: Typography.sizes.caption,
-    color: Colors.textLight,
-    marginBottom: Spacing.lg,
+    fontSize: Typography.sizes.tiny,
+    fontWeight: '600' as const,
+    color: Colors.backgroundDark,
   },
   subscriptionActions: {
     gap: Spacing.md,
@@ -805,93 +594,221 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: Spacing.sm,
-    padding: Spacing.lg,
+    paddingVertical: Spacing.md,
   },
   upgradeButtonText: {
     fontSize: Typography.sizes.body,
-    fontWeight: '400' as const,
-    color: '#1A1A1A',
+    fontWeight: '600' as const,
+    color: Colors.backgroundDark,
   },
   manageButton: {
-    padding: Spacing.lg,
+    paddingVertical: Spacing.md,
     borderRadius: BorderRadius.medium,
-    backgroundColor: 'transparent',
     borderWidth: 1,
     borderColor: Colors.primary,
     alignItems: 'center',
   },
   manageButtonText: {
     fontSize: Typography.sizes.body,
-    fontWeight: '400' as const,
     color: Colors.primary,
+    fontWeight: '500' as const,
   },
   restoreButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: Spacing.sm,
-    padding: Spacing.md,
+    gap: Spacing.xs,
+    paddingVertical: Spacing.sm,
   },
   restoreButtonText: {
-    fontSize: Typography.sizes.caption,
-    fontWeight: '400' as const,
-    color: Colors.textLight,
+    fontSize: Typography.sizes.small,
+    color: Colors.textMuted,
   },
-  resetButton: {
+  
+  // Mode
+  modeContainer: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+  },
+  modeButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: Spacing.sm,
-    padding: Spacing.lg,
+    paddingVertical: Spacing.lg,
+    backgroundColor: Colors.cardBackground,
     borderRadius: BorderRadius.medium,
-    backgroundColor: '#1A1A1A',
     borderWidth: 1,
-    borderColor: '#3A3A3A',
+    borderColor: Colors.cardBorder,
   },
-  resetButtonText: {
+  modeButtonActive: {
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primaryMuted,
+  },
+  modeButtonText: {
     fontSize: Typography.sizes.body,
-    fontWeight: '400' as const,
+    color: Colors.textLight,
+  },
+  modeButtonTextActive: {
+    color: Colors.primary,
+    fontWeight: '500' as const,
+  },
+  
+  // Preferences
+  preferencesList: {
+    backgroundColor: Colors.cardBackground,
+    borderRadius: BorderRadius.large,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    overflow: 'hidden',
+  },
+  preferenceItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: Spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.cardBorder,
+  },
+  preferenceIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.backgroundLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: Spacing.md,
+  },
+  preferenceInfo: {
+    flex: 1,
+    marginRight: Spacing.md,
+  },
+  preferenceHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 2,
+  },
+  preferenceTitle: {
+    fontSize: Typography.sizes.body,
     color: Colors.text,
+  },
+  preferenceDescription: {
+    fontSize: Typography.sizes.small,
+    color: Colors.textLight,
+  },
+  editButton: {
+    fontSize: Typography.sizes.small,
+    color: Colors.primary,
+  },
+  
+  // Legal
+  legalLinks: {
+    backgroundColor: Colors.cardBackground,
+    borderRadius: BorderRadius.large,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    overflow: 'hidden',
+  },
+  linkButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: Spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.cardBorder,
+    gap: Spacing.md,
+  },
+  linkButtonText: {
+    flex: 1,
+    fontSize: Typography.sizes.body,
+    color: Colors.text,
+  },
+  
+  // Account
+  accountEmail: {
+    fontSize: Typography.sizes.small,
+    color: Colors.textLight,
+    marginBottom: Spacing.md,
   },
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: Spacing.sm,
-    padding: Spacing.lg,
+    paddingVertical: Spacing.md,
+    backgroundColor: Colors.errorMuted,
     borderRadius: BorderRadius.medium,
-    backgroundColor: '#1A1A1A',
-    borderWidth: 1,
-    borderColor: '#3A3A3A',
-    marginTop: Spacing.md,
   },
   logoutButtonText: {
     fontSize: Typography.sizes.body,
-    fontWeight: '400' as const,
-    color: Colors.error || '#FF4444',
+    color: Colors.error,
+    fontWeight: '500' as const,
   },
-  legalLinks: {
-    gap: Spacing.md,
-  },
-  legalButton: {
+  
+  // Reset
+  resetButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.md,
-    padding: Spacing.lg,
-    borderRadius: BorderRadius.medium,
-    backgroundColor: '#1A1A1A',
-    borderWidth: 1,
-    borderColor: '#262626',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    paddingVertical: Spacing.md,
   },
-  legalButtonText: {
-    fontSize: Typography.sizes.body,
-    fontWeight: '400' as const,
-    color: Colors.text,
+  resetButtonText: {
+    fontSize: Typography.sizes.small,
+    color: Colors.textMuted,
   },
+  
+  // Version
   versionText: {
     fontSize: Typography.sizes.small,
     color: Colors.textMuted,
     textAlign: 'center',
-    marginTop: Spacing.md,
+    marginTop: Spacing.lg,
+  },
+  
+  // Religion Picker
+  pickerTitle: {
+    fontSize: Typography.sizes.h2,
+    fontWeight: '600' as const,
+    color: Colors.text,
+    textAlign: 'center',
+    marginBottom: Spacing.sm,
+  },
+  pickerDescription: {
+    fontSize: Typography.sizes.body,
+    color: Colors.textLight,
+    textAlign: 'center',
+    marginBottom: Spacing.xl,
+  },
+  religionList: {
+    gap: Spacing.sm,
+  },
+  religionOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: Spacing.lg,
+    backgroundColor: Colors.cardBackground,
+    borderRadius: BorderRadius.medium,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  religionOptionSelected: {
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primaryMuted,
+  },
+  religionOptionText: {
+    fontSize: Typography.sizes.body,
+    color: Colors.text,
+  },
+  religionOptionTextSelected: {
+    color: Colors.primary,
+    fontWeight: '500' as const,
+  },
+  religionCheck: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: Colors.primary,
   },
 });

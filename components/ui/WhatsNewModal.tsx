@@ -1,10 +1,11 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView } from 'react-native';
-import { Sparkles, Calendar, BarChart3, Users, X } from 'lucide-react-native';
+import { Calendar, BarChart3, Users, X, Lightbulb } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import Typography from '@/constants/typography';
 import Spacing from '@/constants/spacing';
 import { BorderRadius } from '@/constants/design';
+import Logo from '@/components/ui/Logo';
 
 interface WhatsNewModalProps {
   visible: boolean;
@@ -28,7 +29,7 @@ const NEW_FEATURES = [
     description: 'Vote with your partner on activity ideas before committing',
   },
   {
-    icon: Sparkles,
+    icon: Lightbulb,
     title: 'Smarter Suggestions',
     description: 'AI learns from your preferences and completed activities',
   },
@@ -53,7 +54,7 @@ export default function WhatsNewModal({ visible, onDismiss }: WhatsNewModalProps
           </TouchableOpacity>
 
           <View style={styles.header}>
-            <Sparkles size={48} color={Colors.primary} />
+            <Logo size={56} color={Colors.primary} />
             <Text style={styles.title}>What&apos;s New</Text>
             <Text style={styles.subtitle}>Version 1.0.0</Text>
           </View>

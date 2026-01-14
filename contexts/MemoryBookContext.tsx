@@ -59,6 +59,45 @@ export const [MemoryBookProvider, useMemoryBook] = createContextHook(() => {
     return savedActivity;
   };
 
+  const createManualActivity = (activityData: {
+    title: string;
+    description: string;
+    category: string;
+    cost: 'free' | '$' | '$$' | '$$$';
+    duration: string;
+    proTip?: string;
+    photos?: string[];
+    notes?: string;
+  }) => {
+    const activity: Activity = {
+      title: activityData.title,
+      description: activityData.description,
+      category: activityData.category,
+      cost: activityData.cost,
+      duration: activityData.duration,
+      proTip: activityData.proTip || 'Enjoy the moment and make it memorable!',
+    };
+
+    const savedActivity: SavedActivity = {
+      ...activity,
+      id: Date.now().toString() + Math.random().toString(36),
+      savedAt: Date.now(),
+      isActive: false,
+      isCompleted: true, // Mark as completed since user is logging it after doing it
+      completedAt: Date.now(),
+      photos: activityData.photos || [],
+      notes: activityData.notes || '',
+      locationSnapshot: location || undefined,
+    };
+
+    const updated = [savedActivity, ...savedActivities];
+    setSavedActivities(updated);
+    saveSavedActivities(updated);
+
+    console.log('Manual activity created:', savedActivity.title);
+    return savedActivity;
+  };
+
   const unsaveActivity = (activityId: string) => {
     const updated = savedActivities.filter(a => a.id !== activityId);
     setSavedActivities(updated);
@@ -193,6 +232,7 @@ export const [MemoryBookProvider, useMemoryBook] = createContextHook(() => {
     savedActivities,
     isLoading,
     saveActivity,
+    createManualActivity,
     unsaveActivity,
     startActivity,
     stopActivity,

@@ -122,7 +122,7 @@ export default function ActivityDetailScreen() {
     try {
       startActivity(activity.id);
       Alert.alert(
-        '🎉 Activity Started!',
+        'Activity Started!',
         'Time to make some amazing memories! Don\'t forget to take photos and add notes along the way.',
         [{ text: 'Got it!' }]
       );

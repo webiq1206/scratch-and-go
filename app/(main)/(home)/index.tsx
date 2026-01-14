@@ -4,6 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Heart, Users, MapPin, ChevronLeft, Clock, DollarSign, Lightbulb, Play, RefreshCw, Share2, ThumbsDown, Bookmark, Sun, Cloud, CloudRain, Snowflake, Zap, Coffee, Palette, Utensils, Mountain, Home as HomeIcon, Shuffle } from 'lucide-react-native';
+import Logo from '@/components/ui/Logo';
 import Colors from '@/constants/colors';
 import Typography from '@/constants/typography';
 import Spacing from '@/constants/spacing';
@@ -13,9 +15,7 @@ import ScratchCard from '@/components/ui/ScratchCard';
 import LocationSelector from '@/components/ui/LocationSelector';
 import { useActivity } from '@/contexts/ActivityContext';
 import { useLocation } from '@/contexts/LocationContext';
-
 import { useSubscription } from '@/contexts/SubscriptionContext';
-
 import { Filters } from '@/types/activity';
 import { shareActivity } from '@/utils/shareActivity';
 
@@ -24,7 +24,6 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const MODE_KEY = 'scratch_and_go_mode';
 
 type Mode = 'couples' | 'family';
-
 type WizardStep = 'welcome' | 'category' | 'budget' | 'timing' | 'setting' | 'summary';
 
 interface WizardAnswers {
@@ -33,6 +32,33 @@ interface WizardAnswers {
   timing?: string;
   setting?: 'indoor' | 'outdoor' | 'either';
 }
+
+// Category icons mapping
+const getCategoryIcon = (category: string, size: number = 20, color: string = Colors.text) => {
+  const icons: Record<string, React.ReactNode> = {
+    'Chill': <Coffee size={size} color={color} />,
+    'Active': <Zap size={size} color={color} />,
+    'Creative': <Palette size={size} color={color} />,
+    'Foodie': <Utensils size={size} color={color} />,
+    'Adventure': <Mountain size={size} color={color} />,
+    'Educational': <Lightbulb size={size} color={color} />,
+    'Outdoor': <Sun size={size} color={color} />,
+  };
+  return icons[category] || <Heart size={size} color={color} />;
+};
+
+// Weather icon helper
+const getWeatherIcon = (condition: string, size: number = 18) => {
+  const conditionLower = condition.toLowerCase();
+  if (conditionLower.includes('rain') || conditionLower.includes('shower')) {
+    return <CloudRain size={size} color={Colors.textLight} />;
+  } else if (conditionLower.includes('snow')) {
+    return <Snowflake size={size} color={Colors.textLight} />;
+  } else if (conditionLower.includes('cloud') || conditionLower.includes('overcast')) {
+    return <Cloud size={size} color={Colors.textLight} />;
+  }
+  return <Sun size={size} color={Colors.accent} />;
+};
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -94,7 +120,7 @@ export default function HomeScreen() {
         ]
       );
     }
-  }, [generationError, wizardStep, wizardAnswers, mode, location, generateActivity, regenerateActivity]);
+  }, [generationError]);
 
   useEffect(() => {
     InteractionManager.runAfterInteractions(() => {
@@ -118,8 +144,7 @@ export default function HomeScreen() {
       tension: 40,
       useNativeDriver: true,
     }).start();
-  }, [wizardStep, slideAnim]);
-
+  }, [wizardStep]);
 
   const loadMode = async () => {
     const savedMode = await AsyncStorage.getItem(MODE_KEY);
@@ -138,9 +163,7 @@ export default function HomeScreen() {
   };
 
   const getPremiumCategories = useCallback(() => {
-    return mode === 'couples' 
-      ? ['Adventure'] 
-      : ['Outdoor'];
+    return mode === 'couples' ? ['Adventure'] : ['Outdoor'];
   }, [mode]);
 
   const isCategoryPremium = useCallback((category: string) => {
@@ -192,7 +215,6 @@ export default function HomeScreen() {
           setting: updatedAnswers.setting || 'either',
           location: location || undefined,
         };
-        
         generateActivity(filters);
       });
     }
@@ -217,8 +239,7 @@ export default function HomeScreen() {
     setWizardAnswers({});
     setWizardStep('welcome');
     setHasStartedScratch(false);
-    setIsDescriptionExpanded(false); // Reset description expansion
-    // Reset scratcher when restarting wizard
+    setIsDescriptionExpanded(false);
     scratchCardKeyRef.current = `card-${Date.now()}`;
     clearCurrentActivity();
   }, [clearCurrentActivity]);
@@ -232,7 +253,6 @@ export default function HomeScreen() {
 
   const handleScratchStart = async () => {
     if (hasStartedScratch) return;
-    
     setHasStartedScratch(true);
     setIsSavedForLater(false);
     setScrollEnabled(false);
@@ -263,12 +283,7 @@ export default function HomeScreen() {
     try {
       await shareActivity(currentActivity);
     } catch (error) {
-      console.error('Error sharing activity:', error);
-      Alert.alert(
-        'Share Failed',
-        'Unable to share activity. Please try again.',
-        [{ text: 'OK' }]
-      );
+      Alert.alert('Share Failed', 'Unable to share activity. Please try again.');
     } finally {
       setIsSharing(false);
     }
@@ -278,11 +293,7 @@ export default function HomeScreen() {
     if (!currentActivity || isSavedForLater) return;
 
     if (isActivitySavedForLater(currentActivity.title)) {
-      Alert.alert(
-        'Already Saved',
-        'This activity is already in your saved for later list.',
-        [{ text: 'OK' }]
-      );
+      Alert.alert('Already Saved', 'This activity is already in your saved list.');
       return;
     }
     
@@ -291,11 +302,7 @@ export default function HomeScreen() {
     InteractionManager.runAfterInteractions(async () => {
       const success = await saveForLaterActivity();
       if (success) {
-        Alert.alert(
-          'Saved for Later!',
-          'This activity has been added to your queue. You can find it anytime in the Queue tab.',
-          [{ text: 'Got it!' }]
-        );
+        Alert.alert('Saved!', 'Activity saved to your Memories for later.');
       } else {
         setIsSavedForLater(false);
       }
@@ -319,24 +326,19 @@ export default function HomeScreen() {
 
     setIsSavedForLater(false);
     setHasStartedScratch(false);
-    setIsDescriptionExpanded(false); // Reset description expansion
-    // Update reset key when regenerating to reset the scratcher
+    setIsDescriptionExpanded(false);
     scratchCardKeyRef.current = `card-${Date.now()}`;
     await regenerateActivity();
   };
 
   const handleScratchComplete = useCallback(() => {
-    // Validate that activity exists before allowing reveal
     if (!currentActivity) {
       Alert.alert(
         'Activity Not Ready',
-        'The activity is still being generated. Please wait a moment and try again.',
-        [{ text: 'OK' }]
+        'The activity is still being generated. Please wait a moment and try again.'
       );
       return;
     }
-    
-    // Activity revealed after scratch completion
     setScrollEnabled(true);
   }, [currentActivity]);
 
@@ -345,22 +347,20 @@ export default function HomeScreen() {
     
     Alert.alert(
       'Not Interested',
-      "This helps us learn your preferences. We'll avoid suggesting similar activities in the future.",
+      "We'll avoid suggesting similar activities in the future.",
       [
         { text: 'Cancel', style: 'cancel' },
         { 
-          text: 'Not Interested', 
-          style: 'destructive',
+          text: 'Skip This One', 
           onPress: async () => {
             await markAsNotInterested();
             setHasStartedScratch(false);
             setScrollEnabled(true);
             scratchCardKeyRef.current = `card-${Date.now()}`;
-            // Regenerate a new activity after marking as not interested
             if (isLimitReached && !isPremium) {
               Alert.alert(
                 'Scratch Limit Reached',
-                `You've used your 3 free scratches this month! Upgrade to premium for unlimited scratches.`,
+                `You've used your 3 free scratches this month!`,
                 [
                   { text: 'Not Now', style: 'cancel' },
                   { text: 'Upgrade', onPress: () => router.push('/paywall' as any) }
@@ -377,22 +377,22 @@ export default function HomeScreen() {
 
   const categories = mode === 'couples' 
     ? [
-        { label: 'Chill', description: 'Low-key vibes' },
-        { label: 'Active', description: 'Get moving' },
-        { label: 'Creative', description: 'Make something' },
-        { label: 'Foodie', description: 'Taste & explore' },
-        { label: 'Adventure', description: 'Try new things' },
+        { label: 'Chill', description: 'Relaxed vibes', icon: 'Chill' },
+        { label: 'Active', description: 'Get moving', icon: 'Active' },
+        { label: 'Creative', description: 'Make something', icon: 'Creative' },
+        { label: 'Foodie', description: 'Taste & explore', icon: 'Foodie' },
+        { label: 'Adventure', description: 'Try new things', icon: 'Adventure' },
       ]
     : [
-        { label: 'Chill', description: 'Relax together' },
-        { label: 'Active', description: 'Fun & energetic' },
-        { label: 'Creative', description: 'Arts & crafts' },
-        { label: 'Educational', description: 'Learn together' },
-        { label: 'Outdoor', description: 'Nature fun' },
+        { label: 'Chill', description: 'Relaxed together', icon: 'Chill' },
+        { label: 'Active', description: 'Fun & energetic', icon: 'Active' },
+        { label: 'Creative', description: 'Arts & crafts', icon: 'Creative' },
+        { label: 'Educational', description: 'Learn together', icon: 'Educational' },
+        { label: 'Outdoor', description: 'Nature fun', icon: 'Outdoor' },
       ];
 
   const budgetOptions = [
-    { label: 'Free', description: 'No cost at all' },
+    { label: 'Free', description: 'No cost' },
     { label: '$', description: 'Under $25' },
     { label: '$$', description: '$25 - $75' },
     { label: '$$$', description: '$75+' },
@@ -405,11 +405,10 @@ export default function HomeScreen() {
   ];
 
   const settingOptions = [
-    { label: 'Indoor', value: 'indoor' as const, description: 'Cozy & comfortable' },
-    { label: 'Outdoor', value: 'outdoor' as const, description: 'Fresh air & nature' },
-    { label: 'Either', value: 'either' as const, description: 'Surprise me!' },
+    { label: 'Indoor', value: 'indoor' as const, description: 'Cozy & comfortable', icon: <HomeIcon size={24} color={Colors.text} /> },
+    { label: 'Outdoor', value: 'outdoor' as const, description: 'Fresh air', icon: <Sun size={24} color={Colors.text} /> },
+    { label: 'Either', value: 'either' as const, description: 'Surprise me', icon: <Shuffle size={24} color={Colors.text} /> },
   ];
-
 
   const renderWizardContent = () => {
     const slideTransform = slideAnim.interpolate({
@@ -428,27 +427,28 @@ export default function HomeScreen() {
           <Animated.View style={[styles.wizardContent, { transform: [{ translateX: slideTransform }], opacity }]}>
             <View style={styles.welcomeContainer}>
               <View style={styles.welcomeIconContainer}>
-                <Image 
-                  source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/attachments/y0y3gb7wc49gdw8yub9ef' }}
-                  style={styles.welcomeIcon}
-                  resizeMode="contain"
-                />
+                <Logo size={56} color={Colors.primary} />
               </View>
               <Text style={styles.welcomeTitle}>
-                {`Let's create a${mode === 'couples' ? ' romantic' : 'n unforgettable'} moment`}
+                Ready for {mode === 'couples' ? 'a special moment' : 'family fun'}?
               </Text>
               <Text style={styles.welcomeDescription}>
-                {mode === 'couples' 
-                  ? "Answer a few quick questions and we'll find the perfect experience to share with your partner"
-                  : 'Answer a few questions to discover the perfect family activity everyone will love'
-                }
+                Answer a few quick questions and we'll find the perfect {mode === 'couples' ? 'date' : 'activity'} for you.
               </Text>
               <TouchableOpacity
                 style={styles.startButton}
                 onPress={handleStartWizard}
                 activeOpacity={0.8}
               >
-                <Text style={styles.startButtonText}>{"Let's Go!"}</Text>
+                <LinearGradient
+                  colors={[Colors.primaryGradientStart, Colors.primaryGradientEnd]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.startButtonGradient}
+                >
+                  <Text style={styles.startButtonText}>Let's Go</Text>
+                  <Logo size={22} color={Colors.backgroundDark} />
+                </LinearGradient>
               </TouchableOpacity>
             </View>
           </Animated.View>
@@ -458,11 +458,9 @@ export default function HomeScreen() {
         return (
           <Animated.View style={[styles.wizardContent, { transform: [{ translateX: slideTransform }], opacity }]}>
             <View style={styles.questionContainer}>
-              <Text style={styles.questionNumber}>Question 1 of 4</Text>
-              <Text style={styles.questionTitle}>
-                What kind of vibe are {mode === 'couples' ? 'you two' : 'you all'} feeling?
-              </Text>
-              <Text style={styles.questionSubtitle}>Pick what matches your mood today</Text>
+              <Text style={styles.questionNumber}>1 of 4</Text>
+              <Text style={styles.questionTitle}>What's the vibe?</Text>
+              <Text style={styles.questionSubtitle}>Pick what matches your mood</Text>
               
               <View style={styles.optionsGrid}>
                 {categories.map((cat) => (
@@ -475,8 +473,11 @@ export default function HomeScreen() {
                     onPress={() => handleWizardAnswer('category', cat.label)}
                     activeOpacity={0.7}
                   >
-                    <View style={styles.optionContent}>
-                      <Text style={styles.optionLabel}>{cat.label}</Text>
+                    <View style={styles.optionIconContainer}>
+                      {getCategoryIcon(cat.icon, 24, wizardAnswers.category === cat.label ? Colors.primary : Colors.textLight)}
+                    </View>
+                    <View style={styles.optionTextContainer}>
+                      <Text style={[styles.optionLabel, wizardAnswers.category === cat.label && styles.optionLabelSelected]}>{cat.label}</Text>
                       <Text style={styles.optionDescription}>{cat.description}</Text>
                     </View>
                     {isCategoryPremium(cat.label) && !isPremium && (
@@ -495,25 +496,23 @@ export default function HomeScreen() {
         return (
           <Animated.View style={[styles.wizardContent, { transform: [{ translateX: slideTransform }], opacity }]}>
             <View style={styles.questionContainer}>
-              <Text style={styles.questionNumber}>Question 2 of 4</Text>
-              <Text style={styles.questionTitle}>{"What's your budget for this?"}</Text>
-              <Text style={styles.questionSubtitle}>Be honest - every budget makes memories</Text>
+              <Text style={styles.questionNumber}>2 of 4</Text>
+              <Text style={styles.questionTitle}>What's your budget?</Text>
+              <Text style={styles.questionSubtitle}>Every budget makes memories</Text>
               
-              <View style={styles.optionsGrid}>
+              <View style={styles.budgetGrid}>
                 {budgetOptions.map((budget) => (
                   <TouchableOpacity
                     key={budget.label}
                     style={[
-                      styles.optionCard,
-                      wizardAnswers.budget === budget.label && styles.optionCardSelected,
+                      styles.budgetCard,
+                      wizardAnswers.budget === budget.label && styles.budgetCardSelected,
                     ]}
                     onPress={() => handleWizardAnswer('budget', budget.label)}
                     activeOpacity={0.7}
                   >
-                    <View style={styles.optionContent}>
-                      <Text style={styles.optionLabel}>{budget.label}</Text>
-                      <Text style={styles.optionDescription}>{budget.description}</Text>
-                    </View>
+                    <Text style={[styles.budgetLabel, wizardAnswers.budget === budget.label && styles.budgetLabelSelected]}>{budget.label}</Text>
+                    <Text style={styles.budgetDescription}>{budget.description}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -525,9 +524,9 @@ export default function HomeScreen() {
         return (
           <Animated.View style={[styles.wizardContent, { transform: [{ translateX: slideTransform }], opacity }]}>
             <View style={styles.questionContainer}>
-              <Text style={styles.questionNumber}>Question 3 of 4</Text>
-              <Text style={styles.questionTitle}>How much time do you have?</Text>
-              <Text style={styles.questionSubtitle}>Quality matters more than quantity</Text>
+              <Text style={styles.questionNumber}>3 of 4</Text>
+              <Text style={styles.questionTitle}>How much time?</Text>
+              <Text style={styles.questionSubtitle}>Quality over quantity</Text>
               
               <View style={styles.optionsGrid}>
                 {timingOptions.map((timing) => (
@@ -540,8 +539,11 @@ export default function HomeScreen() {
                     onPress={() => handleWizardAnswer('timing', timing.label)}
                     activeOpacity={0.7}
                   >
-                    <View style={styles.optionContent}>
-                      <Text style={styles.optionLabel}>{timing.label}</Text>
+                    <View style={styles.optionIconContainer}>
+                      <Clock size={24} color={wizardAnswers.timing === timing.label ? Colors.primary : Colors.textLight} />
+                    </View>
+                    <View style={styles.optionTextContainer}>
+                      <Text style={[styles.optionLabel, wizardAnswers.timing === timing.label && styles.optionLabelSelected]}>{timing.label}</Text>
                       <Text style={styles.optionDescription}>{timing.description}</Text>
                     </View>
                   </TouchableOpacity>
@@ -555,27 +557,33 @@ export default function HomeScreen() {
         return (
           <Animated.View style={[styles.wizardContent, { transform: [{ translateX: slideTransform }], opacity }]}>
             <View style={styles.questionContainer}>
-              <Text style={styles.questionNumber}>Question 4 of 4</Text>
+              <Text style={styles.questionNumber}>4 of 4</Text>
               <Text style={styles.questionTitle}>Indoor or outdoor?</Text>
-              <Text style={styles.questionSubtitle}>
-                {location?.weather ? `Currently ${location.weather.temp}°F and ${location.weather.condition.toLowerCase()}` : 'What sounds better right now?'}
-              </Text>
+              {location?.weather && (
+                <View style={styles.weatherHint}>
+                  {getWeatherIcon(location.weather.condition)}
+                  <Text style={styles.weatherHintText}>
+                    {location.weather.temp}°F and {location.weather.condition.toLowerCase()}
+                  </Text>
+                </View>
+              )}
               
-              <View style={styles.optionsGrid}>
+              <View style={styles.settingGrid}>
                 {settingOptions.map((setting) => (
                   <TouchableOpacity
                     key={setting.value}
                     style={[
-                      styles.optionCard,
-                      wizardAnswers.setting === setting.value && styles.optionCardSelected,
+                      styles.settingCard,
+                      wizardAnswers.setting === setting.value && styles.settingCardSelected,
                     ]}
                     onPress={() => handleWizardAnswer('setting', setting.value)}
                     activeOpacity={0.7}
                   >
-                    <View style={styles.optionContent}>
-                      <Text style={styles.optionLabel}>{setting.label}</Text>
-                      <Text style={styles.optionDescription}>{setting.description}</Text>
+                    <View style={[styles.settingIconContainer, wizardAnswers.setting === setting.value && styles.settingIconContainerSelected]}>
+                      {React.cloneElement(setting.icon, { color: wizardAnswers.setting === setting.value ? Colors.primary : Colors.textLight })}
                     </View>
+                    <Text style={[styles.settingLabel, wizardAnswers.setting === setting.value && styles.settingLabelSelected]}>{setting.label}</Text>
+                    <Text style={styles.settingDescription}>{setting.description}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -599,122 +607,161 @@ export default function HomeScreen() {
                   revealContent={
                     <View style={styles.revealContent}>
                       {isGenerating || !currentActivity ? (
-                        <>
+                        <View style={styles.loadingContainer}>
                           <ActivityIndicator size="large" color={Colors.primary} />
-                          <Text style={styles.revealTitle}>Creating your adventure...</Text>
-                        </>
+                          <Text style={styles.loadingText}>Creating your perfect {mode === 'couples' ? 'date' : 'activity'}...</Text>
+                        </View>
                       ) : (
-                        <>
-                          <Text style={styles.revealTitle} numberOfLines={3}>{currentActivity.title}</Text>
-                          <View style={styles.descriptionContainer}>
-                            <Text 
-                              style={styles.revealDescription} 
-                              numberOfLines={isDescriptionExpanded ? undefined : 4}
+                        <ScrollView 
+                          style={styles.revealScroll}
+                          contentContainerStyle={styles.revealScrollContent}
+                          showsVerticalScrollIndicator={false}
+                          nestedScrollEnabled
+                        >
+                          {/* Activity Title */}
+                          <Text style={styles.revealTitle}>{currentActivity.title}</Text>
+                          
+                          {/* Category Badge */}
+                          <View style={styles.categoryBadge}>
+                            {getCategoryIcon(currentActivity.category, 14, Colors.primary)}
+                            <Text style={styles.categoryBadgeText}>{currentActivity.category}</Text>
+                          </View>
+                          
+                          {/* Description */}
+                          <Text 
+                            style={styles.revealDescription} 
+                            numberOfLines={isDescriptionExpanded ? undefined : 3}
+                          >
+                            {currentActivity.description}
+                          </Text>
+                          {currentActivity.description && currentActivity.description.length > 120 && (
+                            <TouchableOpacity
+                              onPress={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                              activeOpacity={0.7}
                             >
-                              {currentActivity.description}
-                            </Text>
-                            {currentActivity.description && currentActivity.description.length > 150 && (
-                              <TouchableOpacity
-                                onPress={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
-                                activeOpacity={0.7}
-                                style={styles.expandButton}
-                              >
-                                <Text style={styles.expandButtonText}>
-                                  {isDescriptionExpanded ? 'Show Less' : 'Read More'}
-                                </Text>
-                              </TouchableOpacity>
-                            )}
-                          </View>
-                          {location?.weather && (
-                            <View style={styles.weatherBox}>
-                              <Text style={styles.weatherIcon}>{location.weather.icon}</Text>
-                              <View style={styles.weatherInfo}>
-                                <Text style={styles.weatherTemp}>{location.weather.temp}°F</Text>
-                                <Text style={styles.weatherCondition}>{location.weather.condition}</Text>
-                              </View>
-                            </View>
+                              <Text style={styles.expandButton}>
+                                {isDescriptionExpanded ? 'Show less' : 'Read more'}
+                              </Text>
+                            </TouchableOpacity>
                           )}
-                          <View style={styles.statsRow}>
-                            <View style={styles.statItem}>
-                              <Text style={styles.statLabel}>Duration</Text>
-                              <Text style={styles.statValue}>{currentActivity.duration}</Text>
+                          
+                          {/* Quick Stats */}
+                          <View style={styles.quickStats}>
+                            <View style={styles.statChip}>
+                              <Clock size={14} color={Colors.textLight} />
+                              <Text style={styles.statChipText}>{currentActivity.duration}</Text>
                             </View>
-                            <View style={styles.statItem}>
-                              <Text style={styles.statLabel}>Cost</Text>
-                              <Text style={styles.statValue}>{currentActivity.cost === 'free' ? 'Free' : currentActivity.cost}</Text>
+                            <View style={styles.statChip}>
+                              <DollarSign size={14} color={Colors.textLight} />
+                              <Text style={styles.statChipText}>{currentActivity.cost === 'free' ? 'Free' : currentActivity.cost}</Text>
                             </View>
                           </View>
+                          
+                          {/* Pro Tip */}
                           {currentActivity.proTip && (
-                            <View style={styles.proTipBox}>
-                              <Text style={styles.proTipLabel}>Pro Tip</Text>
+                            <View style={styles.proTipContainer}>
+                              <View style={styles.proTipHeader}>
+                                <Lightbulb size={16} color={Colors.accent} />
+                                <Text style={styles.proTipLabel}>Pro Tip</Text>
+                              </View>
                               <Text style={styles.proTipText}>{currentActivity.proTip}</Text>
                             </View>
                           )}
-                          <View style={styles.actionButtons}>
-                            <TouchableOpacity
-                              style={styles.startActivityButton}
-                              onPress={handleStartActivity}
-                              activeOpacity={0.7}
+                          
+                          {/* Primary Action */}
+                          <TouchableOpacity
+                            style={styles.primaryAction}
+                            onPress={handleStartActivity}
+                            activeOpacity={0.8}
+                          >
+                            <LinearGradient
+                              colors={[Colors.primaryGradientStart, Colors.primaryGradientEnd]}
+                              start={{ x: 0, y: 0 }}
+                              end={{ x: 1, y: 0 }}
+                              style={styles.primaryActionGradient}
                             >
-                              <View style={styles.startActivityButtonContent}>
-                                <Text style={styles.startActivityButtonIcon}>💕</Text>
-                                <Text style={styles.startActivityButtonText}>{mode === 'couples' ? 'Start Date' : 'Start Activity'}</Text>
-                              </View>
-                            </TouchableOpacity>
-                          </View>
+                              <Play size={20} color={Colors.backgroundDark} fill={Colors.backgroundDark} />
+                              <Text style={styles.primaryActionText}>
+                                {mode === 'couples' ? 'Start This Date' : 'Start Activity'}
+                              </Text>
+                            </LinearGradient>
+                          </TouchableOpacity>
+                          
+                          {/* Secondary Actions */}
                           <View style={styles.secondaryActions}>
                             <TouchableOpacity
-                              style={styles.regenerateButton}
+                              style={styles.secondaryAction}
                               onPress={handleRegenerateActivity}
                               disabled={isGenerating}
                               activeOpacity={0.7}
                             >
-                              <Text style={styles.regenerateButtonText}>{isGenerating ? 'Generating...' : '🔄 Generate New Idea'}</Text>
+                              <RefreshCw size={18} color={Colors.primary} />
+                              <Text style={styles.secondaryActionText}>New Idea</Text>
                             </TouchableOpacity>
-                          </View>
-                          <View style={styles.tertiaryActions}>
+                            
                             <TouchableOpacity
-                              style={styles.actionLink}
+                              style={styles.secondaryAction}
+                              onPress={handleSaveForLater}
+                              disabled={isSavedForLater}
+                              activeOpacity={0.7}
+                            >
+                              <Bookmark size={18} color={isSavedForLater ? Colors.accent : Colors.textLight} fill={isSavedForLater ? Colors.accent : 'none'} />
+                              <Text style={[styles.secondaryActionText, isSavedForLater && { color: Colors.accent }]}>
+                                {isSavedForLater ? 'Saved' : 'Save'}
+                              </Text>
+                            </TouchableOpacity>
+                            
+                            <TouchableOpacity
+                              style={styles.secondaryAction}
                               onPress={handleShareActivity}
                               disabled={isSharing}
                               activeOpacity={0.7}
                             >
-                              <Text style={styles.actionLinkText}>Share</Text>
-                            </TouchableOpacity>
-                            <View style={styles.actionDivider} />
-                            <TouchableOpacity
-                              style={styles.actionLink}
-                              onPress={handleNotInterested}
-                              activeOpacity={0.7}
-                            >
-                              <Text style={styles.actionLinkText}>Not Interested</Text>
+                              <Share2 size={18} color={Colors.textLight} />
+                              <Text style={styles.secondaryActionText}>Share</Text>
                             </TouchableOpacity>
                           </View>
-                        </>
+                          
+                          {/* Skip Action */}
+                          <TouchableOpacity
+                            style={styles.skipAction}
+                            onPress={handleNotInterested}
+                            activeOpacity={0.7}
+                          >
+                            <ThumbsDown size={14} color={Colors.textMuted} />
+                            <Text style={styles.skipActionText}>Not for me</Text>
+                          </TouchableOpacity>
+                        </ScrollView>
                       )}
                     </View>
                   }
                 />
               </View>
 
+              {/* Current Preferences */}
               <View style={styles.preferencesInfo}>
-                <View style={styles.preferencesRow}>
-                  <Text style={styles.preferenceItem}>{wizardAnswers.category}</Text>
-                  <Text style={styles.preferenceSeparator}>•</Text>
-                  <Text style={styles.preferenceItem}>{wizardAnswers.budget}</Text>
-                  <Text style={styles.preferenceSeparator}>•</Text>
-                  <Text style={styles.preferenceItem}>{wizardAnswers.timing}</Text>
-                  <Text style={styles.preferenceSeparator}>•</Text>
-                  <Text style={styles.preferenceItem}>
-                    {wizardAnswers.setting === 'indoor' ? 'Indoor' : wizardAnswers.setting === 'outdoor' ? 'Outdoor' : 'Either'}
-                  </Text>
+                <View style={styles.preferencesChips}>
+                  <View style={styles.preferenceChip}>
+                    <Text style={styles.preferenceChipText}>{wizardAnswers.category}</Text>
+                  </View>
+                  <View style={styles.preferenceChip}>
+                    <Text style={styles.preferenceChipText}>{wizardAnswers.budget}</Text>
+                  </View>
+                  <View style={styles.preferenceChip}>
+                    <Text style={styles.preferenceChipText}>{wizardAnswers.timing}</Text>
+                  </View>
+                  <View style={styles.preferenceChip}>
+                    <Text style={styles.preferenceChipText}>
+                      {wizardAnswers.setting === 'indoor' ? 'Indoor' : wizardAnswers.setting === 'outdoor' ? 'Outdoor' : 'Either'}
+                    </Text>
+                  </View>
                 </View>
                 <TouchableOpacity
-                  style={styles.changeAnswersLink}
+                  style={styles.changePreferencesButton}
                   onPress={handleRestartWizard}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.changeAnswersLinkText}>Change preferences</Text>
+                  <Text style={styles.changePreferencesText}>Change preferences</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -726,13 +773,15 @@ export default function HomeScreen() {
     }
   };
 
+  // Mode Selection Screen
   if (!mode) {
     return (
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={styles.modeSelectionContainer}>
           <View style={styles.modeHeader}>
+            <Logo size={56} color={Colors.primary} />
             <Text style={styles.modeTitle}>Scratch & Go</Text>
-            <Text style={styles.modeSubtitle}>Scratch your next adventure</Text>
+            <Text style={styles.modeSubtitle}>Discover your next adventure</Text>
           </View>
 
           <View style={styles.modeCardsContainer}>
@@ -741,83 +790,16 @@ export default function HomeScreen() {
               onPress={() => handleModeSelection('couples')}
               activeOpacity={0.9}
             >
-              <View style={styles.modeCardImageContainer}>
-                <View style={styles.polaroidGrid}>
-                  {/* Column 1: Romantic moments - holding hands, sunset walks */}
-                  <View style={[styles.polaroidColumn, styles.column1]}>
-                    <View style={[styles.polaroidFrame, { transform: [{ rotate: '-12deg' }], marginTop: 5 }]}>
-                      <Image 
-                        source={{ uri: 'https://images.unsplash.com/photo-1518568814500-bf0f8d125f46?w=400&h=500&fit=crop' }}
-                        style={styles.polaroidPhoto}
-                        resizeMode="cover"
-                      />
-                    </View>
-                    <View style={[styles.polaroidFrame, { transform: [{ rotate: '8deg' }], marginTop: -5 }]}>
-                      <Image 
-                        source={{ uri: 'https://images.unsplash.com/photo-1518621012428-6d7e0e04a2d0?w=400&h=500&fit=crop' }}
-                        style={styles.polaroidPhoto}
-                        resizeMode="cover"
-                      />
-                    </View>
-                  </View>
-                  
-                  {/* Column 2: Date activities - dining, coffee, picnics */}
-                  <View style={[styles.polaroidColumn, styles.column2]}>
-                    <View style={[styles.polaroidFrame, { transform: [{ rotate: '6deg' }], marginTop: 40 }]}>
-                      <Image 
-                        source={{ uri: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&h=500&fit=crop' }}
-                        style={styles.polaroidPhoto}
-                        resizeMode="cover"
-                      />
-                    </View>
-                    <View style={[styles.polaroidFrame, { transform: [{ rotate: '-7deg' }], marginTop: 8 }]}>
-                      <Image 
-                        source={{ uri: 'https://images.unsplash.com/photo-1464207687429-7505649dae38?w=400&h=500&fit=crop' }}
-                        style={styles.polaroidPhoto}
-                        resizeMode="cover"
-                      />
-                    </View>
-                  </View>
-                  
-                  {/* Column 3: Intimate moments - cuddling, laughing together */}
-                  <View style={[styles.polaroidColumn, styles.column3]}>
-                    <View style={[styles.polaroidFrame, { transform: [{ rotate: '-9deg' }], marginTop: 18 }]}>
-                      <Image 
-                        source={{ uri: 'https://images.unsplash.com/photo-1522673607200-164d1b6ce486?w=400&h=500&fit=crop' }}
-                        style={styles.polaroidPhoto}
-                        resizeMode="cover"
-                      />
-                    </View>
-                    <View style={[styles.polaroidFrame, { transform: [{ rotate: '5deg' }], marginTop: -3 }]}>
-                      <Image 
-                        source={{ uri: 'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?w=400&h=500&fit=crop' }}
-                        style={styles.polaroidPhoto}
-                        resizeMode="cover"
-                      />
-                    </View>
-                  </View>
-                  
-                  {/* Column 4: Adventure together - traveling, exploring */}
-                  <View style={[styles.polaroidColumn, styles.column4]}>
-                    <View style={[styles.polaroidFrame, { transform: [{ rotate: '11deg' }], marginTop: 52 }]}>
-                      <Image 
-                        source={{ uri: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=500&fit=crop' }}
-                        style={styles.polaroidPhoto}
-                        resizeMode="cover"
-                      />
-                    </View>
-                    <View style={[styles.polaroidFrame, { transform: [{ rotate: '-6deg' }], marginTop: 10 }]}>
-                      <Image 
-                        source={{ uri: 'https://images.unsplash.com/photo-1529258283598-8e0c02a5499a?w=400&h=500&fit=crop' }}
-                        style={styles.polaroidPhoto}
-                        resizeMode="cover"
-                      />
-                    </View>
-                  </View>
+              <LinearGradient
+                colors={['rgba(255, 107, 138, 0.15)', 'rgba(255, 107, 138, 0.05)']}
+                style={styles.modeCardGradient}
+              >
+                <View style={styles.modeIconContainer}>
+                  <Heart size={32} color={Colors.primary} />
                 </View>
-              </View>
-              <Text style={styles.modeCardTitle}>Couples Mode</Text>
-              <Text style={styles.modeCardDescription}>Cherish moments together</Text>
+                <Text style={styles.modeCardTitle}>Couples</Text>
+                <Text style={styles.modeCardDescription}>Date nights and romantic moments</Text>
+              </LinearGradient>
             </TouchableOpacity>
 
             <TouchableOpacity 
@@ -825,87 +807,20 @@ export default function HomeScreen() {
               onPress={() => handleModeSelection('family')}
               activeOpacity={0.9}
             >
-              <View style={styles.modeCardImageContainer}>
-                <View style={styles.polaroidGrid}>
-                  {/* Column 1: Family activities - playing, cooking together */}
-                  <View style={[styles.polaroidColumn, styles.column1]}>
-                    <View style={[styles.polaroidFrame, { transform: [{ rotate: '10deg' }], marginTop: 8 }]}>
-                      <Image 
-                        source={{ uri: 'https://images.unsplash.com/photo-1511895426328-dc8714191300?w=400&h=500&fit=crop' }}
-                        style={styles.polaroidPhoto}
-                        resizeMode="cover"
-                      />
-                    </View>
-                    <View style={[styles.polaroidFrame, { transform: [{ rotate: '-9deg' }], marginTop: -2 }]}>
-                      <Image 
-                        source={{ uri: 'https://images.unsplash.com/photo-1609220136736-443140cffec6?w=400&h=500&fit=crop' }}
-                        style={styles.polaroidPhoto}
-                        resizeMode="cover"
-                      />
-                    </View>
-                  </View>
-                  
-                  {/* Column 2: Outdoor family fun - parks, beaches, nature */}
-                  <View style={[styles.polaroidColumn, styles.column2]}>
-                    <View style={[styles.polaroidFrame, { transform: [{ rotate: '-5deg' }], marginTop: 45 }]}>
-                      <Image 
-                        source={{ uri: 'https://images.unsplash.com/photo-1516627145497-ae6968895b74?w=400&h=500&fit=crop' }}
-                        style={styles.polaroidPhoto}
-                        resizeMode="cover"
-                      />
-                    </View>
-                    <View style={[styles.polaroidFrame, { transform: [{ rotate: '7deg' }], marginTop: 5 }]}>
-                      <Image 
-                        source={{ uri: 'https://images.unsplash.com/photo-1541781774459-bb2af2f05b55?w=400&h=500&fit=crop' }}
-                        style={styles.polaroidPhoto}
-                        resizeMode="cover"
-                      />
-                    </View>
-                  </View>
-                  
-                  {/* Column 3: Learning and creativity - reading, arts, games */}
-                  <View style={[styles.polaroidColumn, styles.column3]}>
-                    <View style={[styles.polaroidFrame, { transform: [{ rotate: '4deg' }], marginTop: 22 }]}>
-                      <Image 
-                        source={{ uri: 'https://images.unsplash.com/photo-1593197497196-e08d95058347?w=400&h=500&fit=crop' }}
-                        style={styles.polaroidPhoto}
-                        resizeMode="cover"
-                      />
-                    </View>
-                    <View style={[styles.polaroidFrame, { transform: [{ rotate: '-8deg' }], marginTop: -5 }]}>
-                      <Image 
-                        source={{ uri: 'https://images.unsplash.com/photo-1543035038-f1f6155e2dc2?w=400&h=500&fit=crop' }}
-                        style={styles.polaroidPhoto}
-                        resizeMode="cover"
-                      />
-                    </View>
-                  </View>
-                  
-                  {/* Column 4: Special moments - celebrations, holidays, milestones */}
-                  <View style={[styles.polaroidColumn, styles.column4]}>
-                    <View style={[styles.polaroidFrame, { transform: [{ rotate: '-7deg' }], marginTop: 58 }]}>
-                      <Image 
-                        source={{ uri: 'https://images.unsplash.com/photo-1504052434569-70ad5836ab65?w=400&h=500&fit=crop' }}
-                        style={styles.polaroidPhoto}
-                        resizeMode="cover"
-                      />
-                    </View>
-                    <View style={[styles.polaroidFrame, { transform: [{ rotate: '9deg' }], marginTop: 8 }]}>
-                      <Image 
-                        source={{ uri: 'https://images.unsplash.com/photo-1560785477-d43d2b34e0df?w=400&h=500&fit=crop' }}
-                        style={styles.polaroidPhoto}
-                        resizeMode="cover"
-                      />
-                    </View>
-                  </View>
+              <LinearGradient
+                colors={['rgba(255, 107, 138, 0.15)', 'rgba(255, 107, 138, 0.05)']}
+                style={styles.modeCardGradient}
+              >
+                <View style={styles.modeIconContainer}>
+                  <Users size={32} color={Colors.primary} />
                 </View>
-              </View>
-              <Text style={styles.modeCardTitle}>Family Mode</Text>
-              <Text style={styles.modeCardDescription}>Build lasting family memories</Text>
+                <Text style={styles.modeCardTitle}>Family</Text>
+                <Text style={styles.modeCardDescription}>Fun activities for everyone</Text>
+              </LinearGradient>
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.switchNote}>You can switch anytime</Text>
+          <Text style={styles.switchNote}>You can change this anytime in Settings</Text>
         </View>
       </SafeAreaView>
     );
@@ -913,25 +828,13 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <View style={styles.logoContainer}>
-            <Image 
-              source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/attachments/y0y3gb7wc49gdw8yub9ef' }}
-              style={styles.logoImage}
-              resizeMode="contain"
-            />
-          </View>
+          <Logo size={28} color={Colors.primary} />
           <View>
-            <View style={styles.appNameRow}>
-              <Text style={styles.appName}>Scratch & Go</Text>
-              {isPremium && (
-                <View style={styles.premiumBadge}>
-                  <Text style={styles.premiumBadgeText}>PRO</Text>
-                </View>
-              )}
-            </View>
-            <Text style={styles.modeLabel}>{mode === 'couples' ? 'Couples Mode' : 'Family Mode'}</Text>
+            <Text style={styles.appName}>Scratch & Go</Text>
+            <Text style={styles.modeLabel}>{mode === 'couples' ? 'Couples' : 'Family'}</Text>
           </View>
         </View>
         <LocationSelector />
@@ -946,34 +849,32 @@ export default function HomeScreen() {
         scrollEventThrottle={16}
         nestedScrollEnabled={false}
       >
-        {wizardStep !== 'summary' && (
+        {/* Progress Bar */}
+        {wizardStep !== 'welcome' && wizardStep !== 'summary' && (
           <View style={styles.progressContainer}>
             <View style={styles.progressBarBackground}>
               <Animated.View 
-                style={[
-                  styles.progressBarFill,
-                  { width: `${wizardProgress}%` }
-                ]}
+                style={[styles.progressBarFill, { width: `${wizardProgress}%` }]}
               />
             </View>
-            {wizardStep !== 'welcome' && (
-              <TouchableOpacity
-                style={styles.backButton}
-                onPress={handleWizardBack}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.backButtonText}>Back</Text>
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={handleWizardBack}
+              activeOpacity={0.7}
+            >
+              <ChevronLeft size={20} color={Colors.textLight} />
+              <Text style={styles.backButtonText}>Back</Text>
+            </TouchableOpacity>
           </View>
         )}
 
         {renderWizardContent()}
 
+        {/* Scratch Counter */}
         {wizardStep === 'summary' && (
           <View style={styles.scratchCountContainer}>
             <Text style={styles.scratchCountText}>
-              {isPremium ? 'Unlimited scratches' : `${remainingScratches} scratches remaining this month`}
+              {isPremium ? 'Unlimited scratches' : `${remainingScratches} scratches left this month`}
             </Text>
           </View>
         )}
@@ -992,49 +893,22 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.lg,
+    paddingVertical: Spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.cardBorder,
   },
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.md,
   },
-  logoContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: Colors.cardBackground,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logoImage: {
-    width: 28,
-    height: 28,
-  },
-  appNameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-  },
   appName: {
     fontSize: Typography.sizes.body,
-    fontWeight: '400' as const,
+    fontWeight: '600' as const,
     color: Colors.text,
   },
-  premiumBadge: {
-    backgroundColor: Colors.primary,
-    paddingHorizontal: Spacing.xs,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  premiumBadgeText: {
-    fontSize: 10,
-    fontWeight: '400' as const,
-    color: Colors.backgroundDark,
-    letterSpacing: 0.5,
-  },
   modeLabel: {
-    fontSize: Typography.sizes.caption,
+    fontSize: Typography.sizes.small,
     color: Colors.textLight,
     marginTop: 2,
   },
@@ -1043,508 +917,13 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.xl,
+    paddingBottom: Spacing.xxl,
   },
-  cardContainer: {
-    alignItems: 'center',
-    marginTop: Spacing.lg,
-    marginBottom: Spacing.lg,
-    width: '100%',
-  },
-  scratchLayer: {
-    flex: 1,
-    overflow: 'hidden',
-  },
-  shimmer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    width: 100,
-  },
-  scratchContent: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.md,
-  },
-  scratchText: {
-    fontSize: Typography.sizes.h2,
-    fontWeight: '400' as const,
-    color: Colors.backgroundDark,
-    textShadowColor: 'rgba(0, 0, 0, 0.1)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
-  },
-  scratchSubtext: {
-    fontSize: Typography.sizes.body,
-    fontWeight: '400' as const,
-    color: Colors.backgroundDark,
-    opacity: 0.8,
-  },
-  revealContent: {
-    flex: 1,
-    backgroundColor: Colors.cardBackground,
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    padding: Spacing.md,
-    paddingTop: Spacing.sm,
-  },
-  revealTitle: {
-    fontSize: Typography.sizes.body,
-    fontWeight: '600' as const,
-    color: Colors.text,
-    textAlign: 'center',
-    marginBottom: Spacing.xs,
-    paddingHorizontal: Spacing.xs,
-    lineHeight: 20,
-  },
-  descriptionContainer: {
-    width: '100%',
-    marginBottom: Spacing.xs,
-  },
-  revealDescription: {
-    fontSize: 12,
-    color: Colors.textLight,
-    textAlign: 'center',
-    paddingHorizontal: Spacing.xs,
-    lineHeight: 16,
-  },
-  expandButton: {
-    paddingVertical: Spacing.xs,
-    paddingHorizontal: Spacing.sm,
-    marginTop: Spacing.xs,
-    alignSelf: 'center',
-  },
-  expandButtonText: {
-    fontSize: 12,
-    color: Colors.primary,
-    fontWeight: '600' as const,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    gap: Spacing.md,
-    marginVertical: Spacing.xs,
-    marginBottom: Spacing.sm,
-  },
-  statItem: {
-    alignItems: 'center',
-    gap: Spacing.xs,
-  },
-  statLabel: {
-    fontSize: 10,
-    color: Colors.textLight,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  statValue: {
-    fontSize: 13,
-    fontWeight: '600' as const,
-    color: Colors.primary,
-  },
-  proTipBox: {
-    backgroundColor: Colors.accent + '20',
-    padding: Spacing.xs,
-    borderRadius: 8,
-    marginTop: Spacing.xs,
-    marginBottom: Spacing.xs,
-    width: '100%',
-  },
-  proTipLabel: {
-    fontSize: 11,
-    fontWeight: '600' as const,
-    color: Colors.accent,
-    marginBottom: 4,
-  },
-  proTipText: {
-    fontSize: 11,
-    color: Colors.text,
-    lineHeight: 15,
-  },
-  weatherBox: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-    borderRadius: 8,
-    marginBottom: Spacing.xs,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  weatherIcon: {
-    fontSize: 20,
-    marginRight: Spacing.xs,
-  },
-  weatherInfo: {
-    flex: 1,
-  },
-  weatherTemp: {
-    fontSize: 14,
-    color: Colors.text,
-    fontWeight: '600' as const,
-  },
-  weatherCondition: {
-    fontSize: 11,
-    color: Colors.textSecondary,
-  },
-  scratchCountContainer: {
-    alignItems: 'center',
-    marginBottom: Spacing.xl,
-    backgroundColor: Colors.cardBackground,
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.lg,
-    borderRadius: BorderRadius.full,
-    alignSelf: 'center',
-  },
-  scratchCountText: {
-    fontSize: Typography.sizes.caption,
-    color: Colors.textLight,
-    fontWeight: '400' as const,
-  },
-  modeSelectionContainer: {
-    flex: 1,
-    backgroundColor: '#1A1A1A',
-    paddingHorizontal: Spacing.xl,
-    justifyContent: 'center',
-  },
-  modeHeader: {
-    alignItems: 'center',
-    marginBottom: Spacing.xxl * 2,
-  },
-  modeTitle: {
-    fontSize: 32,
-    fontWeight: '400' as const,
-    color: '#FFFFFF',
-    marginTop: Spacing.md,
-    marginBottom: Spacing.xs,
-  },
-  modeSubtitle: {
-    fontSize: Typography.sizes.body,
-    color: '#B8B8B8',
-  },
-  modeCardsContainer: {
-    gap: Spacing.lg,
-    marginBottom: Spacing.xl,
-  },
-  modeCard: {
-    backgroundColor: '#252525',
-    borderRadius: BorderRadius.large,
-    padding: Spacing.xl,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#333333',
-  },
-  modeCardImageContainer: {
-    marginBottom: Spacing.lg,
-    height: 120,
-    width: '100%',
-    overflow: 'hidden',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  polaroidGrid: {
-    flexDirection: 'row',
-    width: '100%',
-    height: 220,
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  polaroidColumn: {
-    width: 80,
-    position: 'absolute',
-    gap: 12,
-  },
-  column1: {
-    left: -25,
-  },
-  column2: {
-    left: 70,
-  },
-  column3: {
-    left: 165,
-  },
-  column4: {
-    right: -25,
-  },
-  polaroidFrame: {
-    width: 80,
-    height: 100,
-    backgroundColor: '#FFFFFF',
-    padding: 6,
-    paddingBottom: 18,
-    borderRadius: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4,
-    shadowRadius: 10,
-    elevation: 8,
-  },
-  polaroidPhoto: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 2,
-  },
-  modeCardTitle: {
-    fontSize: Typography.sizes.h2,
-    fontWeight: '400' as const,
-    color: '#FFFFFF',
-    marginBottom: Spacing.xs,
-  },
-  modeCardDescription: {
-    fontSize: Typography.sizes.body,
-    color: '#B8B8B8',
-    textAlign: 'center',
-  },
-  switchNote: {
-    fontSize: Typography.sizes.small,
-    color: '#666666',
-    textAlign: 'center',
-  },
-  actionButtons: {
-    marginTop: Spacing.xs,
-    width: '100%',
-  },
-  startActivityButton: {
-    backgroundColor: Colors.primary,
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.md,
-    borderRadius: 12,
-    width: '100%',
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  startActivityButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.sm,
-  },
-  startActivityButtonIcon: {
-    fontSize: 18,
-  },
-  startActivityButtonText: {
-    fontSize: 16,
-    fontWeight: '600' as const,
-    color: Colors.backgroundDark,
-    textAlign: 'center',
-  },
-
-  secondaryActions: {
-    marginTop: Spacing.xs,
-    width: '100%',
-  },
-  regenerateButton: {
-    backgroundColor: Colors.cardBackground,
-    borderWidth: 1,
-    borderColor: Colors.primary,
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    borderRadius: 10,
-    width: '100%',
-  },
-  regenerateButtonText: {
-    fontSize: 14,
-    fontWeight: '600' as const,
-    color: Colors.primary,
-    textAlign: 'center',
-  },
-  tertiaryActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: Spacing.xs,
-    width: '100%',
-    paddingHorizontal: Spacing.sm,
-    justifyContent: 'center',
-  },
-  actionLink: {
-    paddingVertical: Spacing.xs,
-    paddingHorizontal: Spacing.sm,
-  },
-  actionLinkText: {
-    fontSize: 12,
-    fontWeight: '400' as const,
-    color: Colors.textSecondary,
-  },
-  actionLinkTextDisabled: {
-    color: Colors.textSecondary,
-    opacity: 0.5,
-  },
-  actionDivider: {
-    width: 1,
-    height: 14,
-    backgroundColor: Colors.cardBorder,
-  },
-  wizardContent: {
-    flex: 1,
-  },
-  welcomeContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.xxl,
-  },
-  welcomeIconContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: Colors.cardBackground,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: Spacing.lg,
-    borderWidth: 2,
-    borderColor: Colors.primary,
-  },
-  welcomeIcon: {
-    width: 60,
-    height: 60,
-  },
-  welcomeTitle: {
-    fontSize: Typography.sizes.h1,
-    fontWeight: '400' as const,
-    color: Colors.text,
-    textAlign: 'center',
-    marginBottom: Spacing.md,
-    lineHeight: 36,
-  },
-  welcomeDescription: {
-    fontSize: Typography.sizes.body,
-    color: Colors.textLight,
-    textAlign: 'center',
-    marginBottom: Spacing.xxl,
-    lineHeight: 24,
-    paddingHorizontal: Spacing.md,
-  },
-  startButton: {
-    backgroundColor: Colors.primary,
-    paddingVertical: Spacing.lg,
-    paddingHorizontal: Spacing.xxl * 2,
-    borderRadius: BorderRadius.large,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  startButtonText: {
-    fontSize: Typography.sizes.h3,
-    fontWeight: '400' as const,
-    color: Colors.backgroundDark,
-  },
-  questionContainer: {
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.xl,
-  },
-  questionNumber: {
-    fontSize: Typography.sizes.caption,
-    color: Colors.textLight,
-    textTransform: 'uppercase',
-    marginBottom: Spacing.sm,
-    fontWeight: '400' as const,
-  },
-  questionTitle: {
-    fontSize: Typography.sizes.h1,
-    fontWeight: '400' as const,
-    color: Colors.text,
-    marginBottom: Spacing.xs,
-    lineHeight: 32,
-  },
-  questionSubtitle: {
-    fontSize: Typography.sizes.body,
-    color: Colors.textLight,
-    marginBottom: Spacing.xl,
-    lineHeight: 22,
-  },
-  optionsGrid: {
-    gap: Spacing.md,
-  },
-  optionCard: {
-    backgroundColor: Colors.cardBackground,
-    borderWidth: 2,
-    borderColor: Colors.cardBorder,
-    borderRadius: BorderRadius.large,
-    padding: Spacing.lg,
-    position: 'relative',
-  },
-  optionCardSelected: {
-    borderColor: Colors.primary,
-    backgroundColor: Colors.primary + '15',
-  },
-  optionContent: {
-    flex: 1,
-  },
-  optionLabel: {
-    fontSize: Typography.sizes.h3,
-    fontWeight: '400' as const,
-    color: Colors.text,
-    marginBottom: Spacing.xs,
-  },
-  optionDescription: {
-    fontSize: Typography.sizes.caption,
-    color: Colors.textLight,
-  },
-  premiumTag: {
-    backgroundColor: Colors.accent,
-    paddingHorizontal: Spacing.xs,
-    paddingVertical: 2,
-    borderRadius: 4,
-    position: 'absolute',
-    top: Spacing.sm,
-    right: Spacing.sm,
-  },
-  premiumTagText: {
-    fontSize: 10,
-    fontWeight: '400' as const,
-    color: Colors.backgroundDark,
-    letterSpacing: 0.5,
-  },
-  summaryContainer: {
-    flex: 1,
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.xl,
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-  },
-  preferencesInfo: {
-    marginTop: Spacing.md,
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  preferencesRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: Spacing.xs,
-  },
-  preferenceItem: {
-    fontSize: Typography.sizes.caption,
-    color: Colors.textLight,
-  },
-  preferenceSeparator: {
-    fontSize: Typography.sizes.caption,
-    color: Colors.textLight,
-    opacity: 0.5,
-  },
-  changeAnswersLink: {
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-  },
-  changeAnswersLinkText: {
-    fontSize: Typography.sizes.caption,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-  },
+  
+  // Progress
   progressContainer: {
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
-    marginBottom: Spacing.lg,
+    paddingTop: Spacing.lg,
+    marginBottom: Spacing.md,
   },
   progressBarBackground: {
     height: 4,
@@ -1556,12 +935,492 @@ const styles = StyleSheet.create({
   progressBarFill: {
     height: '100%',
     backgroundColor: Colors.primary,
+    borderRadius: 2,
   },
   backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
     alignSelf: 'flex-start',
+    gap: Spacing.xs,
   },
   backButtonText: {
     fontSize: Typography.sizes.body,
-    color: Colors.textSecondary,
+    color: Colors.textLight,
+  },
+  
+  // Wizard
+  wizardContent: {
+    flex: 1,
+  },
+  
+  // Welcome
+  welcomeContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: Spacing.xxxl,
+  },
+  welcomeIconContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: Colors.primaryMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.xl,
+  },
+  welcomeTitle: {
+    fontSize: Typography.sizes.h1,
+    fontWeight: '600' as const,
+    color: Colors.text,
+    textAlign: 'center',
+    marginBottom: Spacing.md,
+  },
+  welcomeDescription: {
+    fontSize: Typography.sizes.body,
+    color: Colors.textLight,
+    textAlign: 'center',
+    marginBottom: Spacing.xxl,
+    lineHeight: 24,
+    paddingHorizontal: Spacing.lg,
+  },
+  startButton: {
+    borderRadius: BorderRadius.large,
+    overflow: 'hidden',
+  },
+  startButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing.xxl,
+  },
+  startButtonText: {
+    fontSize: Typography.sizes.h3,
+    fontWeight: '600' as const,
+    color: Colors.backgroundDark,
+  },
+  
+  // Questions
+  questionContainer: {
+    paddingTop: Spacing.lg,
+  },
+  questionNumber: {
+    fontSize: Typography.sizes.small,
+    color: Colors.textMuted,
+    marginBottom: Spacing.sm,
+  },
+  questionTitle: {
+    fontSize: Typography.sizes.h1,
+    fontWeight: '600' as const,
+    color: Colors.text,
+    marginBottom: Spacing.xs,
+  },
+  questionSubtitle: {
+    fontSize: Typography.sizes.body,
+    color: Colors.textLight,
+    marginBottom: Spacing.xl,
+  },
+  
+  // Options Grid
+  optionsGrid: {
+    gap: Spacing.md,
+  },
+  optionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.cardBackground,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    borderRadius: BorderRadius.large,
+    padding: Spacing.lg,
+    gap: Spacing.md,
+  },
+  optionCardSelected: {
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primaryMuted,
+  },
+  optionIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Colors.backgroundLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  optionTextContainer: {
+    flex: 1,
+  },
+  optionLabel: {
+    fontSize: Typography.sizes.body,
+    fontWeight: '500' as const,
+    color: Colors.text,
+    marginBottom: 2,
+  },
+  optionLabelSelected: {
+    color: Colors.primary,
+  },
+  optionDescription: {
+    fontSize: Typography.sizes.small,
+    color: Colors.textLight,
+  },
+  premiumTag: {
+    backgroundColor: Colors.accent,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 2,
+    borderRadius: BorderRadius.xs,
+  },
+  premiumTagText: {
+    fontSize: Typography.sizes.tiny,
+    fontWeight: '600' as const,
+    color: Colors.backgroundDark,
+  },
+  
+  // Budget Grid
+  budgetGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.md,
+  },
+  budgetCard: {
+    width: (SCREEN_WIDTH - Spacing.lg * 2 - Spacing.md) / 2,
+    backgroundColor: Colors.cardBackground,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    borderRadius: BorderRadius.large,
+    padding: Spacing.lg,
+    alignItems: 'center',
+  },
+  budgetCardSelected: {
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primaryMuted,
+  },
+  budgetLabel: {
+    fontSize: Typography.sizes.h2,
+    fontWeight: '600' as const,
+    color: Colors.text,
+    marginBottom: Spacing.xs,
+  },
+  budgetLabelSelected: {
+    color: Colors.primary,
+  },
+  budgetDescription: {
+    fontSize: Typography.sizes.small,
+    color: Colors.textLight,
+    textAlign: 'center',
+  },
+  
+  // Setting Grid
+  settingGrid: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+    marginTop: Spacing.md,
+  },
+  settingCard: {
+    flex: 1,
+    backgroundColor: Colors.cardBackground,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    borderRadius: BorderRadius.large,
+    padding: Spacing.lg,
+    alignItems: 'center',
+  },
+  settingCardSelected: {
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primaryMuted,
+  },
+  settingIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: Colors.backgroundLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.md,
+  },
+  settingIconContainerSelected: {
+    backgroundColor: Colors.primaryMuted,
+  },
+  settingLabel: {
+    fontSize: Typography.sizes.body,
+    fontWeight: '500' as const,
+    color: Colors.text,
+    marginBottom: Spacing.xs,
+  },
+  settingLabelSelected: {
+    color: Colors.primary,
+  },
+  settingDescription: {
+    fontSize: Typography.sizes.small,
+    color: Colors.textLight,
+    textAlign: 'center',
+  },
+  weatherHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: Spacing.lg,
+  },
+  weatherHintText: {
+    fontSize: Typography.sizes.caption,
+    color: Colors.textLight,
+  },
+  
+  // Summary
+  summaryContainer: {
+    paddingTop: Spacing.lg,
+    alignItems: 'center',
+  },
+  cardContainer: {
+    width: '100%',
+    marginBottom: Spacing.lg,
+  },
+  
+  // Reveal Content
+  revealContent: {
+    flex: 1,
+    backgroundColor: Colors.cardBackground,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: Spacing.xl,
+  },
+  loadingText: {
+    fontSize: Typography.sizes.body,
+    color: Colors.textLight,
+    marginTop: Spacing.lg,
+    textAlign: 'center',
+  },
+  revealScroll: {
+    flex: 1,
+  },
+  revealScrollContent: {
+    padding: Spacing.lg,
+    paddingTop: Spacing.xl,
+  },
+  revealTitle: {
+    fontSize: Typography.sizes.h2,
+    fontWeight: '600' as const,
+    color: Colors.text,
+    textAlign: 'center',
+    marginBottom: Spacing.md,
+    lineHeight: 28,
+  },
+  categoryBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'center',
+    gap: Spacing.xs,
+    backgroundColor: Colors.primaryMuted,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.full,
+    marginBottom: Spacing.lg,
+  },
+  categoryBadgeText: {
+    fontSize: Typography.sizes.small,
+    color: Colors.primary,
+    fontWeight: '500' as const,
+  },
+  revealDescription: {
+    fontSize: Typography.sizes.body,
+    color: Colors.textLight,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: Spacing.sm,
+  },
+  expandButton: {
+    fontSize: Typography.sizes.small,
+    color: Colors.primary,
+    textAlign: 'center',
+    marginBottom: Spacing.lg,
+  },
+  quickStats: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: Spacing.md,
+    marginBottom: Spacing.lg,
+  },
+  statChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    backgroundColor: Colors.backgroundLight,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.full,
+  },
+  statChipText: {
+    fontSize: Typography.sizes.small,
+    color: Colors.textLight,
+  },
+  proTipContainer: {
+    backgroundColor: Colors.accentMuted,
+    borderRadius: BorderRadius.medium,
+    padding: Spacing.md,
+    marginBottom: Spacing.lg,
+  },
+  proTipHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    marginBottom: Spacing.sm,
+  },
+  proTipLabel: {
+    fontSize: Typography.sizes.small,
+    fontWeight: '600' as const,
+    color: Colors.accent,
+  },
+  proTipText: {
+    fontSize: Typography.sizes.small,
+    color: Colors.text,
+    lineHeight: 18,
+  },
+  
+  // Actions
+  primaryAction: {
+    borderRadius: BorderRadius.medium,
+    overflow: 'hidden',
+    marginBottom: Spacing.lg,
+  },
+  primaryActionGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    paddingVertical: Spacing.lg,
+  },
+  primaryActionText: {
+    fontSize: Typography.sizes.body,
+    fontWeight: '600' as const,
+    color: Colors.backgroundDark,
+  },
+  secondaryActions: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: Spacing.xl,
+    marginBottom: Spacing.lg,
+  },
+  secondaryAction: {
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
+  secondaryActionText: {
+    fontSize: Typography.sizes.small,
+    color: Colors.textLight,
+  },
+  skipAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.xs,
+    paddingVertical: Spacing.sm,
+  },
+  skipActionText: {
+    fontSize: Typography.sizes.small,
+    color: Colors.textMuted,
+  },
+  
+  // Preferences
+  preferencesInfo: {
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  preferencesChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+  },
+  preferenceChip: {
+    backgroundColor: Colors.backgroundLight,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.full,
+  },
+  preferenceChipText: {
+    fontSize: Typography.sizes.small,
+    color: Colors.textLight,
+  },
+  changePreferencesButton: {
+    paddingVertical: Spacing.sm,
+  },
+  changePreferencesText: {
+    fontSize: Typography.sizes.small,
+    color: Colors.textMuted,
+  },
+  
+  // Scratch Count
+  scratchCountContainer: {
+    alignItems: 'center',
+    marginTop: Spacing.md,
+  },
+  scratchCountText: {
+    fontSize: Typography.sizes.small,
+    color: Colors.textMuted,
+  },
+  
+  // Mode Selection
+  modeSelectionContainer: {
+    flex: 1,
+    backgroundColor: Colors.background,
+    paddingHorizontal: Spacing.xl,
+    justifyContent: 'center',
+  },
+  modeHeader: {
+    alignItems: 'center',
+    marginBottom: Spacing.xxxl,
+  },
+  modeTitle: {
+    fontSize: Typography.sizes.hero,
+    fontWeight: '600' as const,
+    color: Colors.text,
+    marginTop: Spacing.lg,
+    marginBottom: Spacing.sm,
+  },
+  modeSubtitle: {
+    fontSize: Typography.sizes.body,
+    color: Colors.textLight,
+  },
+  modeCardsContainer: {
+    gap: Spacing.lg,
+    marginBottom: Spacing.xl,
+  },
+  modeCard: {
+    borderRadius: BorderRadius.xl,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  modeCardGradient: {
+    padding: Spacing.xl,
+    alignItems: 'center',
+  },
+  modeIconContainer: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: Colors.primaryMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.lg,
+  },
+  modeCardTitle: {
+    fontSize: Typography.sizes.h2,
+    fontWeight: '600' as const,
+    color: Colors.text,
+    marginBottom: Spacing.xs,
+  },
+  modeCardDescription: {
+    fontSize: Typography.sizes.body,
+    color: Colors.textLight,
+    textAlign: 'center',
+  },
+  switchNote: {
+    fontSize: Typography.sizes.small,
+    color: Colors.textMuted,
+    textAlign: 'center',
   },
 });

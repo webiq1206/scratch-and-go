@@ -3,6 +3,7 @@ import { View, StyleSheet, PanResponder, Animated, Dimensions, Platform } from '
 import Svg, { Circle, Defs, Mask, Rect, LinearGradient, Stop } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 import { BorderRadius } from '@/constants/design';
+import Colors from '@/constants/colors';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = SCREEN_WIDTH - 48;
@@ -333,10 +334,10 @@ export default function ScratchCard({
             pointerEvents="none"
           >
             <Defs>
-              <LinearGradient id="scratchGradient" x1="0" y1="0" x2="0" y2={CARD_HEIGHT}>
-                <Stop offset="0" stopColor="#FF6B9D" stopOpacity="1" />
-                <Stop offset="0.5" stopColor="#FF4A8A" stopOpacity="1" />
-                <Stop offset="1" stopColor="#FFB3D9" stopOpacity="1" />
+              <LinearGradient id="scratchGradient" x1="0" y1="0" x2="1" y2="1">
+                <Stop offset="0" stopColor={Colors.primaryGradientStart} stopOpacity="1" />
+                <Stop offset="0.5" stopColor={Colors.primary} stopOpacity="1" />
+                <Stop offset="1" stopColor={Colors.primaryGradientEnd} stopOpacity="1" />
               </LinearGradient>
               <Mask id="scratchMask">
                 {/* White background - everything visible */}

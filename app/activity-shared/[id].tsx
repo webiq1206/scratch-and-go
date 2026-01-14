@@ -11,7 +11,8 @@ import {
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Crown, X, Heart, Clock, DollarSign, Package, Lightbulb, Sparkles } from 'lucide-react-native';
+import { Crown, X, Heart, Clock, DollarSign, Package, Lightbulb } from 'lucide-react-native';
+import Logo from '@/components/ui/Logo';
 import Colors from '@/constants/colors';
 import Typography from '@/constants/typography';
 import Spacing from '@/constants/spacing';
@@ -164,7 +165,7 @@ export default function ActivitySharedScreen() {
             end={{ x: 1, y: 1 }}
             style={styles.iconContainer}
           >
-            <Sparkles size={32} color={Colors.white} />
+            <Logo size={36} color={Colors.white} />
           </LinearGradient>
 
           <Text style={styles.badgeText}>Shared Activity</Text>

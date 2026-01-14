@@ -1,11 +1,12 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { X, ArrowDown, Sparkles } from 'lucide-react-native';
+import { X, ArrowDown } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import Typography from '@/constants/typography';
 import Spacing from '@/constants/spacing';
 import { BorderRadius } from '@/constants/design';
+import Logo from '@/components/ui/Logo';
 
 interface TutorialOverlayProps {
   visible: boolean;
@@ -57,7 +58,7 @@ export default function TutorialOverlay({
 
         <View style={styles.content}>
           <View style={styles.iconContainer}>
-            <Sparkles size={32} color={Colors.primary} />
+            <Logo size={40} color={Colors.primary} />
           </View>
 
           <Text style={styles.title}>{title}</Text>

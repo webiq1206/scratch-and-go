@@ -5,13 +5,22 @@ import { Stack, router } from 'expo-router';
 import { useStats } from '@/contexts/StatsContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { 
-  Award,
-  Sparkles,
-  Calendar
+  Trophy,
+  Calendar,
+  Clock,
+  DollarSign,
+  TrendingUp,
+  Target,
+  Bookmark,
+  CheckCircle2,
+  Flame,
+  ChevronRight
 } from 'lucide-react-native';
+import Logo from '@/components/ui/Logo';
 import Colors from '@/constants/colors';
 import Typography from '@/constants/typography';
 import Spacing from '@/constants/spacing';
+import { BorderRadius } from '@/constants/design';
 
 const { width } = Dimensions.get('window');
 
@@ -21,7 +30,8 @@ export default function StatsScreen() {
   const formatTime = (minutes: number): string => {
     if (minutes < 60) return `${minutes}m`;
     const hours = Math.floor(minutes / 60);
-    return `${hours}h`;
+    const mins = minutes % 60;
+    return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
   };
 
   const formatMoney = (amount: number): string => {
@@ -29,13 +39,13 @@ export default function StatsScreen() {
     return `$${amount.toLocaleString()}`;
   };
 
+  const cardWidth = (width - Spacing.lg * 2 - Spacing.md) / 2;
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <Stack.Screen
         options={{
-          headerStyle: { backgroundColor: Colors.backgroundDark },
-          headerTintColor: Colors.text,
-          headerTitle: 'Your Stats',
+          headerShown: false,
         }}
       />
       <ScrollView 
@@ -43,101 +53,133 @@ export default function StatsScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        {/* Header */}
         <View style={styles.header}>
-          <Sparkles size={32} color={Colors.accent} />
+          <View style={styles.headerIcon}>
+            <TrendingUp size={28} color={Colors.primary} />
+          </View>
           <Text style={styles.headerTitle}>Your Journey</Text>
           <Text style={styles.headerSubtitle}>
-            Track your adventures and achievements
+            Track your progress and achievements
           </Text>
         </View>
 
+        {/* Year Recap Button */}
         <TouchableOpacity
           style={styles.yearRecapButton}
           onPress={() => router.push('/(main)/year-recap' as any)}
           activeOpacity={0.8}
         >
           <LinearGradient
-            colors={['#FF6B6B', '#C471ED', '#12C2E9']}
+            colors={[Colors.primaryGradientStart, Colors.primaryGradientEnd]}
             start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
+            end={{ x: 1, y: 0 }}
             style={styles.yearRecapGradient}
           >
             <View style={styles.yearRecapContent}>
-              <Calendar size={28} color={Colors.white} />
-              <View style={styles.yearRecapText}>
-                <Text style={styles.yearRecapTitle}>Your {new Date().getFullYear()} Year in Review</Text>
-                <Text style={styles.yearRecapSubtitle}>See your memories and achievements</Text>
+              <View style={styles.yearRecapIcon}>
+                <Calendar size={24} color={Colors.white} />
               </View>
+              <View style={styles.yearRecapText}>
+                <Text style={styles.yearRecapTitle}>{new Date().getFullYear()} Year in Review</Text>
+                <Text style={styles.yearRecapSubtitle}>See your highlights</Text>
+              </View>
+              <ChevronRight size={20} color={Colors.white} />
             </View>
           </LinearGradient>
         </TouchableOpacity>
 
+        {/* Streak Card */}
+        {stats.currentStreak > 0 && (
+          <View style={styles.streakCard}>
+            <LinearGradient
+              colors={[Colors.accentMuted, 'transparent']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.streakGradient}
+            >
+              <View style={styles.streakIcon}>
+                <Flame size={24} color={Colors.accent} />
+              </View>
+              <View style={styles.streakContent}>
+                <Text style={styles.streakValue}>{stats.currentStreak} Week Streak</Text>
+                <Text style={styles.streakLabel}>Keep it going!</Text>
+              </View>
+              {stats.longestStreak > stats.currentStreak && (
+                <View style={styles.streakBest}>
+                  <Trophy size={14} color={Colors.textMuted} />
+                  <Text style={styles.streakBestText}>Best: {stats.longestStreak}</Text>
+                </View>
+              )}
+            </LinearGradient>
+          </View>
+        )}
+
+        {/* Stats Grid */}
         <View style={styles.statsGrid}>
-          <View style={styles.statCard}>
+          <View style={[styles.statCard, { width: cardWidth }]}>
+            <View style={styles.statIcon}>
+              <Logo size={24} color={Colors.primary} />
+            </View>
             <Text style={styles.statValue}>{stats.totalScratched}</Text>
-            <Text style={styles.statLabel}>Activities Scratched</Text>
+            <Text style={styles.statLabel}>Scratched</Text>
           </View>
 
-          <View style={styles.statCard}>
+          <View style={[styles.statCard, { width: cardWidth }]}>
+            <View style={styles.statIcon}>
+              <Bookmark size={20} color={Colors.primary} />
+            </View>
             <Text style={styles.statValue}>{stats.totalSaved}</Text>
-            <Text style={styles.statLabel}>Activities Saved</Text>
+            <Text style={styles.statLabel}>Saved</Text>
           </View>
 
-          <View style={styles.statCard}>
+          <View style={[styles.statCard, { width: cardWidth }]}>
+            <View style={styles.statIcon}>
+              <CheckCircle2 size={20} color={Colors.success} />
+            </View>
             <Text style={styles.statValue}>{stats.totalCompleted}</Text>
             <Text style={styles.statLabel}>Completed</Text>
           </View>
 
-          <View style={styles.statCard}>
+          <View style={[styles.statCard, { width: cardWidth }]}>
+            <View style={styles.statIcon}>
+              <Target size={20} color={Colors.accent} />
+            </View>
             <Text style={styles.statValue}>{stats.currentMonthScratches}</Text>
             <Text style={styles.statLabel}>This Month</Text>
           </View>
         </View>
 
-        {stats.currentStreak > 0 && (
-          <LinearGradient
-            colors={[Colors.primaryGradientStart, Colors.primaryGradientEnd]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.streakCard}
-          >
-            <Award size={32} color={Colors.white} />
-            <View style={styles.streakContent}>
-              <Text style={styles.streakValue}>{stats.currentStreak} Week Streak!</Text>
-              <Text style={styles.streakLabel}>
-                You&apos;re on fire! Keep completing activities.
-              </Text>
-              {stats.longestStreak > stats.currentStreak && (
-                <Text style={styles.streakBest}>
-                  Personal best: {stats.longestStreak} weeks
-                </Text>
-              )}
-            </View>
-          </LinearGradient>
-        )}
-
+        {/* Time & Money Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Time & Money</Text>
-          <View style={styles.row}>
-            <View style={styles.timeMoneyCard}>
-              <Text style={styles.timeMoneyValue}>{formatTime(stats.estimatedTimeSpent)}</Text>
-              <Text style={styles.timeMoneyLabel}>Time Spent</Text>
+          <Text style={styles.sectionTitle}>Investment</Text>
+          <View style={styles.investmentRow}>
+            <View style={styles.investmentCard}>
+              <View style={[styles.investmentIcon, { backgroundColor: Colors.primaryMuted }]}>
+                <Clock size={24} color={Colors.primary} />
+              </View>
+              <Text style={styles.investmentValue}>{formatTime(stats.estimatedTimeSpent)}</Text>
+              <Text style={styles.investmentLabel}>Time invested</Text>
             </View>
-            <View style={styles.timeMoneyCard}>
-              <Text style={styles.timeMoneyValue}>{formatMoney(stats.estimatedMoneySpent)}</Text>
-              <Text style={styles.timeMoneyLabel}>Invested</Text>
+            <View style={styles.investmentCard}>
+              <View style={[styles.investmentIcon, { backgroundColor: Colors.successMuted }]}>
+                <DollarSign size={24} color={Colors.success} />
+              </View>
+              <Text style={styles.investmentValue}>{formatMoney(stats.estimatedMoneySpent)}</Text>
+              <Text style={styles.investmentLabel}>Money invested</Text>
             </View>
           </View>
         </View>
 
+        {/* Favorite Categories */}
         {stats.favoriteCategories.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Favorite Categories</Text>
+            <Text style={styles.sectionTitle}>Top Categories</Text>
             <View style={styles.categoriesContainer}>
-              {stats.favoriteCategories.map((category, index) => (
+              {stats.favoriteCategories.slice(0, 5).map((category, index) => (
                 <View key={category.category} style={styles.categoryItem}>
                   <View style={styles.categoryRank}>
-                    <Text style={styles.categoryRankText}>#{index + 1}</Text>
+                    <Text style={styles.categoryRankText}>{index + 1}</Text>
                   </View>
                   <View style={styles.categoryInfo}>
                     <Text style={styles.categoryName}>{category.category}</Text>
@@ -157,51 +199,7 @@ export default function StatsScreen() {
           </View>
         )}
 
-        {stats.monthlyRecap.highlights.length > 0 && (
-          <View style={styles.section}>
-            <View style={styles.recapHeader}>
-              <Text style={styles.sectionTitle}>
-                {stats.monthlyRecap.month} Recap
-              </Text>
-            </View>
-            <View style={styles.recapCard}>
-              <View style={styles.recapStats}>
-                <View style={styles.recapStatItem}>
-                  <Text style={styles.recapStatValue}>
-                    {stats.monthlyRecap.activitiesScratched}
-                  </Text>
-                  <Text style={styles.recapStatLabel}>Scratched</Text>
-                </View>
-                <View style={styles.recapDivider} />
-                <View style={styles.recapStatItem}>
-                  <Text style={styles.recapStatValue}>
-                    {stats.monthlyRecap.activitiesCompleted}
-                  </Text>
-                  <Text style={styles.recapStatLabel}>Completed</Text>
-                </View>
-                <View style={styles.recapDivider} />
-                <View style={styles.recapStatItem}>
-                  <Text style={styles.recapStatValue}>
-                    {formatTime(stats.monthlyRecap.totalTimeSpent)}
-                  </Text>
-                  <Text style={styles.recapStatLabel}>Time</Text>
-                </View>
-              </View>
-              {stats.monthlyRecap.highlights.length > 0 && (
-                <View style={styles.highlightsContainer}>
-                  <Text style={styles.highlightsTitle}>Highlights</Text>
-                  {stats.monthlyRecap.highlights.map((highlight, index) => (
-                    <View key={index} style={styles.highlightItem}>
-                      <View style={styles.highlightDot} />
-                      <Text style={styles.highlightText}>{highlight}</Text>
-                    </View>
-                  ))}
-                </View>
-              )}
-            </View>
-          </View>
-        )}
-
+        {/* Weekly Activity */}
         {streakData.weeklyActivities.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Weekly Activity</Text>
@@ -220,17 +218,45 @@ export default function StatsScreen() {
             </View>
             <View style={styles.weeklyLabels}>
               <Text style={styles.weeklyLabel}>Now</Text>
-              <Text style={styles.weeklyLabel}>12 weeks ago</Text>
+              <Text style={styles.weeklyLabel}>12w ago</Text>
             </View>
           </View>
         )}
 
+        {/* Monthly Recap */}
+        {stats.monthlyRecap.highlights.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>{stats.monthlyRecap.month} Recap</Text>
+            <View style={styles.recapCard}>
+              <View style={styles.recapStats}>
+                <View style={styles.recapStatItem}>
+                  <Text style={styles.recapStatValue}>{stats.monthlyRecap.activitiesScratched}</Text>
+                  <Text style={styles.recapStatLabel}>Scratched</Text>
+                </View>
+                <View style={styles.recapDivider} />
+                <View style={styles.recapStatItem}>
+                  <Text style={styles.recapStatValue}>{stats.monthlyRecap.activitiesCompleted}</Text>
+                  <Text style={styles.recapStatLabel}>Completed</Text>
+                </View>
+                <View style={styles.recapDivider} />
+                <View style={styles.recapStatItem}>
+                  <Text style={styles.recapStatValue}>{formatTime(stats.monthlyRecap.totalTimeSpent)}</Text>
+                  <Text style={styles.recapStatLabel}>Time</Text>
+                </View>
+              </View>
+            </View>
+          </View>
+        )}
+
+        {/* Empty State */}
         {stats.totalCompleted === 0 && stats.totalScratched === 0 && (
           <View style={styles.emptyState}>
-            <Sparkles size={48} color={Colors.textMuted} />
+            <View style={styles.emptyIcon}>
+              <Logo size={56} color={Colors.textMuted} />
+            </View>
             <Text style={styles.emptyTitle}>Start Your Journey</Text>
             <Text style={styles.emptyText}>
-              Scratch your first activity card to begin tracking your adventures!
+              Scratch your first activity to begin tracking your adventures!
             </Text>
           </View>
         )}
@@ -244,135 +270,210 @@ export default function StatsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.backgroundDark,
+    backgroundColor: Colors.background,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    padding: Spacing.md,
+    padding: Spacing.lg,
   },
+  
+  // Header
   header: {
     alignItems: 'center',
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.xl,
+  },
+  headerIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: Colors.primaryMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.md,
   },
   headerTitle: {
     fontSize: Typography.sizes.h1,
-    fontWeight: Typography.weights.regular,
+    fontWeight: '600' as const,
     color: Colors.text,
-    marginTop: Spacing.sm,
+    marginBottom: Spacing.xs,
   },
   headerSubtitle: {
     fontSize: Typography.sizes.caption,
     color: Colors.textLight,
-    marginTop: Spacing.xs,
   },
+  
+  // Year Recap
+  yearRecapButton: {
+    marginBottom: Spacing.lg,
+    borderRadius: BorderRadius.large,
+    overflow: 'hidden',
+  },
+  yearRecapGradient: {
+    padding: Spacing.lg,
+  },
+  yearRecapContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  yearRecapIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: Spacing.md,
+  },
+  yearRecapText: {
+    flex: 1,
+  },
+  yearRecapTitle: {
+    fontSize: Typography.sizes.body,
+    fontWeight: '600' as const,
+    color: Colors.white,
+    marginBottom: 2,
+  },
+  yearRecapSubtitle: {
+    fontSize: Typography.sizes.small,
+    color: 'rgba(255, 255, 255, 0.8)',
+  },
+  
+  // Streak
+  streakCard: {
+    marginBottom: Spacing.lg,
+    borderRadius: BorderRadius.large,
+    overflow: 'hidden',
+    backgroundColor: Colors.cardBackground,
+    borderWidth: 1,
+    borderColor: Colors.accent + '30',
+  },
+  streakGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: Spacing.lg,
+  },
+  streakIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Colors.accentMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: Spacing.md,
+  },
+  streakContent: {
+    flex: 1,
+  },
+  streakValue: {
+    fontSize: Typography.sizes.h3,
+    fontWeight: '600' as const,
+    color: Colors.text,
+  },
+  streakLabel: {
+    fontSize: Typography.sizes.small,
+    color: Colors.textLight,
+  },
+  streakBest: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  streakBestText: {
+    fontSize: Typography.sizes.small,
+    color: Colors.textMuted,
+  },
+  
+  // Stats Grid
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    marginBottom: Spacing.md,
+    gap: Spacing.md,
+    marginBottom: Spacing.lg,
   },
   statCard: {
-    width: (width - Spacing.md * 2 - Spacing.sm) / 2,
     backgroundColor: Colors.cardBackground,
-    borderRadius: 16,
-    padding: Spacing.md,
-    marginBottom: Spacing.sm,
+    borderRadius: BorderRadius.large,
+    padding: Spacing.lg,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: Colors.cardBorder,
   },
-  statEmoji: {
-    fontSize: 36,
-    marginBottom: Spacing.xs,
+  statIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.backgroundLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.sm,
   },
   statValue: {
-    fontSize: Typography.sizes.h1,
-    fontWeight: Typography.weights.regular,
+    fontSize: Typography.sizes.h2,
+    fontWeight: '600' as const,
     color: Colors.text,
-    marginBottom: Spacing.xs,
+    marginBottom: 2,
   },
   statLabel: {
     fontSize: Typography.sizes.small,
     color: Colors.textLight,
-    textAlign: 'center',
   },
-  streakCard: {
-    borderRadius: 16,
-    padding: Spacing.lg,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: Spacing.md,
-  },
-  streakContent: {
-    flex: 1,
-    marginLeft: Spacing.md,
-  },
-  streakValue: {
-    fontSize: Typography.sizes.h2,
-    fontWeight: Typography.weights.regular,
-    color: Colors.white,
-    marginBottom: Spacing.xs,
-  },
-  streakLabel: {
-    fontSize: Typography.sizes.caption,
-    color: Colors.white,
-    opacity: 0.9,
-  },
-  streakBest: {
-    fontSize: Typography.sizes.small,
-    color: Colors.white,
-    opacity: 0.8,
-    marginTop: Spacing.xs,
-  },
+  
+  // Sections
   section: {
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.xl,
   },
   sectionTitle: {
     fontSize: Typography.sizes.h3,
-    fontWeight: Typography.weights.regular,
+    fontWeight: '600' as const,
     color: Colors.text,
     marginBottom: Spacing.md,
   },
   sectionSubtitle: {
-    fontSize: Typography.sizes.caption,
+    fontSize: Typography.sizes.small,
     color: Colors.textLight,
     marginTop: -Spacing.sm,
     marginBottom: Spacing.md,
   },
-  row: {
+  
+  // Investment
+  investmentRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: Spacing.md,
   },
-  timeMoneyCard: {
+  investmentCard: {
     flex: 1,
     backgroundColor: Colors.cardBackground,
-    borderRadius: 16,
+    borderRadius: BorderRadius.large,
     padding: Spacing.lg,
     alignItems: 'center',
-    marginRight: Spacing.sm,
     borderWidth: 1,
     borderColor: Colors.cardBorder,
   },
-  timeMoneyEmoji: {
-    fontSize: 32,
-    marginBottom: Spacing.xs,
+  investmentIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.md,
   },
-  timeMoneyValue: {
+  investmentValue: {
     fontSize: Typography.sizes.h2,
-    fontWeight: Typography.weights.regular,
+    fontWeight: '600' as const,
     color: Colors.text,
-    marginTop: Spacing.sm,
-    marginBottom: Spacing.xs,
+    marginBottom: 2,
   },
-  timeMoneyLabel: {
-    fontSize: Typography.sizes.caption,
+  investmentLabel: {
+    fontSize: Typography.sizes.small,
     color: Colors.textLight,
   },
+  
+  // Categories
   categoriesContainer: {
     backgroundColor: Colors.cardBackground,
-    borderRadius: 16,
+    borderRadius: BorderRadius.large,
     padding: Spacing.md,
     borderWidth: 1,
     borderColor: Colors.cardBorder,
@@ -380,110 +481,49 @@ const styles = StyleSheet.create({
   categoryItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: Spacing.md,
+    paddingVertical: Spacing.sm,
   },
   categoryRank: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: Colors.backgroundLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: Spacing.md,
   },
   categoryRankText: {
-    fontSize: Typography.sizes.caption,
-    color: Colors.primaryGradientStart,
-    fontWeight: Typography.weights.regular,
+    fontSize: Typography.sizes.small,
+    color: Colors.primary,
+    fontWeight: '600' as const,
   },
   categoryInfo: {
     flex: 1,
     marginRight: Spacing.md,
   },
   categoryName: {
-    fontSize: Typography.sizes.body,
+    fontSize: Typography.sizes.caption,
     color: Colors.text,
     marginBottom: Spacing.xs,
   },
   categoryBar: {
-    height: 6,
+    height: 4,
     backgroundColor: Colors.backgroundLight,
-    borderRadius: 3,
+    borderRadius: 2,
     overflow: 'hidden',
   },
   categoryBarFill: {
     height: '100%',
-    backgroundColor: Colors.primaryGradientStart,
+    backgroundColor: Colors.primary,
+    borderRadius: 2,
   },
   categoryCount: {
-    fontSize: Typography.sizes.body,
-    color: Colors.textLight,
-    fontWeight: Typography.weights.regular,
-  },
-  recapHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: Spacing.md,
-  },
-  recapEmoji: {
-    fontSize: 24,
-    marginRight: Spacing.sm,
-  },
-  recapCard: {
-    backgroundColor: Colors.cardBackground,
-    borderRadius: 16,
-    padding: Spacing.lg,
-    borderWidth: 1,
-    borderColor: Colors.cardBorder,
-  },
-  recapStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: Spacing.lg,
-  },
-  recapStatItem: {
-    alignItems: 'center',
-  },
-  recapStatValue: {
-    fontSize: Typography.sizes.h2,
-    fontWeight: Typography.weights.regular,
-    color: Colors.text,
-    marginBottom: Spacing.xs,
-  },
-  recapStatLabel: {
     fontSize: Typography.sizes.caption,
     color: Colors.textLight,
+    fontWeight: '500' as const,
   },
-  recapDivider: {
-    width: 1,
-    backgroundColor: Colors.divider,
-  },
-  highlightsContainer: {
-    borderTopWidth: 1,
-    borderTopColor: Colors.divider,
-    paddingTop: Spacing.md,
-  },
-  highlightsTitle: {
-    fontSize: Typography.sizes.body,
-    color: Colors.text,
-    marginBottom: Spacing.sm,
-  },
-  highlightItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: Spacing.sm,
-  },
-  highlightDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: Colors.primaryGradientStart,
-    marginRight: Spacing.sm,
-  },
-  highlightText: {
-    fontSize: Typography.sizes.caption,
-    color: Colors.textLight,
-  },
+  
+  // Weekly
   weeklyContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -494,11 +534,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 2,
   },
   weekBar: {
-    height: 40,
-    borderRadius: 4,
+    height: 32,
+    borderRadius: BorderRadius.xs,
   },
   weekBarActive: {
-    backgroundColor: Colors.primaryGradientStart,
+    backgroundColor: Colors.primary,
   },
   weekBarInactive: {
     backgroundColor: Colors.backgroundLight,
@@ -508,18 +548,58 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   weeklyLabel: {
-    fontSize: Typography.sizes.small,
+    fontSize: Typography.sizes.tiny,
     color: Colors.textMuted,
   },
+  
+  // Recap
+  recapCard: {
+    backgroundColor: Colors.cardBackground,
+    borderRadius: BorderRadius.large,
+    padding: Spacing.lg,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  recapStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  recapStatItem: {
+    alignItems: 'center',
+  },
+  recapStatValue: {
+    fontSize: Typography.sizes.h3,
+    fontWeight: '600' as const,
+    color: Colors.text,
+    marginBottom: 2,
+  },
+  recapStatLabel: {
+    fontSize: Typography.sizes.small,
+    color: Colors.textLight,
+  },
+  recapDivider: {
+    width: 1,
+    backgroundColor: Colors.cardBorder,
+  },
+  
+  // Empty State
   emptyState: {
     alignItems: 'center',
-    paddingVertical: Spacing.xxl,
+    paddingVertical: Spacing.xxxl,
+  },
+  emptyIcon: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: Colors.cardBackground,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.lg,
   },
   emptyTitle: {
-    fontSize: Typography.sizes.h2,
-    fontWeight: Typography.weights.regular,
+    fontSize: Typography.sizes.h3,
+    fontWeight: '600' as const,
     color: Colors.text,
-    marginTop: Spacing.md,
     marginBottom: Spacing.sm,
   },
   emptyText: {
@@ -527,36 +607,11 @@ const styles = StyleSheet.create({
     color: Colors.textLight,
     textAlign: 'center',
     maxWidth: 280,
+    lineHeight: 22,
   },
+  
   bottomSpacer: {
-    height: Spacing.xxl * 2,
-  },
-  yearRecapButton: {
-    marginBottom: Spacing.md,
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  yearRecapGradient: {
-    borderRadius: 16,
-    padding: Spacing.lg,
-  },
-  yearRecapContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  yearRecapText: {
-    flex: 1,
-    marginLeft: Spacing.md,
-  },
-  yearRecapTitle: {
-    fontSize: Typography.sizes.h3,
-    fontWeight: Typography.weights.bold as any,
-    color: Colors.white,
-    marginBottom: Spacing.xs,
-  },
-  yearRecapSubtitle: {
-    fontSize: Typography.sizes.caption,
-    color: Colors.white,
-    opacity: 0.9,
+    height: Spacing.xxl,
   },
 });
+

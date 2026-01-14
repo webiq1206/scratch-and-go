@@ -3,7 +3,8 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { X, Sparkles, Zap, Star, Crown, Check } from 'lucide-react-native';
+import { X, Sparkles, Zap, Crown, Check } from 'lucide-react-native';
+import Logo from '@/components/ui/Logo';
 import { PurchasesPackage } from 'react-native-purchases';
 import Colors from '@/constants/colors';
 import Typography from '@/constants/typography';
@@ -25,10 +26,10 @@ export default function PaywallScreen() {
   const [selectedPackage, setSelectedPackage] = useState<PurchasesPackage | null>(null);
 
   const benefits = [
-    { icon: Zap, text: 'Unlimited scratches every month', color: Colors.accent },
-    { icon: Star, text: 'Exclusive premium activity categories', color: Colors.accent },
-    { icon: Sparkles, text: 'Priority support from our team', color: Colors.accent },
-    { icon: Crown, text: '100% ad-free experience', color: Colors.accent },
+    { icon: Zap, text: 'Unlimited scratches every month', color: Colors.accent, isLogo: false },
+    { icon: null, text: 'Exclusive premium activity categories', color: Colors.accent, isLogo: true },
+    { icon: Sparkles, text: 'Priority support from our team', color: Colors.accent, isLogo: false },
+    { icon: Crown, text: '100% ad-free experience', color: Colors.accent, isLogo: false },
   ];
 
   const packages = offerings?.current?.availablePackages || [];
@@ -170,7 +171,11 @@ export default function PaywallScreen() {
             return (
               <View key={index} style={styles.benefitItem}>
                 <View style={styles.benefitIconContainer}>
-                  <IconComponent size={20} color={benefit.color} />
+                  {benefit.isLogo ? (
+                    <Logo size={20} color={benefit.color} />
+                  ) : IconComponent ? (
+                    <IconComponent size={20} color={benefit.color} />
+                  ) : null}
                 </View>
                 <Text style={styles.benefitText}>{benefit.text}</Text>
               </View>

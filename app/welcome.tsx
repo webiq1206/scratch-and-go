@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Heart, Users, Check } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import Typography from '@/constants/typography';
 import Spacing from '@/constants/spacing';
@@ -224,7 +225,9 @@ export default function WelcomeScreen() {
               activeOpacity={0.8}
             >
               <View style={styles.modeOptionContent}>
-                <Text style={styles.modeEmoji}>💕</Text>
+                <View style={styles.modeIconContainer}>
+                  <Heart size={28} color={selectedMode === 'couples' ? Colors.primary : Colors.textLight} />
+                </View>
                 <Text style={styles.modeOptionTitle}>Couples Mode</Text>
                 <Text style={styles.modeOptionDescription}>
                   Perfect for romantic dates and couple activities
@@ -232,7 +235,7 @@ export default function WelcomeScreen() {
               </View>
               {selectedMode === 'couples' && (
                 <View style={styles.modeCheckmark}>
-                  <Text style={styles.modeCheckmarkText}>✓</Text>
+                  <Check size={20} color="#1A1A1A" strokeWidth={3} />
                 </View>
               )}
             </TouchableOpacity>
@@ -246,7 +249,9 @@ export default function WelcomeScreen() {
               activeOpacity={0.8}
             >
               <View style={styles.modeOptionContent}>
-                <Text style={styles.modeEmoji}>👨‍👩‍👧‍👦</Text>
+                <View style={styles.modeIconContainer}>
+                  <Users size={28} color={selectedMode === 'family' ? Colors.primary : Colors.textLight} />
+                </View>
                 <Text style={styles.modeOptionTitle}>Family Mode</Text>
                 <Text style={styles.modeOptionDescription}>
                   Great for family activities and creating memories together
@@ -254,7 +259,7 @@ export default function WelcomeScreen() {
               </View>
               {selectedMode === 'family' && (
                 <View style={styles.modeCheckmark}>
-                  <Text style={styles.modeCheckmarkText}>✓</Text>
+                  <Check size={20} color="#1A1A1A" strokeWidth={3} />
                 </View>
               )}
             </TouchableOpacity>
@@ -808,11 +813,14 @@ const styles = StyleSheet.create({
     minHeight: 100,
     justifyContent: 'flex-start',
   },
-  modeEmoji: {
-    fontSize: 32,
+  modeIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255, 107, 157, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: Spacing.sm,
-    height: 40,
-    lineHeight: 40,
   },
   modeOptionTitle: {
     fontSize: Typography.sizes.h2,
@@ -835,11 +843,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginLeft: Spacing.md,
     flexShrink: 0,
-  },
-  modeCheckmarkText: {
-    fontSize: 20,
-    color: '#1A1A1A',
-    fontWeight: 'bold' as const,
   },
   modeNote: {
     fontSize: Typography.sizes.small,
