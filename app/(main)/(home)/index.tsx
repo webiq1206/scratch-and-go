@@ -44,6 +44,7 @@ export default function HomeScreen() {
   const scrollViewRef = useRef<ScrollView>(null);
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const scratchCardKeyRef = useRef<string>(`card-${Date.now()}`);
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   
   const { 
     currentActivity, 
@@ -216,6 +217,7 @@ export default function HomeScreen() {
     setWizardAnswers({});
     setWizardStep('welcome');
     setHasStartedScratch(false);
+    setIsDescriptionExpanded(false); // Reset description expansion
     // Reset scratcher when restarting wizard
     scratchCardKeyRef.current = `card-${Date.now()}`;
     clearCurrentActivity();
@@ -317,6 +319,7 @@ export default function HomeScreen() {
 
     setIsSavedForLater(false);
     setHasStartedScratch(false);
+    setIsDescriptionExpanded(false); // Reset description expansion
     // Update reset key when regenerating to reset the scratcher
     scratchCardKeyRef.current = `card-${Date.now()}`;
     await regenerateActivity();
@@ -603,7 +606,25 @@ export default function HomeScreen() {
                       ) : (
                         <>
                           <Text style={styles.revealTitle} numberOfLines={3}>{currentActivity.title}</Text>
-                          <Text style={styles.revealDescription} numberOfLines={4}>{currentActivity.description}</Text>
+                          <View style={styles.descriptionContainer}>
+                            <Text 
+                              style={styles.revealDescription} 
+                              numberOfLines={isDescriptionExpanded ? undefined : 4}
+                            >
+                              {currentActivity.description}
+                            </Text>
+                            {currentActivity.description && currentActivity.description.length > 150 && (
+                              <TouchableOpacity
+                                onPress={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                                activeOpacity={0.7}
+                                style={styles.expandButton}
+                              >
+                                <Text style={styles.expandButtonText}>
+                                  {isDescriptionExpanded ? 'Show Less' : 'Read More'}
+                                </Text>
+                              </TouchableOpacity>
+                            )}
+                          </View>
                           {location?.weather && (
                             <View style={styles.weatherBox}>
                               <Text style={styles.weatherIcon}>{location.weather.icon}</Text>
@@ -1080,13 +1101,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.xs,
     lineHeight: 20,
   },
+  descriptionContainer: {
+    width: '100%',
+    marginBottom: Spacing.xs,
+  },
   revealDescription: {
     fontSize: 12,
     color: Colors.textLight,
     textAlign: 'center',
     paddingHorizontal: Spacing.xs,
-    marginBottom: Spacing.xs,
     lineHeight: 16,
+  },
+  expandButton: {
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+    marginTop: Spacing.xs,
+    alignSelf: 'center',
+  },
+  expandButtonText: {
+    fontSize: 12,
+    color: Colors.primary,
+    fontWeight: '600' as const,
   },
   statsRow: {
     flexDirection: 'row',

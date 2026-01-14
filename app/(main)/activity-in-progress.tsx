@@ -46,6 +46,7 @@ export default function ActivityInProgressScreen() {
   const [isCompleted, setIsCompleted] = useState(false);
   const notesInputRef = useRef<TextInput>(null);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const initializedActivityKeyRef = useRef<string | null>(null);
 
   // Create activity object from params (memoized to prevent unnecessary re-renders)
   const activity: Activity = useMemo(() => ({
@@ -76,11 +77,23 @@ export default function ActivityInProgressScreen() {
     }
   }, [params.title, params.description, router]);
 
+  // Initialize activity - create a stable key from activity properties
   useEffect(() => {
     // Validate activity before saving
     if (!activity.title || !activity.description) {
       return;
     }
+
+    // Create a stable key from activity properties
+    const activityKey = `${activity.title}-${activity.description}-${activity.category}`;
+
+    // Prevent re-initialization if we've already initialized for this activity
+    if (initializedActivityKeyRef.current === activityKey) {
+      return;
+    }
+
+    // Mark as initialized for this activity
+    initializedActivityKeyRef.current = activityKey;
 
     // Check for existing activity by title and description to prevent duplicates
     const allActivities = getSavedActivities();
@@ -103,34 +116,23 @@ export default function ActivityInProgressScreen() {
     }
 
     // Save activity to Memory Book and mark as active
-    const existingActivity = savedActivityId ? getSavedActivity(savedActivityId) : null;
-    
-    if (!existingActivity) {
-      try {
-        const saved = saveActivity(activity);
-        setSavedActivityId(saved.id);
-        startActivity(saved.id);
-        if (location) {
-          updateLocationSnapshot(saved.id, location);
-        }
-        setNotesText(saved.notes || '');
-        setPhotos(saved.photos || []);
-        setIsCompleted(saved.isCompleted || false);
-      } catch (error) {
-        console.error('Error saving activity:', error);
-        Alert.alert('Error', 'Failed to save activity. Please try again.');
-        router.back();
+    try {
+      const saved = saveActivity(activity);
+      setSavedActivityId(saved.id);
+      startActivity(saved.id);
+      if (location) {
+        updateLocationSnapshot(saved.id, location);
       }
-    } else {
-      setSavedActivityId(existingActivity.id);
-      setNotesText(existingActivity.notes || '');
-      setPhotos(existingActivity.photos || []);
-      setIsCompleted(existingActivity.isCompleted || false);
-      if (!existingActivity.isActive && !existingActivity.isCompleted) {
-        startActivity(existingActivity.id);
-      }
+      setNotesText(saved.notes || '');
+      setPhotos(saved.photos || []);
+      setIsCompleted(saved.isCompleted || false);
+    } catch (error) {
+      console.error('Error saving activity:', error);
+      Alert.alert('Error', 'Failed to save activity. Please try again.');
+      router.back();
     }
-  }, [activity, savedActivityId, getSavedActivity, getSavedActivities, saveActivity, startActivity, location, updateLocationSnapshot, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activity.title, activity.description, activity.category]);
 
   // Update completion status when saved activity changes
   useEffect(() => {

@@ -545,7 +545,9 @@ function buildSystemPrompt(params: {
     'Creative': isCouples
       ? 'make something together - pottery class, painting, cooking a new recipe, DIY projects'
       : 'arts and crafts - painting, building projects, cooking together, making crafts, decorating',
-    'Foodie': 'culinary exploration - trying new restaurants, food markets, cooking classes, food tours, picnics with homemade food',
+    'Foodie': isCouples
+      ? 'restaurants and dining experiences - trying new restaurants (prioritize restaurants over classes), romantic dinner spots, brunch places, food markets, wine bars, dessert cafes, food trucks, date night restaurants. For Quick (1-2h) timing, STRONGLY prefer restaurants you can visit immediately without advance booking. Only suggest cooking classes for Half Day or Full Day durations if budget allows.'
+      : 'restaurants and family dining - family-friendly restaurants, kid-friendly cafes, pizza places, ice cream shops, food markets, casual dining. For Quick (1-2h) timing, STRONGLY prefer restaurants you can visit immediately without advance booking. Avoid cooking classes unless specifically requested for longer durations.',
     'Adventure': isCouples
       ? 'trying new experiences - escape rooms, go-karts, new neighborhoods, spontaneous road trips'
       : 'exciting discoveries - scavenger hunts, new parks, mini adventures, exploring somewhere new',
@@ -614,12 +616,24 @@ CRITICAL REQUIREMENTS - Follow these exactly:
   prompt += `\n\nSTYLE GUIDELINES:`;
   prompt += `\n- Be SPECIFIC: "Walk along the riverfront trail and stop at a local coffee shop" not "Go for a walk"`;
   prompt += `\n- Be PRACTICAL: Something people can actually do today or this week`;
+  prompt += `\n- Be IMMEDIATE: For Quick (1-2h) activities, STRICTLY avoid anything requiring advance booking, reservations days in advance, or scheduling. Prioritize walk-in restaurants, cafes, parks, shops, and spontaneous activities.`;
   prompt += `\n- Be REALISTIC: Match the budget and time constraints exactly`;
   prompt += `\n- Avoid cheesy or cliche suggestions (no "romantic picnic under the stars" unless it fits naturally)`;
   prompt += `\n- ${isCouples ? 'Focus on connection and quality time together' : 'Make it engaging for both kids and adults'}`;
   prompt += `\n- Title should be catchy but not over-the-top (3-6 words)`;
-  prompt += `\n- Description should explain what to do specifically (2-3 sentences)`;
+  prompt += `\n- Description should explain what to do specifically (2-3 sentences, be detailed but concise)`;
   prompt += `\n- Pro tip should be genuinely useful, not generic`;
+  
+  // Special handling for Foodie category
+  if (intelligentFilters.category === 'Foodie') {
+    if (filters.timing === 'Quick (1-2h)') {
+      prompt += `\n\nFOODIE QUICK ACTIVITY REQUIREMENTS:`;
+      prompt += `\n- MUST prioritize restaurants, cafes, food trucks, or food markets you can visit immediately`;
+      prompt += `\n- NO cooking classes, workshops, or anything requiring advance registration`;
+      prompt += `\n- Suggest specific types of cuisine or restaurant vibes (e.g., "Try a cozy Italian restaurant", "Visit a trendy brunch spot")`;
+      prompt += `\n- Focus on dining experiences, trying new cuisines, or visiting food-focused venues`;
+    }
+  }
 
   if (stronglyDislikedCategories.length > 0) {
     prompt += `\n\nAVOID THESE CATEGORIES (user dislikes): ${stronglyDislikedCategories.join(', ')}`;

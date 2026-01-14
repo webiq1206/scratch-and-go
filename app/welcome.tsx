@@ -15,11 +15,12 @@ const MODE_KEY = 'scratch_and_go_mode';
 const PREFERENCES_KEY = 'scratch_and_go_preferences';
 
 type OnboardingStep = 'mode' | 'preferences' | 'religion';
+type WelcomeStep = OnboardingStep | 'login';
 
 export default function WelcomeScreen() {
   const router = useRouter();
   const { loginWithGoogle, loginWithFacebook, isAuthenticated } = useAuth();
-  const [step, setStep] = useState<OnboardingStep>('mode');
+  const [step, setStep] = useState<OnboardingStep | 'login'>('login');
   const [selectedMode, setSelectedMode] = useState<'couples' | 'family' | null>(null);
   const [preferences, setPreferences] = useState<UserPreferences>(DEFAULT_PREFERENCES);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -54,17 +55,55 @@ export default function WelcomeScreen() {
     checkExistingMode();
   }, [router]);
 
+  // Check onboarding status and ensure mode selection is shown on first login
   useEffect(() => {
-    if (isAuthenticated) {
-      setStep('preferences');
-      setSelectedMode('couples');
-    }
-  }, [isAuthenticated]);
+    const checkOnboardingStatus = async () => {
+      try {
+        const savedPreferences = await AsyncStorage.getItem(PREFERENCES_KEY);
+        
+        // If onboarding is complete, navigate to home
+        if (savedPreferences) {
+          try {
+            const prefs = JSON.parse(savedPreferences);
+            if (prefs && prefs.completedOnboarding) {
+              router.replace('/(main)/(home)' as any);
+              return;
+            }
+          } catch (e) {
+            // Continue with onboarding if parsing fails
+          }
+        }
+        
+        // If authenticated, check if we need to show mode selection
+        if (isAuthenticated) {
+          const savedMode = await AsyncStorage.getItem(MODE_KEY);
+          if (savedMode) {
+            // Pre-select the saved mode, but still show mode selection screen
+            setSelectedMode(savedMode as 'couples' | 'family');
+          }
+          // Always show mode selection on first login (when onboarding not complete)
+          // This ensures users can see and confirm/change their mode selection
+          if (step === 'login') {
+            setStep('mode');
+          }
+        }
+      } catch (error) {
+        console.error('Error checking onboarding status:', error);
+      }
+    };
+    
+    checkOnboardingStatus();
+  }, [isAuthenticated, router, step]);
 
   const handleGoogleLogin = async () => {
     setIsLoggingIn(true);
     try {
       await loginWithGoogle();
+      // After successful login, show mode selection if not already selected
+      const savedMode = await AsyncStorage.getItem(MODE_KEY);
+      if (!savedMode) {
+        setStep('mode');
+      }
     } catch (error) {
       console.error('Google login error:', error);
       // Error handling is managed by AuthContext, but we ensure loading state is cleared
@@ -77,6 +116,11 @@ export default function WelcomeScreen() {
     setIsLoggingIn(true);
     try {
       await loginWithFacebook();
+      // After successful login, show mode selection if not already selected
+      const savedMode = await AsyncStorage.getItem(MODE_KEY);
+      if (!savedMode) {
+        setStep('mode');
+      }
     } catch (error) {
       console.error('Facebook login error:', error);
       // Error handling is managed by AuthContext, but we ensure loading state is cleared
@@ -113,6 +157,17 @@ export default function WelcomeScreen() {
     }
   };
 
+  const handleModeSelect = async (mode: 'couples' | 'family') => {
+    setSelectedMode(mode);
+    await AsyncStorage.setItem(MODE_KEY, mode);
+    setStep('preferences');
+  };
+
+  const handleContinueWithoutLogin = () => {
+    // User chose to continue without login, show mode selection
+    setStep('mode');
+  };
+
   const handleReligionSelection = (religionId: string) => {
     const updatedPreferences = {
       ...preferences,
@@ -146,6 +201,72 @@ export default function WelcomeScreen() {
       router.replace('/(main)/(home)' as any);
     }
   };
+
+  if (step === 'mode') {
+    return (
+      <View style={styles.container}>
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.headerContainer}>
+            <Text style={styles.setupTitle}>Choose Your Mode</Text>
+            <Text style={styles.setupSubtitle}>Select how you'll use Scratch & Go</Text>
+          </View>
+
+          <View style={styles.modeSelectionContainer}>
+            <TouchableOpacity
+              style={[
+                styles.modeOption,
+                selectedMode === 'couples' && styles.modeOptionSelected
+              ]}
+              onPress={() => handleModeSelect('couples')}
+              activeOpacity={0.8}
+            >
+              <View style={styles.modeOptionContent}>
+                <Text style={styles.modeEmoji}>💕</Text>
+                <Text style={styles.modeOptionTitle}>Couples Mode</Text>
+                <Text style={styles.modeOptionDescription}>
+                  Perfect for romantic dates and couple activities
+                </Text>
+              </View>
+              {selectedMode === 'couples' && (
+                <View style={styles.modeCheckmark}>
+                  <Text style={styles.modeCheckmarkText}>✓</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.modeOption,
+                selectedMode === 'family' && styles.modeOptionSelected
+              ]}
+              onPress={() => handleModeSelect('family')}
+              activeOpacity={0.8}
+            >
+              <View style={styles.modeOptionContent}>
+                <Text style={styles.modeEmoji}>👨‍👩‍👧‍👦</Text>
+                <Text style={styles.modeOptionTitle}>Family Mode</Text>
+                <Text style={styles.modeOptionDescription}>
+                  Great for family activities and creating memories together
+                </Text>
+              </View>
+              {selectedMode === 'family' && (
+                <View style={styles.modeCheckmark}>
+                  <Text style={styles.modeCheckmarkText}>✓</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.modeNote}>
+            You can change this anytime in settings
+          </Text>
+        </ScrollView>
+      </View>
+    );
+  }
 
   if (step === 'religion') {
     const progress = ((currentQuestionIndex + 1) / ONBOARDING_QUESTIONS.length) * 100;
@@ -195,6 +316,13 @@ export default function WelcomeScreen() {
   }
 
   if (step === 'preferences') {
+    // Ensure mode is selected before showing preferences
+    if (!selectedMode) {
+      // If no mode selected, go back to mode selection
+      setStep('mode');
+      return null;
+    }
+
     // Safety check: ensure question index is valid
     if (currentQuestionIndex >= ONBOARDING_QUESTIONS.length) {
       completeOnboarding(preferences);
@@ -276,94 +404,97 @@ export default function WelcomeScreen() {
     { uri: 'https://r2-pub.rork.com/generated-images/14b9dd81-cead-4151-958b-e1ff18fc5330.png', offset: 0, rotate: '2deg' },
   ];
 
-  return (
-    <View style={styles.container}>
-      <View style={styles.photoCollageContainer}>
-        <View style={styles.polaroidGridWrapper}>
-          <View style={styles.polaroidGrid}>
-            {polaroidImages.map((photo, index) => (
-              <View key={index} style={[styles.polaroid, { marginTop: photo.offset, transform: [{ rotate: photo.rotate }] }]}>
-                <Image source={{ uri: photo.uri }} style={styles.polaroidImage} />
-              </View>
-            ))}
+  // Show login screen if step is 'login' or if not authenticated and step is not explicitly set
+  if (step === 'login' || (!isAuthenticated && step !== 'mode' && step !== 'preferences' && step !== 'religion')) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.photoCollageContainer}>
+          <View style={styles.polaroidGridWrapper}>
+            <View style={styles.polaroidGrid}>
+              {polaroidImages.map((photo, index) => (
+                <View key={index} style={[styles.polaroid, { marginTop: photo.offset, transform: [{ rotate: photo.rotate }] }]}>
+                  <Image source={{ uri: photo.uri }} style={styles.polaroidImage} />
+                </View>
+              ))}
+            </View>
           </View>
+          <LinearGradient
+            colors={['rgba(0, 0, 0, 0.2)', 'rgba(0, 0, 0, 0.5)', 'rgba(0, 0, 0, 0.85)', '#000000']}
+            locations={[0, 0.3, 0.6, 0.75]}
+            style={styles.photoOverlay}
+          />
         </View>
-        <LinearGradient
-          colors={['rgba(0, 0, 0, 0.2)', 'rgba(0, 0, 0, 0.5)', 'rgba(0, 0, 0, 0.85)', '#000000']}
-          locations={[0, 0.3, 0.6, 0.75]}
-          style={styles.photoOverlay}
-        />
-      </View>
 
-      <View style={[styles.contentContainer, { paddingBottom: Math.max(insets.bottom, Spacing.xxl) }]}>
-        <Text style={styles.mainTagline}>Create memories that last forever.</Text>
-        <Text style={styles.subTagline}>
-          Discover meaningful moments to share{('\n')}with the people you love most.
-        </Text>
+        <View style={[styles.contentContainer, { paddingBottom: Math.max(insets.bottom, Spacing.xxl) }]}>
+          <Text style={styles.mainTagline}>Create memories that last forever.</Text>
+          <Text style={styles.subTagline}>
+            Discover meaningful moments to share{('\n')}with the people you love most.
+          </Text>
 
-        <View style={styles.authButtonsContainer}>
-          <TouchableOpacity
-            onPress={handleGoogleLogin}
-            activeOpacity={0.8}
-            style={styles.socialButton}
-            disabled={isLoggingIn}
-          >
-            <View style={styles.socialButtonContent}>
-              <Image
-                source={{ uri: 'https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg' }}
-                style={styles.socialIcon}
-              />
-              <Text style={styles.socialButtonText}>Continue with Google</Text>
-            </View>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={handleFacebookLogin}
-            activeOpacity={0.8}
-            style={[styles.socialButton, styles.facebookButton]}
-            disabled={isLoggingIn}
-          >
-            <View style={styles.socialButtonContent}>
-              <Image
-                source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/5/51/Facebook_f_logo_%282019%29.svg' }}
-                style={styles.socialIcon}
-              />
-              <Text style={[styles.socialButtonText, styles.facebookButtonText]}>Continue with Facebook</Text>
-            </View>
-          </TouchableOpacity>
-
-          <View style={styles.dividerContainer}>
-            <View style={styles.divider} />
-            <Text style={styles.dividerText}>or</Text>
-            <View style={styles.divider} />
-          </View>
-
-          <TouchableOpacity
-            onPress={() => {
-              setSelectedMode('couples');
-              setStep('preferences');
-            }}
-            activeOpacity={0.8}
-            style={{ width: '100%' }}
-            disabled={isLoggingIn}
-          >
-            <LinearGradient
-              colors={[Colors.primaryGradientStart, Colors.primaryGradientEnd]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.nextButton}
+          <View style={styles.authButtonsContainer}>
+            <TouchableOpacity
+              onPress={handleGoogleLogin}
+              activeOpacity={0.8}
+              style={styles.socialButton}
+              disabled={isLoggingIn}
             >
-              {isLoggingIn ? (
-                <ActivityIndicator color="#1A1A1A" />
-              ) : (
-                <Text style={styles.nextButtonText}>Continue</Text>
-              )}
-            </LinearGradient>
-          </TouchableOpacity>
+              <View style={styles.socialButtonContent}>
+                <Image
+                  source={{ uri: 'https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg' }}
+                  style={styles.socialIcon}
+                />
+                <Text style={styles.socialButtonText}>Continue with Google</Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={handleFacebookLogin}
+              activeOpacity={0.8}
+              style={[styles.socialButton, styles.facebookButton]}
+              disabled={isLoggingIn}
+            >
+              <View style={styles.socialButtonContent}>
+                <Image
+                  source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/5/51/Facebook_f_logo_%282019%29.svg' }}
+                  style={styles.socialIcon}
+                />
+                <Text style={[styles.socialButtonText, styles.facebookButtonText]}>Continue with Facebook</Text>
+              </View>
+            </TouchableOpacity>
+
+            <View style={styles.dividerContainer}>
+              <View style={styles.divider} />
+              <Text style={styles.dividerText}>or</Text>
+              <View style={styles.divider} />
+            </View>
+
+            <TouchableOpacity
+              onPress={handleContinueWithoutLogin}
+              activeOpacity={0.8}
+              style={{ width: '100%' }}
+              disabled={isLoggingIn}
+            >
+              <LinearGradient
+                colors={[Colors.primaryGradientStart, Colors.primaryGradientEnd]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.nextButton}
+              >
+                {isLoggingIn ? (
+                  <ActivityIndicator color="#1A1A1A" />
+                ) : (
+                  <Text style={styles.nextButtonText}>Continue</Text>
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
-    </View>
-  );
+    );
+  }
+
+  // This should never be reached, but TypeScript needs it
+  return null;
 }
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -649,5 +780,72 @@ const styles = StyleSheet.create({
     fontSize: Typography.sizes.h3,
     fontWeight: '400' as const,
     color: '#FFFFFF',
+  },
+  modeSelectionContainer: {
+    width: '100%',
+    gap: Spacing.lg,
+    marginBottom: Spacing.lg,
+  },
+  modeOption: {
+    width: '100%',
+    minHeight: 140,
+    padding: Spacing.xl,
+    borderRadius: BorderRadius.large,
+    backgroundColor: '#1A1A1A',
+    borderWidth: 2,
+    borderColor: '#333333',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  modeOptionSelected: {
+    borderColor: Colors.primary,
+    backgroundColor: 'rgba(255, 107, 157, 0.1)',
+  },
+  modeOptionContent: {
+    flex: 1,
+    alignItems: 'flex-start',
+    minHeight: 100,
+    justifyContent: 'flex-start',
+  },
+  modeEmoji: {
+    fontSize: 32,
+    marginBottom: Spacing.sm,
+    height: 40,
+    lineHeight: 40,
+  },
+  modeOptionTitle: {
+    fontSize: Typography.sizes.h2,
+    fontWeight: '400' as const,
+    color: '#FFFFFF',
+    marginBottom: Spacing.xs,
+  },
+  modeOptionDescription: {
+    fontSize: Typography.sizes.body,
+    color: Colors.textLight,
+    lineHeight: 22,
+    flex: 1,
+  },
+  modeCheckmark: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: Spacing.md,
+    flexShrink: 0,
+  },
+  modeCheckmarkText: {
+    fontSize: 20,
+    color: '#1A1A1A',
+    fontWeight: 'bold' as const,
+  },
+  modeNote: {
+    fontSize: Typography.sizes.small,
+    color: Colors.textLight,
+    textAlign: 'center',
+    fontStyle: 'italic',
+    marginTop: Spacing.md,
   },
 });

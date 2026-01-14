@@ -532,7 +532,7 @@ export default function SettingsScreen() {
           <View style={styles.legalLinks}>
             <TouchableOpacity
               style={styles.legalButton}
-              onPress={() => Linking.openURL('https://scratchandgo.app/privacy')}
+              onPress={() => router.push('/privacy-policy' as any)}
               activeOpacity={0.7}
             >
               <Shield size={18} color={Colors.textLight} />
@@ -541,7 +541,7 @@ export default function SettingsScreen() {
             
             <TouchableOpacity
               style={styles.legalButton}
-              onPress={() => Linking.openURL('https://scratchandgo.app/terms')}
+              onPress={() => router.push('/terms-of-service' as any)}
               activeOpacity={0.7}
             >
               <FileText size={18} color={Colors.textLight} />

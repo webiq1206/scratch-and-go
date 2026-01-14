@@ -293,11 +293,11 @@ export default function PaywallScreen() {
             Subscription automatically renews unless auto-renew is turned off at least 24 hours before the end of the current period.
           </Text>
           <View style={styles.legalLinks}>
-            <TouchableOpacity onPress={() => Linking.openURL('https://scratchandgo.app/terms')}>
+            <TouchableOpacity onPress={() => router.push('/terms-of-service' as any)}>
               <Text style={styles.legalLink}>Terms of Service</Text>
             </TouchableOpacity>
             <Text style={styles.legalSeparator}>•</Text>
-            <TouchableOpacity onPress={() => Linking.openURL('https://scratchandgo.app/privacy')}>
+            <TouchableOpacity onPress={() => router.push('/privacy-policy' as any)}>
               <Text style={styles.legalLink}>Privacy Policy</Text>
             </TouchableOpacity>
           </View>
