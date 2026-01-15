@@ -1,45 +1,84 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import createContextHook from '@nkzw/create-context-hook';
-import Purchases, { 
-  PurchasesOfferings, 
-  CustomerInfo, 
-  PurchasesPackage,
-  LOG_LEVEL 
-} from 'react-native-purchases';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 const ENTITLEMENT_ID = 'premium';
 
 function getRCApiKey(): string {
-  if (__DEV__ || Platform.OS === 'web') {
-    return process.env.EXPO_PUBLIC_REVENUECAT_TEST_API_KEY || '';
+  try {
+    if (__DEV__ || Platform.OS === 'web') {
+      return process.env.EXPO_PUBLIC_REVENUECAT_TEST_API_KEY || '';
+    }
+    return Platform.select({
+      ios: process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY || '',
+      android: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY || '',
+      default: process.env.EXPO_PUBLIC_REVENUECAT_TEST_API_KEY || '',
+    }) || '';
+  } catch {
+    console.warn('[RevenueCat] Failed to get API key');
+    return '';
   }
-  return Platform.select({
-    ios: process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY || '',
-    android: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY || '',
-    default: process.env.EXPO_PUBLIC_REVENUECAT_TEST_API_KEY || '',
-  }) || '';
 }
 
-const apiKey = getRCApiKey();
+// Lazy load Purchases module to avoid initialization issues
+let PurchasesModule: typeof import('react-native-purchases').default | null = null;
+let isConfigured = false;
 
-if (apiKey) {
-  console.log('[RevenueCat] Configuring with API key...');
-  Purchases.setLogLevel(LOG_LEVEL.DEBUG);
-  Purchases.configure({ apiKey });
-} else {
-  console.warn('[RevenueCat] No API key found, purchases will not work');
+async function initializePurchases(): Promise<typeof import('react-native-purchases').default | null> {
+  if (PurchasesModule && isConfigured) {
+    return PurchasesModule;
+  }
+
+  try {
+    const purchasesImport = await import('react-native-purchases');
+    PurchasesModule = purchasesImport.default;
+    const LOG_LEVEL = purchasesImport.LOG_LEVEL;
+    
+    const apiKey = getRCApiKey();
+    
+    if (apiKey && PurchasesModule && !isConfigured) {
+      console.log('[RevenueCat] Configuring with API key...');
+      PurchasesModule.setLogLevel(LOG_LEVEL.DEBUG);
+      PurchasesModule.configure({ apiKey });
+      isConfigured = true;
+    } else if (!apiKey) {
+      console.warn('[RevenueCat] No API key found, purchases will not work');
+    }
+    
+    return PurchasesModule;
+  } catch (error) {
+    console.warn('[RevenueCat] Failed to initialize:', error);
+    return null;
+  }
 }
 
 export const [SubscriptionProvider, useSubscription] = createContextHook(() => {
   const queryClient = useQueryClient();
+  const [isInitialized, setIsInitialized] = useState(false);
+  const initRef = useRef(false);
+
+  // Initialize Purchases on mount
+  useEffect(() => {
+    if (initRef.current) return;
+    initRef.current = true;
+    
+    initializePurchases()
+      .then(() => {
+        setIsInitialized(true);
+      })
+      .catch((error) => {
+        console.warn('[RevenueCat] Initialization failed:', error);
+        setIsInitialized(true); // Still set to true so queries can proceed (with null results)
+      });
+  }, []);
 
   const customerInfoQuery = useQuery({
     queryKey: ['revenuecat', 'customerInfo'],
     queryFn: async () => {
-      if (!apiKey) {
-        console.log('[RevenueCat] No API key, returning null customer info');
+      const Purchases = await initializePurchases();
+      if (!Purchases) {
+        console.log('[RevenueCat] Purchases not available, returning null customer info');
         return null;
       }
       console.log('[RevenueCat] Fetching customer info...');
@@ -49,13 +88,15 @@ export const [SubscriptionProvider, useSubscription] = createContextHook(() => {
     },
     staleTime: 1000 * 60 * 5,
     retry: 2,
+    enabled: isInitialized,
   });
 
   const offeringsQuery = useQuery({
     queryKey: ['revenuecat', 'offerings'],
     queryFn: async () => {
-      if (!apiKey) {
-        console.log('[RevenueCat] No API key, returning null offerings');
+      const Purchases = await initializePurchases();
+      if (!Purchases) {
+        console.log('[RevenueCat] Purchases not available, returning null offerings');
         return null;
       }
       console.log('[RevenueCat] Fetching offerings...');
@@ -69,10 +110,15 @@ export const [SubscriptionProvider, useSubscription] = createContextHook(() => {
     },
     staleTime: 1000 * 60 * 10,
     retry: 2,
+    enabled: isInitialized,
   });
 
   const purchaseMutation = useMutation({
-    mutationFn: async (pkg: PurchasesPackage) => {
+    mutationFn: async (pkg: any) => {
+      const Purchases = await initializePurchases();
+      if (!Purchases) {
+        throw new Error('Purchases not available');
+      }
       console.log('[RevenueCat] Purchasing package:', pkg.identifier);
       const { customerInfo } = await Purchases.purchasePackage(pkg);
       console.log('[RevenueCat] Purchase successful');
@@ -91,6 +137,10 @@ export const [SubscriptionProvider, useSubscription] = createContextHook(() => {
 
   const restoreMutation = useMutation({
     mutationFn: async () => {
+      const Purchases = await initializePurchases();
+      if (!Purchases) {
+        throw new Error('Purchases not available');
+      }
       console.log('[RevenueCat] Restoring purchases...');
       const customerInfo = await Purchases.restorePurchases();
       console.log('[RevenueCat] Restore successful');
@@ -126,13 +176,13 @@ export const [SubscriptionProvider, useSubscription] = createContextHook(() => {
   const { mutateAsync: purchaseAsync } = purchaseMutation;
   const { mutateAsync: restoreAsync } = restoreMutation;
 
-  const purchasePackage = useCallback(async (pkg: PurchasesPackage) => {
+  const purchasePackage = useCallback(async (pkg: any) => {
     return purchaseAsync(pkg);
   }, [purchaseAsync]);
 
   const restorePurchases = useCallback(async () => {
     const customerInfo = await restoreAsync();
-    const hasEntitlement = !!customerInfo.entitlements.active[ENTITLEMENT_ID];
+    const hasEntitlement = !!customerInfo?.entitlements?.active?.[ENTITLEMENT_ID];
     return hasEntitlement;
   }, [restoreAsync]);
 
@@ -141,9 +191,9 @@ export const [SubscriptionProvider, useSubscription] = createContextHook(() => {
   }, [queryClient]);
 
   return {
-    customerInfo: customerInfoQuery.data as CustomerInfo | null,
-    offerings: offeringsQuery.data as PurchasesOfferings | null,
-    isLoading: customerInfoQuery.isLoading || offeringsQuery.isLoading,
+    customerInfo: customerInfoQuery.data ?? null,
+    offerings: offeringsQuery.data ?? null,
+    isLoading: !isInitialized || customerInfoQuery.isLoading || offeringsQuery.isLoading,
     isPurchasing: purchaseMutation.isPending,
     isRestoring: restoreMutation.isPending,
     isPremium: isPremium(),

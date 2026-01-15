@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -71,6 +71,23 @@ export default function Toast({
   
   const { Icon, color, backgroundColor, borderColor } = getStylesForType(type);
 
+  const handleDismiss = useCallback(() => {
+    Animated.parallel([
+      Animated.timing(translateY, {
+        toValue: position === 'top' ? -100 : 100,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+      Animated.timing(opacity, {
+        toValue: 0,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      onDismiss();
+    });
+  }, [translateY, opacity, position, onDismiss]);
+
   useEffect(() => {
     let timer: NodeJS.Timeout | null = null;
     
@@ -107,23 +124,6 @@ export default function Toast({
       }
     };
   }, [visible, duration, position, translateY, opacity, handleDismiss]);
-
-  const handleDismiss = () => {
-    Animated.parallel([
-      Animated.timing(translateY, {
-        toValue: position === 'top' ? -100 : 100,
-        duration: 250,
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacity, {
-        toValue: 0,
-        duration: 250,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      onDismiss();
-    });
-  };
 
   if (!visible) return null;
 

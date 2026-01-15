@@ -1,11 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import { Platform } from 'react-native';
 import createContextHook from '@nkzw/create-context-hook';
 
-WebBrowser.maybeCompleteAuthSession();
+// Safely call maybeCompleteAuthSession
+try {
+  WebBrowser.maybeCompleteAuthSession();
+} catch (error) {
+  console.warn('[Auth] Failed to complete auth session:', error);
+}
 
 export type AuthProvider = 'google' | 'facebook' | 'none';
 
