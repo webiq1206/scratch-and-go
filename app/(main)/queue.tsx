@@ -1,15 +1,43 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, RefreshControl, ScrollView } from 'react-native';
+import React, { useState, useEffect, useMemo } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, ScrollView, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
-import { ThumbsUp, ThumbsDown, Trash2, Users, CheckCircle, Clock } from 'lucide-react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LinearGradient } from 'expo-linear-gradient';
+import { ThumbsUp, ThumbsDown, Trash2, Users, CheckCircle, Clock, Heart, Sparkles, Send, MessageCircle } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import Typography from '@/constants/typography';
 import Spacing from '@/constants/spacing';
-import { BorderRadius } from '@/constants/design';
+import { BorderRadius, Shadows } from '@/constants/design';
 import { useCollaborative } from '@/contexts/CollaborativeContext';
 import { CollaborativeActivity } from '@/types/collaborative';
 import { useMemoryBook } from '@/contexts/MemoryBookContext';
+import { useAlert } from '@/contexts/AlertContext';
+import PolaroidFrame from '@/components/ui/PolaroidFrame';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const MODE_KEY = 'scratch_and_go_mode';
+type Mode = 'couples' | 'family';
+
+// Mode-specific content
+const getModeContent = (mode: Mode) => ({
+  couples: {
+    title: 'Date Ideas Queue',
+    subtitle: 'Plan special moments together',
+    pendingEmpty: 'No date ideas waiting! Share activities with your partner to plan together.',
+    approvedEmpty: 'Vote yes on date ideas to see them here, ready for your next romantic adventure!',
+    addedBy: 'Suggested by',
+    savePrompt: 'Save to Our Dates',
+  },
+  family: {
+    title: 'Family Activity Queue',
+    subtitle: 'Plan adventures for everyone',
+    pendingEmpty: 'No activities waiting! Share ideas with your family to plan together.',
+    approvedEmpty: 'Vote yes on activities to see them here, ready for family fun!',
+    addedBy: 'Suggested by',
+    savePrompt: 'Save to Family Activities',
+  },
+});
 
 export default function QueueScreen() {
   const {
@@ -21,9 +49,33 @@ export default function QueueScreen() {
     approvedActivities,
   } = useCollaborative();
 
-  const { saveActivity } = useMemoryBook();
+  const { saveActivity, getCompletedActivities } = useMemoryBook();
+  const { alert, showSuccess, showError } = useAlert();
   const [activeTab, setActiveTab] = useState<'pending' | 'approved'>('pending');
   const [refreshing, setRefreshing] = useState(false);
+  const [mode, setMode] = useState<Mode>('couples');
+
+  // Load mode
+  useEffect(() => {
+    const loadMode = async () => {
+      const savedMode = await AsyncStorage.getItem(MODE_KEY);
+      if (savedMode) {
+        setMode(savedMode as Mode);
+      }
+    };
+    loadMode();
+  }, []);
+
+  const content = getModeContent(mode);
+
+  // Get user photos for empty state decoration
+  const userPhotos = useMemo(() => {
+    const completed = getCompletedActivities();
+    return completed
+      .filter(a => a.photos && a.photos.length > 0)
+      .flatMap(a => a.photos!)
+      .slice(0, 3);
+  }, [getCompletedActivities]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -36,9 +88,9 @@ export default function QueueScreen() {
   };
 
   const handleDelete = (activityId: string) => {
-    Alert.alert(
+    alert(
       'Remove Activity',
-      'Are you sure you want to remove this activity from the queue?',
+      'Are you sure you want to remove this from the queue?',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -48,16 +100,19 @@ export default function QueueScreen() {
             await removeFromQueue(activityId);
           },
         },
-      ]
+      ],
+      'warning'
     );
   };
 
   const handleSaveToMemoryBook = async (activity: CollaborativeActivity) => {
     try {
       await saveActivity(activity);
-      Alert.alert('Success', 'Activity saved to Memory Book!');
+      showSuccess('Saved!', mode === 'couples' 
+        ? 'Date idea saved for your next adventure together!' 
+        : 'Activity saved for your next family adventure!');
     } catch {
-      Alert.alert('Error', 'Failed to save activity. Please try again.');
+      showError('Error', 'Failed to save. Please try again.');
     }
   };
 
@@ -67,33 +122,45 @@ export default function QueueScreen() {
 
     return (
       <View style={styles.activityCard}>
+        {/* Decorative corner accent */}
+        <View style={styles.cardCornerAccent}>
+          {mode === 'couples' ? (
+            <Heart size={12} color={Colors.primary} fill={Colors.primary} />
+          ) : (
+            <Users size={12} color={Colors.primary} />
+          )}
+        </View>
+
         <View style={styles.cardHeader}>
           <View style={styles.headerText}>
             <Text style={styles.activityTitle}>{item.title}</Text>
-            <Text style={styles.addedBy}>Added by {item.addedByName}</Text>
+            <View style={styles.addedByRow}>
+              <MessageCircle size={12} color={Colors.textMuted} />
+              <Text style={styles.addedBy}>{content.addedBy} {item.addedByName}</Text>
+            </View>
           </View>
           <TouchableOpacity onPress={() => handleDelete(item.id)} style={styles.deleteButton}>
-            <Trash2 size={20} color={Colors.textLight} />
+            <Trash2 size={18} color={Colors.textLight} />
           </TouchableOpacity>
         </View>
 
         <Text style={styles.description}>{item.description}</Text>
 
         <View style={styles.metadata}>
-          <View style={styles.metadataItem}>
-            <Text style={styles.metadataLabel}>Cost:</Text>
-            <Text style={styles.metadataValue}>
+          <View style={styles.metadataChip}>
+            <Text style={styles.metadataLabel}>
               {item.cost === 'free' ? 'Free' : item.cost.toUpperCase()}
             </Text>
           </View>
-          <View style={styles.metadataItem}>
-            <Text style={styles.metadataLabel}>Duration:</Text>
-            <Text style={styles.metadataValue}>{item.duration}</Text>
+          <View style={styles.metadataChip}>
+            <Clock size={12} color={Colors.textLight} />
+            <Text style={styles.metadataLabel}>{item.duration}</Text>
           </View>
         </View>
 
         {item.note && (
           <View style={styles.noteContainer}>
+            <Sparkles size={14} color={Colors.accent} />
             <Text style={styles.note}>{item.note}</Text>
           </View>
         )}
@@ -101,10 +168,14 @@ export default function QueueScreen() {
         {item.status === 'pending' && (
           <View style={styles.votingSection}>
             <View style={styles.voteCount}>
-              <ThumbsUp size={16} color={Colors.accent} />
-              <Text style={styles.voteCountText}>{yesVotes}</Text>
-              <ThumbsDown size={16} color={Colors.error} />
-              <Text style={styles.voteCountText}>{noVotes}</Text>
+              <View style={styles.voteCountItem}>
+                <ThumbsUp size={14} color={Colors.success} />
+                <Text style={[styles.voteCountText, { color: Colors.success }]}>{yesVotes}</Text>
+              </View>
+              <View style={styles.voteCountItem}>
+                <ThumbsDown size={14} color={Colors.error} />
+                <Text style={[styles.voteCountText, { color: Colors.error }]}>{noVotes}</Text>
+              </View>
             </View>
 
             <View style={styles.voteButtons}>
@@ -112,18 +183,18 @@ export default function QueueScreen() {
                 style={[
                   styles.voteButton,
                   styles.yesButton,
-                  userVote?.vote === 'yes' && styles.votedButton,
+                  userVote?.vote === 'yes' && styles.yesButtonVoted,
                 ]}
                 onPress={() => handleVote(item.id, 'yes')}
               >
-                <ThumbsUp size={20} color={userVote?.vote === 'yes' ? Colors.white : Colors.accent} />
+                <ThumbsUp size={18} color={userVote?.vote === 'yes' ? Colors.backgroundDark : Colors.success} />
                 <Text
                   style={[
                     styles.voteButtonText,
-                    userVote?.vote === 'yes' && styles.votedButtonText,
+                    { color: userVote?.vote === 'yes' ? Colors.backgroundDark : Colors.success },
                   ]}
                 >
-                  Yes
+                  Let's do it!
                 </Text>
               </TouchableOpacity>
 
@@ -131,18 +202,18 @@ export default function QueueScreen() {
                 style={[
                   styles.voteButton,
                   styles.noButton,
-                  userVote?.vote === 'no' && styles.votedButton,
+                  userVote?.vote === 'no' && styles.noButtonVoted,
                 ]}
                 onPress={() => handleVote(item.id, 'no')}
               >
-                <ThumbsDown size={20} color={userVote?.vote === 'no' ? Colors.white : Colors.error} />
+                <ThumbsDown size={18} color={userVote?.vote === 'no' ? Colors.white : Colors.error} />
                 <Text
                   style={[
                     styles.voteButtonText,
-                    userVote?.vote === 'no' && styles.votedButtonText,
+                    { color: userVote?.vote === 'no' ? Colors.white : Colors.error },
                   ]}
                 >
-                  No
+                  Not this time
                 </Text>
               </TouchableOpacity>
             </View>
@@ -152,14 +223,23 @@ export default function QueueScreen() {
         {item.status === 'approved' && (
           <View style={styles.approvedSection}>
             <View style={styles.approvedBadge}>
-              <CheckCircle size={20} color={Colors.accent} />
-              <Text style={styles.approvedText}>Approved!</Text>
+              <CheckCircle size={20} color={Colors.success} />
+              <Text style={styles.approvedText}>Ready to go!</Text>
             </View>
             <TouchableOpacity
               style={styles.saveButton}
               onPress={() => handleSaveToMemoryBook(item)}
+              activeOpacity={0.8}
             >
-              <Text style={styles.saveButtonText}>Save to Memory Book</Text>
+              <LinearGradient
+                colors={[Colors.primaryGradientStart, Colors.primaryGradientEnd]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.saveButtonGradient}
+              >
+                <Send size={16} color={Colors.backgroundDark} />
+                <Text style={styles.saveButtonText}>{content.savePrompt}</Text>
+              </LinearGradient>
             </TouchableOpacity>
           </View>
         )}
@@ -173,7 +253,7 @@ export default function QueueScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <Stack.Screen
         options={{
-          title: 'Activity Queue',
+          title: content.title,
           headerShown: true,
           headerStyle: {
             backgroundColor: Colors.background,
@@ -181,18 +261,27 @@ export default function QueueScreen() {
           headerTintColor: Colors.white,
           headerTitleStyle: {
             fontSize: Typography.sizes.h3,
-            fontWeight: Typography.weights.regular,
+            fontWeight: '500' as const,
           },
         }}
       />
 
       <View style={styles.header}>
-        <View style={styles.headerIcon}>
-          <Users size={24} color={Colors.primary} />
+        <View style={styles.headerIconContainer}>
+          <View style={styles.headerIcon}>
+            {mode === 'couples' ? (
+              <Heart size={24} color={Colors.primary} fill={Colors.primary} />
+            ) : (
+              <Users size={24} color={Colors.primary} />
+            )}
+          </View>
+          <View style={styles.headerSparkle}>
+            <Sparkles size={12} color={Colors.accent} />
+          </View>
         </View>
-        <Text style={styles.headerTitle}>Collaborative Queue</Text>
+        <Text style={styles.headerTitle}>{content.title}</Text>
         <Text style={styles.headerSubtitle}>
-          Plan special moments together with your loved ones
+          {content.subtitle}
         </Text>
       </View>
 
@@ -201,9 +290,9 @@ export default function QueueScreen() {
           style={[styles.tab, activeTab === 'pending' && styles.activeTab]}
           onPress={() => setActiveTab('pending')}
         >
-          <Clock size={18} color={activeTab === 'pending' ? Colors.primary : Colors.textLight} />
+          <Clock size={18} color={activeTab === 'pending' ? Colors.backgroundDark : Colors.textLight} />
           <Text style={[styles.tabText, activeTab === 'pending' && styles.activeTabText]}>
-            Pending ({pendingActivities.length})
+            Waiting ({pendingActivities.length})
           </Text>
         </TouchableOpacity>
 
@@ -211,7 +300,7 @@ export default function QueueScreen() {
           style={[styles.tab, activeTab === 'approved' && styles.activeTab]}
           onPress={() => setActiveTab('approved')}
         >
-          <CheckCircle size={18} color={activeTab === 'approved' ? Colors.primary : Colors.textLight} />
+          <CheckCircle size={18} color={activeTab === 'approved' ? Colors.backgroundDark : Colors.textLight} />
           <Text style={[styles.tabText, activeTab === 'approved' && styles.activeTabText]}>
             Approved ({approvedActivities.length})
           </Text>
@@ -225,14 +314,39 @@ export default function QueueScreen() {
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />
           }
         >
-          <Users size={64} color={Colors.cardBorder} />
+          {/* Empty Polaroid decoration */}
+          <View style={styles.emptyPolaroidsRow}>
+            <PolaroidFrame
+              imageUri={userPhotos[0]}
+              size="small"
+              isEmpty={!userPhotos[0]}
+              mode={mode}
+              rotation={-8}
+              style={{ opacity: 0.6 }}
+            />
+            <PolaroidFrame
+              imageUri={userPhotos[1]}
+              size="small"
+              isEmpty={!userPhotos[1]}
+              mode={mode}
+              rotation={4}
+              style={{ marginTop: 20, opacity: 0.8 }}
+            />
+            <PolaroidFrame
+              imageUri={userPhotos[2]}
+              size="small"
+              isEmpty={!userPhotos[2]}
+              mode={mode}
+              rotation={-3}
+              style={{ opacity: 0.6 }}
+            />
+          </View>
+
           <Text style={styles.emptyTitle}>
-            {activeTab === 'pending' ? 'No Pending Activities' : 'No Approved Activities'}
+            {activeTab === 'pending' ? 'No Ideas Waiting' : 'Nothing Approved Yet'}
           </Text>
           <Text style={styles.emptyText}>
-            {activeTab === 'pending'
-              ? 'Share activities with your loved ones to create memories together!'
-              : 'Approved activities will appear here - ready to become beautiful memories!'}
+            {activeTab === 'pending' ? content.pendingEmpty : content.approvedEmpty}
           </Text>
         </ScrollView>
       ) : (
@@ -262,24 +376,39 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.cardBorder,
   },
+  headerIconContainer: {
+    position: 'relative',
+    marginBottom: Spacing.sm,
+  },
   headerIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: Colors.cardBackground,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: Colors.primaryMuted,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: Spacing.sm,
+  },
+  headerSparkle: {
+    position: 'absolute',
+    top: -4,
+    right: -8,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: Colors.accentMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: Colors.background,
   },
   headerTitle: {
     fontSize: Typography.sizes.h2,
-    fontWeight: Typography.weights.regular,
+    fontWeight: '600' as const,
     color: Colors.white,
     marginBottom: Spacing.xs,
   },
   headerSubtitle: {
     fontSize: Typography.sizes.body,
-    fontWeight: Typography.weights.regular,
     color: Colors.textLight,
     textAlign: 'center',
   },
@@ -298,17 +427,20 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.large,
     backgroundColor: Colors.cardBackground,
     gap: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
   },
   activeTab: {
     backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
   tabText: {
     fontSize: Typography.sizes.body,
-    fontWeight: Typography.weights.regular,
+    fontWeight: '500' as const,
     color: Colors.textLight,
   },
   activeTabText: {
-    color: Colors.white,
+    color: Colors.backgroundDark,
   },
   list: {
     padding: Spacing.lg,
@@ -320,70 +452,88 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
     borderWidth: 1,
     borderColor: Colors.cardBorder,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  cardCornerAccent: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 32,
+    height: 32,
+    backgroundColor: Colors.primaryMuted,
+    borderBottomLeftRadius: BorderRadius.large,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 4,
+    paddingRight: 4,
   },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     marginBottom: Spacing.md,
-  },
-  emoji: {
-    fontSize: 40,
-    marginRight: Spacing.md,
+    paddingRight: Spacing.xl,
   },
   headerText: {
     flex: 1,
   },
   activityTitle: {
     fontSize: Typography.sizes.h3,
-    fontWeight: Typography.weights.regular,
+    fontWeight: '600' as const,
     color: Colors.white,
     marginBottom: Spacing.xs,
   },
+  addedByRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
   addedBy: {
     fontSize: Typography.sizes.small,
-    fontWeight: Typography.weights.regular,
-    color: Colors.textLight,
+    color: Colors.textMuted,
   },
   deleteButton: {
     padding: Spacing.sm,
   },
   description: {
     fontSize: Typography.sizes.body,
-    fontWeight: Typography.weights.regular,
     color: Colors.textLight,
     lineHeight: 24,
     marginBottom: Spacing.md,
   },
   metadata: {
     flexDirection: 'row',
-    gap: Spacing.lg,
+    gap: Spacing.sm,
     marginBottom: Spacing.md,
   },
-  metadataItem: {
+  metadataChip: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: Spacing.xs,
+    backgroundColor: Colors.backgroundLight,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.full,
   },
   metadataLabel: {
-    fontSize: Typography.sizes.body,
-    fontWeight: Typography.weights.regular,
+    fontSize: Typography.sizes.small,
     color: Colors.textLight,
   },
-  metadataValue: {
-    fontSize: Typography.sizes.body,
-    fontWeight: Typography.weights.regular,
-    color: Colors.white,
-  },
   noteContainer: {
-    backgroundColor: Colors.backgroundDark,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.sm,
+    backgroundColor: Colors.accentMuted,
     padding: Spacing.md,
     borderRadius: BorderRadius.medium,
     marginBottom: Spacing.md,
   },
   note: {
+    flex: 1,
     fontSize: Typography.sizes.body,
-    fontWeight: Typography.weights.regular,
-    color: Colors.textLight,
+    color: Colors.text,
     fontStyle: 'italic' as const,
+    lineHeight: 22,
   },
   votingSection: {
     borderTopWidth: 1,
@@ -395,13 +545,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: Spacing.sm,
+    gap: Spacing.xl,
+  },
+  voteCountItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
   },
   voteCountText: {
     fontSize: Typography.sizes.body,
-    fontWeight: Typography.weights.regular,
-    color: Colors.white,
-    marginRight: Spacing.md,
+    fontWeight: '600' as const,
   },
   voteButtons: {
     flexDirection: 'row',
@@ -419,23 +572,23 @@ const styles = StyleSheet.create({
   },
   yesButton: {
     backgroundColor: 'transparent',
-    borderColor: Colors.accent,
+    borderColor: Colors.success,
+  },
+  yesButtonVoted: {
+    backgroundColor: Colors.success,
+    borderColor: Colors.success,
   },
   noButton: {
     backgroundColor: 'transparent',
     borderColor: Colors.error,
   },
-  votedButton: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
+  noButtonVoted: {
+    backgroundColor: Colors.error,
+    borderColor: Colors.error,
   },
   voteButtonText: {
-    fontSize: Typography.sizes.body,
-    fontWeight: Typography.weights.regular,
-    color: Colors.white,
-  },
-  votedButtonText: {
-    color: Colors.white,
+    fontSize: Typography.sizes.small,
+    fontWeight: '500' as const,
   },
   approvedSection: {
     borderTopWidth: 1,
@@ -451,19 +604,24 @@ const styles = StyleSheet.create({
   },
   approvedText: {
     fontSize: Typography.sizes.h3,
-    fontWeight: Typography.weights.regular,
-    color: Colors.accent,
+    fontWeight: '600' as const,
+    color: Colors.success,
   },
   saveButton: {
-    backgroundColor: Colors.primary,
-    paddingVertical: Spacing.md,
     borderRadius: BorderRadius.medium,
+    overflow: 'hidden',
+  },
+  saveButtonGradient: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    paddingVertical: Spacing.md,
   },
   saveButtonText: {
     fontSize: Typography.sizes.body,
-    fontWeight: Typography.weights.regular,
-    color: Colors.white,
+    fontWeight: '600' as const,
+    color: Colors.backgroundDark,
   },
   emptyContainer: {
     flex: 1,
@@ -471,18 +629,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: Spacing.xl,
   },
+  emptyPolaroidsRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginBottom: Spacing.xl,
+  },
   emptyTitle: {
     fontSize: Typography.sizes.h2,
-    fontWeight: Typography.weights.regular,
+    fontWeight: '600' as const,
     color: Colors.white,
-    marginTop: Spacing.lg,
     marginBottom: Spacing.sm,
+    textAlign: 'center',
   },
   emptyText: {
     fontSize: Typography.sizes.body,
-    fontWeight: Typography.weights.regular,
     color: Colors.textLight,
     textAlign: 'center',
     lineHeight: 24,
+    maxWidth: 300,
   },
 });

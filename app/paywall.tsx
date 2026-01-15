@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, ActivityIndicator, Linking } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, ActivityIndicator, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -11,6 +11,7 @@ import Typography from '@/constants/typography';
 import Spacing from '@/constants/spacing';
 import { BorderRadius } from '@/constants/design';
 import { useSubscription } from '@/contexts/SubscriptionContext';
+import { useAlert } from '@/contexts/AlertContext';
 
 export default function PaywallScreen() {
   const router = useRouter();
@@ -24,9 +25,12 @@ export default function PaywallScreen() {
   } = useSubscription();
   
   const [selectedPackage, setSelectedPackage] = useState<PurchasesPackage | null>(null);
+  const { alert, showSuccess, showError, showInfo } = useAlert();
 
   const benefits = [
     { icon: Zap, text: 'Unlimited scratches every month', color: Colors.accent, isLogo: false },
+    { icon: null, text: 'No 24-hour cooldown between scratches', color: Colors.accent, isLogo: false, customIcon: '⏱️' },
+    { icon: null, text: 'Advanced filters: cuisine, accessibility & more', color: Colors.accent, isLogo: false, customIcon: '🎛️' },
     { icon: null, text: 'Exclusive premium activity categories', color: Colors.accent, isLogo: true },
     { icon: Sparkles, text: 'Priority support from our team', color: Colors.accent, isLogo: false },
     { icon: Crown, text: '100% ad-free experience', color: Colors.accent, isLogo: false },
@@ -46,14 +50,14 @@ export default function PaywallScreen() {
 
   const handlePurchase = async () => {
     if (!selectedPackage) {
-      Alert.alert('Error', 'Please select a plan');
+      showError('Error', 'Please select a plan');
       return;
     }
 
     try {
       await purchasePackage(selectedPackage);
       
-      Alert.alert(
+      alert(
         'Welcome to Premium!',
         'You now have unlimited access to all premium features.',
         [
@@ -61,7 +65,8 @@ export default function PaywallScreen() {
             text: 'Start Exploring',
             onPress: () => router.back(),
           },
-        ]
+        ],
+        'success'
       );
     } catch (error: any) {
       console.error('[Paywall] Purchase error:', error);
@@ -69,7 +74,7 @@ export default function PaywallScreen() {
         // User cancelled - no action needed
         return;
       }
-      Alert.alert('Purchase Failed', error.message || 'Something went wrong. Please try again.');
+      showError('Purchase Failed', error.message || 'Something went wrong. Please try again.');
     }
   };
 
@@ -78,20 +83,21 @@ export default function PaywallScreen() {
       const restored = await restorePurchases();
       
       if (restored) {
-        Alert.alert(
+        alert(
           'Purchases Restored',
           'Your premium subscription has been restored.',
-          [{ text: 'Great!', onPress: () => router.back() }]
+          [{ text: 'Great!', onPress: () => router.back() }],
+          'success'
         );
       } else {
-        Alert.alert(
+        showInfo(
           'No Purchases Found',
           'We couldn\'t find any previous purchases to restore.'
         );
       }
     } catch (error: any) {
       console.error('[Paywall] Restore error:', error);
-      Alert.alert('Restore Failed', error.message || 'Something went wrong. Please try again.');
+      showError('Restore Failed', error.message || 'Something went wrong. Please try again.');
     }
   };
 
@@ -175,6 +181,8 @@ export default function PaywallScreen() {
                     <Logo size={20} color={benefit.color} />
                   ) : IconComponent ? (
                     <IconComponent size={20} color={benefit.color} />
+                  ) : (benefit as any).customIcon ? (
+                    <Text style={styles.customIconText}>{(benefit as any).customIcon}</Text>
                   ) : null}
                 </View>
                 <Text style={styles.benefitText}>{benefit.text}</Text>
@@ -395,6 +403,9 @@ const styles = StyleSheet.create({
     color: Colors.text,
     fontWeight: Typography.weights.regular,
     lineHeight: 22,
+  },
+  customIconText: {
+    fontSize: 18,
   },
   pricingContainer: {
     gap: Spacing.md,

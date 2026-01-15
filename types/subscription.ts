@@ -24,6 +24,8 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     interval: 'monthly',
     features: [
       'Unlimited scratches',
+      'No cooldown between scratches',
+      'Advanced filters (cuisine, budget range, accessibility)',
       'Exclusive activity categories',
       'Priority support',
       'Ad-free experience',
@@ -36,6 +38,8 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     interval: 'yearly',
     features: [
       'Unlimited scratches',
+      'No cooldown between scratches',
+      'Advanced filters (cuisine, budget range, accessibility)',
       'Exclusive activity categories',
       'Priority support',
       'Ad-free experience',

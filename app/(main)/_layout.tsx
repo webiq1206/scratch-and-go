@@ -18,17 +18,18 @@ export default function MainLayout() {
           backgroundColor: Colors.backgroundDark,
           borderTopColor: Colors.cardBorder,
           borderTopWidth: 1,
-          paddingBottom: insets.bottom > 0 ? insets.bottom : 8,
-          paddingTop: 8,
-          height: insets.bottom > 0 ? 56 + insets.bottom : 64,
+          paddingBottom: insets.bottom > 0 ? insets.bottom + 4 : 12,
+          paddingTop: 10,
+          height: insets.bottom > 0 ? 70 + insets.bottom : 80,
         },
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: '500' as const,
-          marginTop: 2,
+          marginTop: 4,
+          marginBottom: 2,
         },
         tabBarIconStyle: {
-          marginTop: 2,
+          marginTop: 4,
         },
       }}
     >

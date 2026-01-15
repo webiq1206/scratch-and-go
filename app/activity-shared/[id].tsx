@@ -6,7 +6,6 @@ import {
   ScrollView,
   ActivityIndicator,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -19,6 +18,7 @@ import Spacing from '@/constants/spacing';
 import { BorderRadius } from '@/constants/design';
 import { useMemoryBook } from '@/contexts/MemoryBookContext';
 import { usePreferences } from '@/contexts/PreferencesContext';
+import { useAlert } from '@/contexts/AlertContext';
 import type { Activity } from '@/types/activity';
 
 export default function ActivitySharedScreen() {
@@ -26,6 +26,7 @@ export default function ActivitySharedScreen() {
   const router = useRouter();
   const { saveActivity, savedActivities } = useMemoryBook();
   const { preferences } = usePreferences();
+  const { alert, showSuccess, showError, showInfo } = useAlert();
   const [activity, setActivity] = useState<Activity | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -46,7 +47,7 @@ export default function ActivitySharedScreen() {
       setActivity(activityData);
     } catch (error) {
       console.error('Error decoding activity:', error);
-      Alert.alert('Error', 'Invalid activity link');
+      showError('Error', 'Invalid activity link');
     } finally {
       setIsLoading(false);
     }
@@ -56,7 +57,7 @@ export default function ActivitySharedScreen() {
     if (!activity) return;
 
     if (!isOnboarded) {
-      Alert.alert(
+      alert(
         'Join Scratch & Go',
         'Create an account to save activities and discover more!',
         [
@@ -65,23 +66,24 @@ export default function ActivitySharedScreen() {
             text: 'Get Started',
             onPress: () => router.replace('/welcome' as any),
           },
-        ]
+        ],
+        'info'
       );
       return;
     }
 
     if (isSaved) {
-      Alert.alert('Already Saved', 'This activity is already in your Memory Book!');
+      showInfo('Already Saved', 'This activity is already in your Memory Book!');
       return;
     }
 
     setIsSaving(true);
     try {
       await saveActivity(activity);
-      Alert.alert('Saved!', 'Activity added to your Memory Book');
+      showSuccess('Saved!', 'Activity added to your Memory Book');
     } catch (error) {
       console.error('Error saving activity:', error);
-      Alert.alert('Error', 'Failed to save activity');
+      showError('Error', 'Failed to save activity');
     } finally {
       setIsSaving(false);
     }

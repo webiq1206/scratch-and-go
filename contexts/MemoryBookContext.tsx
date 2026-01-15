@@ -39,15 +39,19 @@ export const [MemoryBookProvider, useMemoryBook] = createContextHook(() => {
     }
   };
 
-  const saveActivity = (activity: Activity) => {
+  const saveActivity = (activity: Activity, scheduledFor?: number) => {
+    const isScheduled = scheduledFor !== undefined && scheduledFor > Date.now();
     const savedActivity: SavedActivity = {
       ...activity,
       id: Date.now().toString() + Math.random().toString(36),
       savedAt: Date.now(),
-      isActive: false,
+      isActive: !isScheduled, // If scheduled for later, don't mark as active yet
       isCompleted: false,
       photos: [],
       locationSnapshot: location || undefined,
+      scheduledFor: scheduledFor,
+      isScheduled: isScheduled,
+      startedAt: isScheduled ? undefined : Date.now(), // Start immediately if not scheduled
     };
 
     const updated = [savedActivity, ...savedActivities];
@@ -55,7 +59,7 @@ export const [MemoryBookProvider, useMemoryBook] = createContextHook(() => {
     saveSavedActivities(updated);
     trackInteraction(activity, 'saved');
 
-    console.log('Activity saved:', savedActivity.title);
+    console.log('Activity saved:', savedActivity.title, isScheduled ? `scheduled for ${new Date(scheduledFor!).toLocaleString()}` : 'starting now');
     return savedActivity;
   };
 
@@ -228,6 +232,79 @@ export const [MemoryBookProvider, useMemoryBook] = createContextHook(() => {
     return savedActivities.filter(a => a.isCompleted);
   };
 
+  const getScheduledActivities = (): SavedActivity[] => {
+    return savedActivities.filter(a => a.isScheduled && !a.isCompleted && !a.isActive);
+  };
+
+  const updateScheduledTime = (activityId: string, scheduledFor: number) => {
+    const updated = savedActivities.map(activity =>
+      activity.id === activityId
+        ? { 
+            ...activity, 
+            scheduledFor, 
+            isScheduled: scheduledFor > Date.now() 
+          }
+        : activity
+    );
+    setSavedActivities(updated);
+    saveSavedActivities(updated);
+    console.log('Activity scheduled time updated:', activityId, new Date(scheduledFor).toLocaleString());
+  };
+
+  const startScheduledActivity = (activityId: string) => {
+    const updated = savedActivities.map(activity =>
+      activity.id === activityId
+        ? { 
+            ...activity, 
+            isActive: true, 
+            isScheduled: false, 
+            startedAt: Date.now() 
+          }
+        : activity
+    );
+    setSavedActivities(updated);
+    saveSavedActivities(updated);
+    console.log('Scheduled activity started:', activityId);
+  };
+
+  // Get an activity that needs attention (active in-progress or scheduled due now)
+  const getActivityToResume = (): SavedActivity | null => {
+    // First, check for any active (in-progress) activities
+    const activeActivity = savedActivities.find(a => a.isActive && !a.isCompleted);
+    if (activeActivity) {
+      return activeActivity;
+    }
+
+    // Then, check for any scheduled activities that are due (scheduled time has passed)
+    const now = Date.now();
+    const dueScheduled = savedActivities.find(
+      a => a.isScheduled && 
+           !a.isCompleted && 
+           !a.isActive && 
+           a.scheduledFor && 
+           a.scheduledFor <= now
+    );
+    if (dueScheduled) {
+      return dueScheduled;
+    }
+
+    return null;
+  };
+
+  // Get upcoming scheduled activities (within the next 24 hours)
+  const getUpcomingActivities = (): SavedActivity[] => {
+    const now = Date.now();
+    const twentyFourHoursLater = now + 24 * 60 * 60 * 1000;
+    return savedActivities.filter(
+      a => a.isScheduled && 
+           !a.isCompleted && 
+           !a.isActive && 
+           a.scheduledFor && 
+           a.scheduledFor > now &&
+           a.scheduledFor <= twentyFourHoursLater
+    ).sort((a, b) => (a.scheduledFor || 0) - (b.scheduledFor || 0));
+  };
+
   return {
     savedActivities,
     isLoading,
@@ -248,5 +325,11 @@ export const [MemoryBookProvider, useMemoryBook] = createContextHook(() => {
     getSavedActivities,
     getActiveActivities,
     getCompletedActivities,
+    // Scheduling functions
+    getScheduledActivities,
+    updateScheduledTime,
+    startScheduledActivity,
+    getActivityToResume,
+    getUpcomingActivities,
   };
 });

@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { useMemoryBook } from '@/contexts/MemoryBookContext';
+import { useAlert } from '@/contexts/AlertContext';
 import Colors from '@/constants/colors';
 import Typography from '@/constants/typography';
 import Spacing from '@/constants/spacing';
@@ -21,6 +22,7 @@ const COST_OPTIONS = [
 
 export default function LogActivityScreen() {
   const { createManualActivity } = useMemoryBook();
+  const { alert, showError, showSuccess } = useAlert();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
@@ -33,7 +35,7 @@ export default function LogActivityScreen() {
   const handlePickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Please grant camera roll permissions to add photos.');
+      alert('Permission needed', 'Please grant camera roll permissions to add photos.', undefined, 'warning');
       return;
     }
 
@@ -53,7 +55,7 @@ export default function LogActivityScreen() {
   const handleTakePhoto = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Please grant camera permissions to take photos.');
+      alert('Permission needed', 'Please grant camera permissions to take photos.', undefined, 'warning');
       return;
     }
 
@@ -73,22 +75,22 @@ export default function LogActivityScreen() {
 
   const handleSave = async () => {
     if (!title.trim()) {
-      Alert.alert('Missing Title', 'Please enter a title for your activity.');
+      showError('Missing Title', 'Please enter a title for your activity.');
       return;
     }
 
     if (!description.trim()) {
-      Alert.alert('Missing Description', 'Please enter a description of what you did.');
+      showError('Missing Description', 'Please enter a description of what you did.');
       return;
     }
 
     if (!category) {
-      Alert.alert('Missing Category', 'Please select a category.');
+      showError('Missing Category', 'Please select a category.');
       return;
     }
 
     if (!duration.trim()) {
-      Alert.alert('Missing Duration', 'Please enter how long the activity took (e.g., "1-2 hours").');
+      showError('Missing Duration', 'Please enter how long the activity took (e.g., "1-2 hours").');
       return;
     }
 
@@ -104,7 +106,7 @@ export default function LogActivityScreen() {
         photos: photos.length > 0 ? photos : undefined,
       });
 
-      Alert.alert(
+      alert(
         'Activity Logged!',
         'Your activity has been saved to your memory book.',
         [
@@ -112,11 +114,12 @@ export default function LogActivityScreen() {
             text: 'OK',
             onPress: () => router.back(),
           },
-        ]
+        ],
+        'success'
       );
     } catch (error) {
       console.error('Error saving activity:', error);
-      Alert.alert('Error', 'Failed to save activity. Please try again.');
+      showError('Error', 'Failed to save activity. Please try again.');
     } finally {
       setIsSaving(false);
     }

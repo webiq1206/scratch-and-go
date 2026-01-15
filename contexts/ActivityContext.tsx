@@ -1,7 +1,7 @@
 import createContextHook from '@nkzw/create-context-hook';
 import { useMutation } from '@tanstack/react-query';
 import { generateObject } from '@rork-ai/toolkit-sdk';
-import { Activity, ActivitySchema, Filters, ActivityWithInteraction, UserLearningProfile } from '@/types/activity';
+import { Activity, ActivitySchema, Filters, ActivityWithInteraction, UserLearningProfile, ScratchCooldown, COOLDOWN_DURATION_MS } from '@/types/activity';
 import { useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { usePreferences } from './PreferencesContext';
@@ -14,9 +14,10 @@ const SCRATCH_MONTH_KEY = 'scratch_and_go_month';
 const INTERACTIONS_KEY = 'scratch_and_go_interactions';
 const LEARNING_PROFILE_KEY = 'scratch_and_go_learning_profile';
 const SAVED_FOR_LATER_KEY = 'scratch_and_go_saved_for_later';
+const COOLDOWN_KEY = 'scratch_and_go_cooldown';
 
 export const [ActivityProvider, useActivity] = createContextHook(() => {
-  const { getContentRestrictions } = usePreferences();
+  const { getContentRestrictions, getPersonalizationContext } = usePreferences();
   const { location } = useLocation();
   const { isPremium } = useSubscription();
   const [currentActivity, setCurrentActivity] = useState<Activity | null>(null);
@@ -34,10 +35,17 @@ export const [ActivityProvider, useActivity] = createContextHook(() => {
   const [scratchCount, setScratchCount] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationError, setGenerationError] = useState<string | null>(null);
+  
+  // Cooldown state for free users
+  const [cooldown, setCooldown] = useState<ScratchCooldown>({
+    lastScratchTimestamp: null,
+    cooldownEndTimestamp: null,
+  });
 
   useEffect(() => {
     loadHistory();
     loadScratchCount();
+    loadCooldown();
     
     setTimeout(() => {
       loadInteractions();
@@ -74,6 +82,53 @@ export const [ActivityProvider, useActivity] = createContextHook(() => {
       console.error('Failed to load scratch count:', error);
     }
   };
+
+  const loadCooldown = async () => {
+    try {
+      const stored = await AsyncStorage.getItem(COOLDOWN_KEY);
+      if (stored) {
+        const parsedCooldown: ScratchCooldown = JSON.parse(stored);
+        // Check if cooldown has expired
+        const now = Date.now();
+        if (parsedCooldown.cooldownEndTimestamp && parsedCooldown.cooldownEndTimestamp > now) {
+          setCooldown(parsedCooldown);
+        } else {
+          // Cooldown expired, reset it
+          const resetCooldown: ScratchCooldown = {
+            lastScratchTimestamp: parsedCooldown.lastScratchTimestamp,
+            cooldownEndTimestamp: null,
+          };
+          setCooldown(resetCooldown);
+          await AsyncStorage.setItem(COOLDOWN_KEY, JSON.stringify(resetCooldown));
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load cooldown:', error);
+    }
+  };
+
+  const updateCooldown = async () => {
+    const now = Date.now();
+    const newCooldown: ScratchCooldown = {
+      lastScratchTimestamp: now,
+      cooldownEndTimestamp: now + COOLDOWN_DURATION_MS,
+    };
+    setCooldown(newCooldown);
+    await AsyncStorage.setItem(COOLDOWN_KEY, JSON.stringify(newCooldown));
+  };
+
+  const isCooldownActive = useCallback((): boolean => {
+    if (isPremium) return false; // Premium users have no cooldown
+    if (!cooldown.cooldownEndTimestamp) return false;
+    return Date.now() < cooldown.cooldownEndTimestamp;
+  }, [isPremium, cooldown.cooldownEndTimestamp]);
+
+  const getCooldownRemaining = useCallback((): number => {
+    if (isPremium) return 0;
+    if (!cooldown.cooldownEndTimestamp) return 0;
+    const remaining = cooldown.cooldownEndTimestamp - Date.now();
+    return Math.max(0, remaining);
+  }, [isPremium, cooldown.cooldownEndTimestamp]);
 
   const loadInteractions = async () => {
     try {
@@ -260,6 +315,7 @@ export const [ActivityProvider, useActivity] = createContextHook(() => {
         .map(([cat]) => cat);
 
       const contentRestrictions = getContentRestrictions();
+      const personalizationContext = getPersonalizationContext();
       
       const intelligentFilters = getIntelligentFilters(filters);
       
@@ -277,6 +333,7 @@ export const [ActivityProvider, useActivity] = createContextHook(() => {
         historyTitles,
         notInterestedActivities,
         completedAndRatedActivities,
+        personalizationContext,
       });
 
       const activity = await Promise.race([
@@ -326,33 +383,57 @@ export const [ActivityProvider, useActivity] = createContextHook(() => {
   const generateActivity = async (filters: Filters) => {
     if (!isPremium && scratchCount >= 3) {
       console.log('Scratch limit reached for this month');
-      return false;
+      return { success: false, reason: 'limit_reached' as const };
+    }
+
+    // Check cooldown for free users
+    if (!isPremium && isCooldownActive()) {
+      console.log('Cooldown active for free user');
+      return { success: false, reason: 'cooldown_active' as const };
     }
 
     setIsGenerating(true);
-    setGenerationError(null); // Clear any previous errors
+    setGenerationError(null);
     setCurrentFilters(filters);
     await incrementScratchCount();
+    
+    // Set cooldown for free users after scratching
+    if (!isPremium) {
+      await updateCooldown();
+    }
+    
     generateActivityMutation.mutate(filters);
-    return true;
+    return { success: true, reason: null };
   };
 
   const regenerateActivity = async () => {
     if (!currentFilters) {
       console.error('No filters available for regeneration');
-      return false;
+      return { success: false, reason: 'no_filters' as const };
     }
 
     if (!isPremium && scratchCount >= 3) {
       console.log('Scratch limit reached for this month');
-      return false;
+      return { success: false, reason: 'limit_reached' as const };
+    }
+
+    // Check cooldown for free users
+    if (!isPremium && isCooldownActive()) {
+      console.log('Cooldown active for free user');
+      return { success: false, reason: 'cooldown_active' as const };
     }
 
     setIsGenerating(true);
-    setGenerationError(null); // Clear any previous errors
+    setGenerationError(null);
     await incrementScratchCount();
+    
+    // Set cooldown for free users after scratching
+    if (!isPremium) {
+      await updateCooldown();
+    }
+    
     generateActivityMutation.mutate(currentFilters);
-    return true;
+    return { success: true, reason: null };
   };
 
   const saveForLaterActivity = async (activity?: Activity) => {
@@ -470,6 +551,10 @@ export const [ActivityProvider, useActivity] = createContextHook(() => {
     markAsNotInterested,
     isLimitReached: !isPremium && scratchCount >= 3,
     remainingScratches: isPremium ? Infinity : Math.max(0, 3 - scratchCount),
+    // Cooldown related
+    isCooldownActive,
+    getCooldownRemaining,
+    cooldown,
   };
 });
 
@@ -503,6 +588,7 @@ function buildSystemPrompt(params: {
   historyTitles: string;
   notInterestedActivities: string[];
   completedAndRatedActivities: any[];
+  personalizationContext: string | null;
 }): string {
   const {
     filters,
@@ -517,6 +603,7 @@ function buildSystemPrompt(params: {
     historyTitles,
     notInterestedActivities,
     completedAndRatedActivities,
+    personalizationContext,
   } = params;
 
   const isCouples = filters.mode === 'couples';
@@ -613,6 +700,12 @@ CRITICAL REQUIREMENTS - Follow these exactly:
     prompt += `\n\n8. CONTENT RESTRICTIONS: ${contentRestrictions.join(', ')}`;
   }
 
+  if (personalizationContext) {
+    prompt += `\n\n9. PERSONALIZATION: ${personalizationContext}`;
+    prompt += '\n   Use this information to make activity suggestions more relevant and age-appropriate.';
+    prompt += '\n   Consider the ages of family members when suggesting activities - ensure they will be engaging for everyone.';
+  }
+
   prompt += `\n\nSTYLE GUIDELINES:`;
   prompt += `\n- Be SPECIFIC: "Walk along the riverfront trail and stop at a local coffee shop" not "Go for a walk"`;
   prompt += `\n- Be PRACTICAL: Something people can actually do today or this week`;
@@ -657,6 +750,77 @@ CRITICAL REQUIREMENTS - Follow these exactly:
   if (completedAndRatedActivities.length > 0) {
     const topActivities = completedAndRatedActivities.slice(0, 3).map(a => a.title);
     prompt += `\n\nACTIVITIES USER LOVED: ${topActivities.join(', ')} - use these as inspiration for the style/type`;
+  }
+
+  // Advanced filters (premium features)
+  const advancedFilters = filters.advancedFilters;
+  if (advancedFilters) {
+    prompt += `\n\nADVANCED REQUIREMENTS (Premium):`;
+    
+    // Exact budget range
+    if (advancedFilters.budgetRange) {
+      prompt += `\n- EXACT BUDGET: $${advancedFilters.budgetRange.min} - $${advancedFilters.budgetRange.max}`;
+      prompt += `\n  The activity cost MUST fall within this specific range.`;
+    }
+    
+    // Cuisine preferences
+    if (advancedFilters.cuisinePreferences && advancedFilters.cuisinePreferences.length > 0) {
+      const cuisineLabels: Record<string, string> = {
+        'italian': 'Italian', 'mexican': 'Mexican', 'asian': 'Asian Fusion',
+        'american': 'American', 'mediterranean': 'Mediterranean', 'indian': 'Indian',
+        'thai': 'Thai', 'japanese': 'Japanese', 'chinese': 'Chinese',
+        'french': 'French', 'seafood': 'Seafood', 'vegetarian': 'Vegetarian',
+        'vegan': 'Vegan', 'bbq': 'BBQ', 'cafe': 'Café & Brunch', 'dessert': 'Desserts'
+      };
+      const cuisines = advancedFilters.cuisinePreferences.map(c => cuisineLabels[c] || c).join(', ');
+      prompt += `\n- CUISINE PREFERENCES: ${cuisines}`;
+      prompt += `\n  Focus on restaurants or food experiences featuring these cuisine types.`;
+    }
+    
+    // Accessibility requirements
+    if (advancedFilters.accessibility && advancedFilters.accessibility.length > 0) {
+      const accessibilityLabels: Record<string, string> = {
+        'wheelchair_accessible': 'wheelchair accessible',
+        'stroller_friendly': 'stroller friendly',
+        'senior_friendly': 'senior/elderly friendly',
+        'quiet_environment': 'quiet and calm environment',
+        'outdoor_seating': 'outdoor seating available',
+        'private_space': 'private or semi-private space'
+      };
+      const needs = advancedFilters.accessibility.map(a => accessibilityLabels[a] || a).join(', ');
+      prompt += `\n- ACCESSIBILITY REQUIREMENTS: ${needs}`;
+      prompt += `\n  The activity venue MUST accommodate these accessibility needs.`;
+    }
+    
+    // Preferred time of day
+    if (advancedFilters.preferredTimeOfDay && advancedFilters.preferredTimeOfDay !== 'any') {
+      const timeLabels: Record<string, string> = {
+        'morning': 'Morning (6am - 12pm)',
+        'afternoon': 'Afternoon (12pm - 5pm)',
+        'evening': 'Evening (5pm - 9pm)',
+        'night': 'Night (9pm - 2am)'
+      };
+      prompt += `\n- PREFERRED TIME: ${timeLabels[advancedFilters.preferredTimeOfDay] || advancedFilters.preferredTimeOfDay}`;
+      prompt += `\n  Suggest activities best suited for this time of day.`;
+    }
+    
+    // Group size
+    if (advancedFilters.groupSize) {
+      const groupLabels: Record<string, string> = {
+        'intimate': 'intimate setting for 2 people',
+        'small': 'small group of 3-4 people',
+        'medium': 'medium group of 5-8 people',
+        'large': 'large group of 9+ people'
+      };
+      prompt += `\n- GROUP SIZE: ${groupLabels[advancedFilters.groupSize] || advancedFilters.groupSize}`;
+      prompt += `\n  The activity should be suitable for this group size.`;
+    }
+    
+    // Max distance
+    if (advancedFilters.maxDistance) {
+      prompt += `\n- MAX DISTANCE: Within ${advancedFilters.maxDistance} miles`;
+      prompt += `\n  Suggest nearby activities that don't require long travel.`;
+    }
   }
 
   prompt += `\n\nNow generate ONE activity that perfectly matches ALL the above requirements.`;

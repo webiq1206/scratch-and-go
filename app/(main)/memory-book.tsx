@@ -1,11 +1,12 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, TextInput, Alert } from 'react-native';
+import React, { useState, useMemo, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, TextInput, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Image } from 'expo-image';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LinearGradient } from 'expo-linear-gradient';
 import { 
   Bookmark, 
-  CheckCircle2, 
   Search, 
   X, 
   SlidersHorizontal, 
@@ -14,21 +15,31 @@ import {
   DollarSign, 
   Calendar, 
   FileText, 
-  Image as ImageIcon, 
   Plus,
   ChevronRight,
-  Heart
+  Heart,
+  Trash2,
+  Users,
+  Camera,
+  Sparkles
 } from 'lucide-react-native';
 import Logo from '@/components/ui/Logo';
+import PolaroidFrame from '@/components/ui/PolaroidFrame';
+import FloatingPolaroids from '@/components/ui/FloatingPolaroids';
 import Typography from '@/constants/typography';
 import Spacing from '@/constants/spacing';
 import Colors from '@/constants/colors';
-import { BorderRadius } from '@/constants/design';
+import { BorderRadius, Shadows } from '@/constants/design';
 import { useMemoryBook } from '@/contexts/MemoryBookContext';
+import { useAlert } from '@/contexts/AlertContext';
 import { SavedActivity } from '@/types/activity';
 import FilterPill from '@/components/ui/FilterPill';
 
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const MODE_KEY = 'scratch_and_go_mode';
+
 type Tab = 'upcoming' | 'memories';
+type Mode = 'couples' | 'family';
 
 const COST_FILTERS = ['All', 'Free', '$', '$$', '$$$'];
 const CATEGORY_FILTERS = ['All', 'Chill', 'Active', 'Creative', 'Foodie', 'Adventure', 'Outdoor', 'Educational'];
@@ -41,7 +52,30 @@ const SORT_OPTIONS = [
 
 type SortOption = 'date-desc' | 'date-asc' | 'alphabetical' | 'rating-desc';
 
+// Mode-specific copy
+const getModeContent = (mode: Mode) => ({
+  couples: {
+    title: 'Our Memories',
+    upcomingSubtitle: 'Date ideas waiting to happen',
+    memoriesSubtitle: 'Moments we\'ve treasured together',
+    emptyUpcoming: 'Save date ideas to plan your next adventure together',
+    emptyMemories: 'Complete dates to build your love story',
+    addPrompt: 'Add a new date memory',
+    memoryCardPrompt: 'Add photos from your date',
+  },
+  family: {
+    title: 'Family Memories',
+    upcomingSubtitle: 'Adventures waiting for the whole family',
+    memoriesSubtitle: 'Moments we\'ve shared as a family',
+    emptyUpcoming: 'Save activities to plan your next family adventure',
+    emptyMemories: 'Complete activities to build family memories',
+    addPrompt: 'Add a new family memory',
+    memoryCardPrompt: 'Add photos from your adventure',
+  },
+});
+
 export default function MemoryBookScreen() {
+  const params = useLocalSearchParams<{ tab?: string }>();
   const [activeTab, setActiveTab] = useState<Tab>('upcoming');
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -50,6 +84,7 @@ export default function MemoryBookScreen() {
   const [showFilters, setShowFilters] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>('date-desc');
   const [showSortMenu, setShowSortMenu] = useState(false);
+  const [mode, setMode] = useState<Mode>('couples');
   
   const { 
     getSavedActivities, 
@@ -59,6 +94,27 @@ export default function MemoryBookScreen() {
     markAsIncomplete, 
     unsaveActivity 
   } = useMemoryBook();
+  const { alert, showError } = useAlert();
+
+  // Load mode
+  useEffect(() => {
+    const loadMode = async () => {
+      const savedMode = await AsyncStorage.getItem(MODE_KEY);
+      if (savedMode) {
+        setMode(savedMode as Mode);
+      }
+    };
+    loadMode();
+  }, []);
+
+  const content = getModeContent(mode);
+
+  // Handle tab query parameter (e.g., when redirected from activity completion)
+  useEffect(() => {
+    if (params.tab === 'memories') {
+      setActiveTab('memories');
+    }
+  }, [params.tab]);
 
   // Combine saved and active for "upcoming" tab
   const upcomingActivities = useMemo(() => {
@@ -68,6 +124,14 @@ export default function MemoryBookScreen() {
   }, [getSavedActivities, getActiveActivities]);
 
   const completedActivities = getCompletedActivities();
+
+  // Get all user photos for decorative elements
+  const allUserPhotos = useMemo(() => {
+    return completedActivities
+      .filter(a => a.photos && a.photos.length > 0)
+      .flatMap(a => a.photos!)
+      .slice(0, 10);
+  }, [completedActivities]);
 
   const filteredActivities = useMemo(() => {
     const activities = activeTab === 'upcoming' ? upcomingActivities : completedActivities;
@@ -122,24 +186,27 @@ export default function MemoryBookScreen() {
     setRefreshing(false);
   };
 
-  const handleDelete = (activityId: string, activityTitle: string) => {
-    Alert.alert(
-      'Remove Activity',
-      `Are you sure you want to remove "${activityTitle}"?`,
+  const handleDelete = (activityId: string, activityTitle: string, isMemory: boolean) => {
+    alert(
+      isMemory ? 'Delete Memory' : 'Remove Activity',
+      isMemory 
+        ? `Are you sure you want to delete "${activityTitle}" from your Memory Book? This cannot be undone.`
+        : `Are you sure you want to remove "${activityTitle}"?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Remove',
+          text: isMemory ? 'Delete' : 'Remove',
           style: 'destructive',
           onPress: () => unsaveActivity(activityId),
         },
-      ]
+      ],
+      'warning'
     );
   };
 
   const handleActivityPress = (activity: SavedActivity) => {
     if (!activity?.id) {
-      Alert.alert('Error', 'Invalid activity.');
+      showError('Error', 'Invalid activity.');
       return;
     }
     router.push(`/activity/${activity.id}` as any);
@@ -155,21 +222,50 @@ export default function MemoryBookScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      {/* Decorative Floating Polaroids - only show when we have memories (behind content) */}
+      {allUserPhotos.length > 0 && activeTab === 'memories' && (
+        <View style={styles.floatingPolaroidsContainer}>
+          <FloatingPolaroids
+            userImages={allUserPhotos}
+            mode={mode}
+            density="sparse"
+            showGradient={false}
+            animated={true}
+          />
+        </View>
+      )}
+
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerTop}>
-          <View>
-            <Text style={styles.title}>Memories</Text>
-            <Text style={styles.subtitle}>
-              {activeTab === 'upcoming' ? 'Adventures waiting to happen' : 'Moments you\'ve treasured'}
-            </Text>
+          <View style={styles.headerTitleContainer}>
+            <View style={styles.headerIconBadge}>
+              {mode === 'couples' ? (
+                <Heart size={18} color={Colors.primary} fill={Colors.primary} />
+              ) : (
+                <Users size={18} color={Colors.primary} />
+              )}
+            </View>
+            <View>
+              <Text style={styles.title}>{content.title}</Text>
+              <Text style={styles.subtitle}>
+                {activeTab === 'upcoming' ? content.upcomingSubtitle : content.memoriesSubtitle}
+              </Text>
+            </View>
           </View>
           <TouchableOpacity
             style={styles.addButton}
             onPress={() => router.push('/log-activity' as any)}
             activeOpacity={0.7}
           >
-            <Plus size={20} color={Colors.primary} />
+            <LinearGradient
+              colors={[Colors.primaryGradientStart, Colors.primaryGradientEnd]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.addButtonGradient}
+            >
+              <Plus size={20} color={Colors.backgroundDark} />
+            </LinearGradient>
           </TouchableOpacity>
         </View>
       </View>
@@ -200,7 +296,7 @@ export default function MemoryBookScreen() {
           onPress={() => setActiveTab('memories')}
           activeOpacity={0.7}
         >
-          <Heart 
+          <Camera 
             size={18} 
             color={activeTab === 'memories' ? Colors.primary : Colors.textLight}
           />
@@ -221,7 +317,7 @@ export default function MemoryBookScreen() {
           <Search size={18} color={Colors.textMuted} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search activities..."
+            placeholder={mode === 'couples' ? "Search dates..." : "Search activities..."}
             placeholderTextColor={Colors.textMuted}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -330,18 +426,36 @@ export default function MemoryBookScreen() {
       {/* Content */}
       {filteredActivities.length === 0 ? (
         <View style={styles.emptyState}>
-          <View style={styles.emptyIconContainer}>
-            {activeTab === 'upcoming' ? (
-              <Logo size={56} color={Colors.textMuted} />
-            ) : (
-              <Heart size={48} color={Colors.textMuted} />
-            )}
+          {/* Empty Polaroids decoration */}
+          <View style={styles.emptyPolaroidsRow}>
+            <PolaroidFrame
+              size="small"
+              isEmpty
+              mode={mode}
+              rotation={-8}
+              style={{ opacity: 0.6 }}
+            />
+            <PolaroidFrame
+              size="small"
+              isEmpty
+              mode={mode}
+              rotation={4}
+              style={{ marginTop: 20, opacity: 0.8 }}
+            />
+            <PolaroidFrame
+              size="small"
+              isEmpty
+              mode={mode}
+              rotation={-3}
+              style={{ opacity: 0.6 }}
+            />
           </View>
+          
           <Text style={styles.emptyTitle}>
             {hasActiveFilters
               ? 'No matches found'
               : activeTab === 'upcoming' 
-                ? 'No activities saved yet' 
+                ? 'No adventures planned yet' 
                 : 'No memories yet'
             }
           </Text>
@@ -349,8 +463,8 @@ export default function MemoryBookScreen() {
             {hasActiveFilters
               ? 'Try adjusting your filters'
               : activeTab === 'upcoming'
-                ? 'Save activities from the Discover tab to plan your adventures'
-                : 'Complete activities to create lasting memories'
+                ? content.emptyUpcoming
+                : content.emptyMemories
             }
           </Text>
           {hasActiveFilters && (
@@ -373,35 +487,47 @@ export default function MemoryBookScreen() {
             />
           }
         >
-          {filteredActivities.map((activity) => (
-            <ActivityCard
-              key={activity.id}
-              activity={activity}
-              isMemory={activeTab === 'memories'}
-              onPress={() => handleActivityPress(activity)}
-              onComplete={() => markAsCompleted(activity.id)}
-              onUncomplete={() => markAsIncomplete(activity.id)}
-              onDelete={() => handleDelete(activity.id, activity.title)}
-            />
-          ))}
+          {/* Memories Grid - Polaroid style */}
+          {activeTab === 'memories' ? (
+            <View style={styles.memoriesGrid}>
+              {filteredActivities.map((activity) => (
+                <MemoryPolaroidCard
+                  key={activity.id}
+                  activity={activity}
+                  mode={mode}
+                  onPress={() => handleActivityPress(activity)}
+                  onDelete={() => handleDelete(activity.id, activity.title, true)}
+                />
+              ))}
+            </View>
+          ) : (
+            // Upcoming list - enhanced cards
+            filteredActivities.map((activity) => (
+              <UpcomingActivityCard
+                key={activity.id}
+                activity={activity}
+                mode={mode}
+                onPress={() => handleActivityPress(activity)}
+                onDelete={() => handleDelete(activity.id, activity.title, false)}
+              />
+            ))
+          )}
         </ScrollView>
       )}
     </SafeAreaView>
   );
 }
 
-interface ActivityCardProps {
+// Memory card styled as Polaroid
+interface MemoryPolaroidCardProps {
   activity: SavedActivity;
-  isMemory: boolean;
+  mode: Mode;
   onPress: () => void;
-  onComplete: () => void;
-  onUncomplete: () => void;
   onDelete: () => void;
 }
 
-function ActivityCard({ activity, isMemory, onPress, onComplete, onUncomplete, onDelete }: ActivityCardProps) {
+function MemoryPolaroidCard({ activity, mode, onPress, onDelete }: MemoryPolaroidCardProps) {
   const hasPhotos = activity.photos && activity.photos.length > 0;
-  const hasNotes = activity.notes && activity.notes.trim().length > 0;
   const firstPhoto = hasPhotos ? activity.photos![0] : null;
 
   const formatDate = (timestamp: number) => {
@@ -410,76 +536,142 @@ function ActivityCard({ activity, isMemory, onPress, onComplete, onUncomplete, o
   };
 
   return (
-    <TouchableOpacity
-      style={styles.activityCard}
-      onPress={onPress}
-      activeOpacity={0.8}
-    >
-      {/* Photo thumbnail for memories */}
-      {isMemory && (
-        <View style={styles.cardPhotoContainer}>
-          {firstPhoto ? (
-            <Image source={{ uri: firstPhoto }} style={styles.cardPhoto} contentFit="cover" />
-          ) : (
-            <View style={styles.cardPhotoPlaceholder}>
-              <ImageIcon size={24} color={Colors.textMuted} />
-            </View>
-          )}
-          {hasPhotos && activity.photos!.length > 1 && (
-            <View style={styles.photoCountBadge}>
-              <Text style={styles.photoCountText}>{activity.photos!.length}</Text>
-            </View>
-          )}
-        </View>
-      )}
-
-      {/* Content */}
-      <View style={[styles.cardContent, !isMemory && styles.cardContentFull]}>
-        <Text style={styles.cardTitle} numberOfLines={2}>{activity.title}</Text>
-        
-        {!isMemory && (
-          <Text style={styles.cardDescription} numberOfLines={2}>{activity.description}</Text>
-        )}
-
-        {/* Meta info */}
-        <View style={styles.cardMeta}>
-          <View style={styles.metaItem}>
-            <Clock size={12} color={Colors.textLight} />
-            <Text style={styles.metaText}>{activity.duration}</Text>
-          </View>
-          <View style={styles.metaItem}>
-            <DollarSign size={12} color={Colors.textLight} />
-            <Text style={styles.metaText}>{activity.cost === 'free' ? 'Free' : activity.cost}</Text>
-          </View>
-          {activity.completedAt && (
-            <View style={styles.metaItem}>
-              <Calendar size={12} color={Colors.primary} />
-              <Text style={[styles.metaText, { color: Colors.primary }]}>{formatDate(activity.completedAt)}</Text>
-            </View>
-          )}
-          {hasNotes && (
-            <View style={styles.metaItem}>
-              <FileText size={12} color={Colors.accent} />
-            </View>
-          )}
-        </View>
-
-        {/* Rating for memories */}
-        {isMemory && activity.rating && (
-          <View style={styles.ratingRow}>
-            {[1, 2, 3, 4, 5].map((star) => (
-              <View
-                key={star}
-                style={[styles.ratingStar, star <= activity.rating! && styles.ratingStarFilled]}
+    <View style={styles.memoryCardContainer}>
+      <TouchableOpacity onPress={onPress} activeOpacity={0.85}>
+        <View style={styles.polaroidCard}>
+          {/* Photo or Empty State */}
+          <View style={styles.polaroidImageContainer}>
+            {firstPhoto ? (
+              <Image
+                source={{ uri: firstPhoto }}
+                style={styles.polaroidImage}
+                contentFit="cover"
               />
-            ))}
-          </View>
-        )}
-      </View>
+            ) : (
+              <View style={styles.polaroidEmptyImage}>
+                <View style={styles.polaroidEmptyIcon}>
+                  {mode === 'couples' ? (
+                    <Heart size={24} color={Colors.primary} />
+                  ) : (
+                    <Users size={24} color={Colors.primary} />
+                  )}
+                </View>
+                <Text style={styles.polaroidEmptyText}>Add photos</Text>
+              </View>
+            )}
+            
+            {/* Photo count badge */}
+            {hasPhotos && activity.photos!.length > 1 && (
+              <View style={styles.photoCountBadge}>
+                <Camera size={10} color={Colors.white} />
+                <Text style={styles.photoCountText}>{activity.photos!.length}</Text>
+              </View>
+            )}
 
-      {/* Arrow */}
-      <ChevronRight size={20} color={Colors.textMuted} />
-    </TouchableOpacity>
+            {/* Rating stars overlay */}
+            {activity.rating && (
+              <View style={styles.ratingOverlay}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <View
+                    key={star}
+                    style={[
+                      styles.ratingStar,
+                      star <= activity.rating! && styles.ratingStarFilled,
+                    ]}
+                  />
+                ))}
+              </View>
+            )}
+          </View>
+
+          {/* Caption area */}
+          <View style={styles.polaroidCaption}>
+            <Text style={styles.polaroidTitle} numberOfLines={2}>
+              {activity.title}
+            </Text>
+            {activity.completedAt && (
+              <Text style={styles.polaroidDate}>
+                {formatDate(activity.completedAt)}
+              </Text>
+            )}
+          </View>
+        </View>
+      </TouchableOpacity>
+
+      {/* Delete button */}
+      <TouchableOpacity
+        style={styles.polaroidDeleteButton}
+        onPress={onDelete}
+        activeOpacity={0.7}
+      >
+        <Trash2 size={14} color={Colors.error} />
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+// Upcoming activity card - enhanced
+interface UpcomingActivityCardProps {
+  activity: SavedActivity;
+  mode: Mode;
+  onPress: () => void;
+  onDelete: () => void;
+}
+
+function UpcomingActivityCard({ activity, mode, onPress, onDelete }: UpcomingActivityCardProps) {
+  return (
+    <View style={styles.upcomingCardWrapper}>
+      <TouchableOpacity
+        style={styles.upcomingCard}
+        onPress={onPress}
+        activeOpacity={0.8}
+      >
+        {/* Category icon with playful styling */}
+        <View style={styles.upcomingIconContainer}>
+          <View style={styles.upcomingIcon}>
+            {mode === 'couples' ? (
+              <Heart size={20} color={Colors.primary} />
+            ) : (
+              <Users size={20} color={Colors.primary} />
+            )}
+          </View>
+          {/* Mini polaroid accent */}
+          <View style={styles.miniPolaroidAccent}>
+            <Sparkles size={10} color={Colors.accent} />
+          </View>
+        </View>
+
+        {/* Content */}
+        <View style={styles.upcomingContent}>
+          <Text style={styles.upcomingTitle} numberOfLines={2}>{activity.title}</Text>
+          <Text style={styles.upcomingDescription} numberOfLines={2}>{activity.description}</Text>
+
+          {/* Meta info */}
+          <View style={styles.upcomingMeta}>
+            <View style={styles.metaItem}>
+              <Clock size={12} color={Colors.textLight} />
+              <Text style={styles.metaText}>{activity.duration}</Text>
+            </View>
+            <View style={styles.metaItem}>
+              <DollarSign size={12} color={Colors.textLight} />
+              <Text style={styles.metaText}>{activity.cost === 'free' ? 'Free' : activity.cost}</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Arrow */}
+        <ChevronRight size={20} color={Colors.textMuted} />
+      </TouchableOpacity>
+
+      {/* Delete button */}
+      <TouchableOpacity
+        style={styles.deleteButton}
+        onPress={onDelete}
+        activeOpacity={0.7}
+      >
+        <Trash2 size={18} color={Colors.error} />
+      </TouchableOpacity>
+    </View>
   );
 }
 
@@ -488,31 +680,56 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
+  floatingPolaroidsContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 0,
+    pointerEvents: 'none',
+  },
   header: {
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.lg,
     paddingBottom: Spacing.md,
+    zIndex: 10,
   },
   headerTop: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
   },
+  headerTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  headerIconBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.primaryMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   title: {
     fontSize: Typography.sizes.h1,
     fontWeight: '600' as const,
     color: Colors.text,
-    marginBottom: Spacing.xs,
+    marginBottom: 2,
   },
   subtitle: {
     fontSize: Typography.sizes.caption,
     color: Colors.textLight,
   },
   addButton: {
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  addButtonGradient: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: Colors.primaryMuted,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -523,6 +740,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     gap: Spacing.sm,
     marginBottom: Spacing.md,
+    zIndex: 10,
   },
   tab: {
     flex: 1,
@@ -573,6 +791,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     gap: Spacing.sm,
     marginBottom: Spacing.md,
+    zIndex: 10,
   },
   searchInputWrapper: {
     flex: 1,
@@ -622,6 +841,7 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: Colors.cardBorder,
+    zIndex: 10,
   },
   filterRow: {
     marginBottom: Spacing.md,
@@ -655,6 +875,7 @@ const styles = StyleSheet.create({
   sortContainer: {
     paddingHorizontal: Spacing.lg,
     marginBottom: Spacing.md,
+    zIndex: 100,
   },
   sortButton: {
     flexDirection: 'row',
@@ -683,10 +904,7 @@ const styles = StyleSheet.create({
     minWidth: 160,
     zIndex: 100,
     elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    ...Shadows.large,
   },
   sortMenuItem: {
     paddingVertical: Spacing.md,
@@ -709,10 +927,210 @@ const styles = StyleSheet.create({
   // Content
   content: {
     flex: 1,
+    zIndex: 2,
   },
   contentContainer: {
     paddingHorizontal: Spacing.lg,
     paddingBottom: Spacing.xxl,
+  },
+
+  // Memories Grid
+  memoriesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.md,
+    justifyContent: 'space-between',
+  },
+
+  // Memory Polaroid Card
+  memoryCardContainer: {
+    width: (SCREEN_WIDTH - Spacing.lg * 2 - Spacing.md) / 2,
+    marginBottom: Spacing.sm,
+  },
+  polaroidCard: {
+    backgroundColor: '#F5F5F0',
+    borderRadius: 3,
+    padding: 6,
+    paddingBottom: 28,
+    ...Shadows.medium,
+  },
+  polaroidImageContainer: {
+    width: '100%',
+    aspectRatio: 1,
+    borderRadius: 2,
+    overflow: 'hidden',
+    backgroundColor: Colors.backgroundLight,
+  },
+  polaroidImage: {
+    width: '100%',
+    height: '100%',
+  },
+  polaroidEmptyImage: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.backgroundLight,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    borderStyle: 'dashed',
+  },
+  polaroidEmptyIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Colors.primaryMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.xs,
+  },
+  polaroidEmptyText: {
+    fontSize: Typography.sizes.small,
+    color: Colors.textMuted,
+  },
+  photoCountBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: BorderRadius.small,
+  },
+  photoCountText: {
+    fontSize: Typography.sizes.tiny,
+    color: Colors.white,
+    fontWeight: '600' as const,
+  },
+  ratingOverlay: {
+    position: 'absolute',
+    bottom: 6,
+    left: 6,
+    flexDirection: 'row',
+    gap: 3,
+  },
+  ratingStar: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.4)',
+  },
+  ratingStarFilled: {
+    backgroundColor: Colors.accent,
+  },
+  polaroidCaption: {
+    marginTop: 'auto',
+    paddingTop: 8,
+  },
+  polaroidTitle: {
+    fontSize: Typography.sizes.small,
+    fontWeight: '500' as const,
+    color: '#333',
+    textAlign: 'center',
+    lineHeight: 16,
+  },
+  polaroidDate: {
+    fontSize: Typography.sizes.tiny,
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 2,
+    fontStyle: 'italic',
+  },
+  polaroidDeleteButton: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: Colors.cardBackground,
+    borderWidth: 1,
+    borderColor: Colors.error,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
+
+  // Upcoming Card
+  upcomingCardWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+    gap: Spacing.sm,
+  },
+  upcomingCard: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.cardBackground,
+    borderRadius: BorderRadius.large,
+    padding: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    gap: Spacing.md,
+  },
+  upcomingIconContainer: {
+    position: 'relative',
+  },
+  upcomingIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Colors.primaryMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  miniPolaroidAccent: {
+    position: 'absolute',
+    bottom: -4,
+    right: -4,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: Colors.accentMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  upcomingContent: {
+    flex: 1,
+  },
+  upcomingTitle: {
+    fontSize: Typography.sizes.body,
+    fontWeight: '500' as const,
+    color: Colors.text,
+    marginBottom: 4,
+  },
+  upcomingDescription: {
+    fontSize: Typography.sizes.small,
+    color: Colors.textLight,
+    lineHeight: 18,
+    marginBottom: Spacing.sm,
+  },
+  upcomingMeta: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  metaText: {
+    fontSize: Typography.sizes.small,
+    color: Colors.textLight,
+  },
+  deleteButton: {
+    width: 44,
+    height: 44,
+    borderRadius: BorderRadius.medium,
+    backgroundColor: Colors.cardBackground,
+    borderWidth: 1,
+    borderColor: Colors.error,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   // Empty State
@@ -721,15 +1139,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: Spacing.xl,
+    zIndex: 2,
   },
-  emptyIconContainer: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: Colors.cardBackground,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: Spacing.lg,
+  emptyPolaroidsRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginBottom: Spacing.xl,
   },
   emptyTitle: {
     fontSize: Typography.sizes.h3,
@@ -757,96 +1172,5 @@ const styles = StyleSheet.create({
     fontSize: Typography.sizes.caption,
     color: Colors.primary,
     fontWeight: '500' as const,
-  },
-
-  // Activity Card
-  activityCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.cardBackground,
-    borderRadius: BorderRadius.large,
-    padding: Spacing.md,
-    marginBottom: Spacing.md,
-    borderWidth: 1,
-    borderColor: Colors.cardBorder,
-  },
-  cardPhotoContainer: {
-    width: 72,
-    height: 72,
-    borderRadius: BorderRadius.medium,
-    overflow: 'hidden',
-    marginRight: Spacing.md,
-  },
-  cardPhoto: {
-    width: '100%',
-    height: '100%',
-  },
-  cardPhotoPlaceholder: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: Colors.backgroundLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  photoCountBadge: {
-    position: 'absolute',
-    bottom: 4,
-    right: 4,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    paddingHorizontal: Spacing.xs,
-    paddingVertical: 2,
-    borderRadius: BorderRadius.xs,
-  },
-  photoCountText: {
-    fontSize: Typography.sizes.tiny,
-    color: Colors.white,
-    fontWeight: '600' as const,
-  },
-  cardContent: {
-    flex: 1,
-    marginRight: Spacing.sm,
-  },
-  cardContentFull: {
-    marginLeft: 0,
-  },
-  cardTitle: {
-    fontSize: Typography.sizes.body,
-    fontWeight: '500' as const,
-    color: Colors.text,
-    marginBottom: Spacing.xs,
-  },
-  cardDescription: {
-    fontSize: Typography.sizes.small,
-    color: Colors.textLight,
-    lineHeight: 18,
-    marginBottom: Spacing.sm,
-  },
-  cardMeta: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.md,
-  },
-  metaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  metaText: {
-    fontSize: Typography.sizes.small,
-    color: Colors.textLight,
-  },
-  ratingRow: {
-    flexDirection: 'row',
-    gap: 4,
-    marginTop: Spacing.sm,
-  },
-  ratingStar: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.backgroundLight,
-  },
-  ratingStarFilled: {
-    backgroundColor: Colors.accent,
   },
 });

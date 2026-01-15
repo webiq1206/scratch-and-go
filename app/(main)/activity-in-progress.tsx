@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, Stack, router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
 import { useMemoryBook } from '@/contexts/MemoryBookContext';
 import { useLocation } from '@/contexts/LocationContext';
+import { useAlert } from '@/contexts/AlertContext';
 import { Activity } from '@/types/activity';
 import Colors from '@/constants/colors';
 import Typography from '@/constants/typography';
@@ -38,6 +39,7 @@ export default function ActivityInProgressScreen() {
     markAsCompleted
   } = useMemoryBook();
   const { location } = useLocation();
+  const { alert, showError, showSuccess } = useAlert();
 
   const [savedActivityId, setSavedActivityId] = useState<string | null>(null);
   const [notesText, setNotesText] = useState('');
@@ -63,7 +65,7 @@ export default function ActivityInProgressScreen() {
   // Validate required params
   useEffect(() => {
     if (!params.title || !params.description) {
-      Alert.alert(
+      alert(
         'Invalid Activity',
         'Required activity information is missing. Please try again.',
         [
@@ -71,7 +73,8 @@ export default function ActivityInProgressScreen() {
             text: 'Go Back',
             onPress: () => router.back(),
           },
-        ]
+        ],
+        'error'
       );
       return;
     }
@@ -121,14 +124,14 @@ export default function ActivityInProgressScreen() {
       setSavedActivityId(saved.id);
       startActivity(saved.id);
       if (location) {
-        updateLocationSnapshot(saved.id, location);
+        updateLocationSnapshot(saved.id);
       }
       setNotesText(saved.notes || '');
       setPhotos(saved.photos || []);
       setIsCompleted(saved.isCompleted || false);
     } catch (error) {
       console.error('Error saving activity:', error);
-      Alert.alert('Error', 'Failed to save activity. Please try again.');
+      showError('Error', 'Failed to save activity. Please try again.');
       router.back();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -196,7 +199,7 @@ export default function ActivityInProgressScreen() {
       setIsEditingNotes(false);
     } catch (error) {
       console.error('Error saving notes:', error);
-      Alert.alert('Error', 'Failed to save notes. Please try again.');
+      showError('Error', 'Failed to save notes. Please try again.');
     }
   };
 
@@ -206,7 +209,7 @@ export default function ActivityInProgressScreen() {
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission Required', 'Camera permission is needed to take photos.');
+        alert('Permission Required', 'Camera permission is needed to take photos.', undefined, 'warning');
         return;
       }
 
@@ -224,12 +227,12 @@ export default function ActivityInProgressScreen() {
           setPhotos(prev => [...prev, result.assets[0].uri]);
         } catch (error) {
           console.error('Error adding photo:', error);
-          Alert.alert('Error', 'Failed to add photo. Please try again.');
+          showError('Error', 'Failed to add photo. Please try again.');
         }
       }
     } catch (error) {
       console.error('Error taking photo:', error);
-      Alert.alert('Error', 'Failed to take photo. Please try again.');
+      showError('Error', 'Failed to take photo. Please try again.');
     }
   };
 
@@ -239,7 +242,7 @@ export default function ActivityInProgressScreen() {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission Required', 'Photo library permission is needed to select photos.');
+        alert('Permission Required', 'Photo library permission is needed to select photos.', undefined, 'warning');
         return;
       }
 
@@ -262,19 +265,19 @@ export default function ActivityInProgressScreen() {
           setPhotos(prev => [...prev, ...newPhotoUris]);
         } catch (error) {
           console.error('Error adding photos:', error);
-          Alert.alert('Error', 'Failed to add some photos. Please try again.');
+          showError('Error', 'Failed to add some photos. Please try again.');
         }
       }
     } catch (error) {
       console.error('Error picking photo:', error);
-      Alert.alert('Error', 'Failed to pick photo. Please try again.');
+      showError('Error', 'Failed to pick photo. Please try again.');
     }
   };
 
   const handleRemovePhoto = (photoUri: string) => {
     if (!savedActivityId) return;
 
-    Alert.alert(
+    alert(
       'Remove Photo',
       'Are you sure you want to remove this photo?',
       [
@@ -288,22 +291,23 @@ export default function ActivityInProgressScreen() {
               setPhotos(prev => prev.filter(uri => uri !== photoUri));
             } catch (error) {
               console.error('Error removing photo:', error);
-              Alert.alert('Error', 'Failed to remove photo. Please try again.');
+              showError('Error', 'Failed to remove photo. Please try again.');
             }
           }
         }
-      ]
+      ],
+      'warning'
     );
   };
 
   const handleMarkComplete = () => {
     if (!savedActivityId) return;
 
-    Alert.alert(
+    alert(
       mode === 'couples' ? 'Complete Date?' : 'Complete Activity?',
       mode === 'couples' 
-        ? 'Mark this date as completed? You can save it to your Memory Book after completion.'
-        : 'Mark this activity as completed? You can save it to your Memory Book after completion.',
+        ? 'Mark this date as completed and save it to your Memory Book?'
+        : 'Mark this activity as completed and save it to your Memory Book?',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -313,134 +317,33 @@ export default function ActivityInProgressScreen() {
               const completedAt = Date.now();
               markAsCompleted(savedActivityId, completedAt);
               setIsCompleted(true);
-              // Update local photos and notes state to match saved activity
-              const savedActivity = getSavedActivity(savedActivityId);
-              if (savedActivity) {
-                setPhotos(savedActivity.photos || []);
-                setNotesText(savedActivity.notes || '');
+              
+              // Save final notes before redirecting
+              if (notesText && savedActivityId) {
+                updateNotes(savedActivityId, notesText);
               }
-              Alert.alert(
-                'Completed!',
+              
+              // Show success message and redirect to Memory Book (Memories tab)
+              showSuccess(
+                'Memory Saved!',
                 mode === 'couples'
-                  ? 'Great date! Save it to your Memory Book to keep this memory forever.'
-                  : 'Great activity! Save it to your Memory Book to keep this memory forever.',
-                [{ text: 'OK' }]
+                  ? 'Your date has been saved to your Memory Book!'
+                  : 'Your activity has been saved to your Memory Book!'
               );
+              
+              // Redirect to Memory Book with memories tab active
+              setTimeout(() => {
+                router.replace('/(main)/memory-book?tab=memories' as any);
+              }, 500);
             } catch (error) {
               console.error('Error marking activity as complete:', error);
-              Alert.alert('Error', 'Failed to mark activity as complete. Please try again.');
+              showError('Error', 'Failed to mark activity as complete. Please try again.');
               setIsCompleted(false);
             }
           }
         }
-      ]
-    );
-  };
-
-  const generateMemoryTitle = (activityTitle: string, mode: string): string => {
-    // Create a personalized memory title
-    const date = new Date();
-    const timeOfDay = date.getHours();
-    let timeGreeting = '';
-    
-    if (timeOfDay < 12) timeGreeting = 'Morning';
-    else if (timeOfDay < 17) timeGreeting = 'Afternoon';
-    else if (timeOfDay < 21) timeGreeting = 'Evening';
-    else timeGreeting = 'Night';
-
-    // Use activity title as base
-    const baseTitle = activityTitle;
-    
-    // Return a clean title
-    return `${baseTitle} - ${timeGreeting}`;
-  };
-
-  const formatTimestamp = (timestamp: number): { date: string; time: string; full: string } => {
-    const date = new Date(timestamp);
-    const options: Intl.DateTimeFormatOptions = { 
-      month: 'long', 
-      day: 'numeric', 
-      year: 'numeric' 
-    };
-    const timeOptions: Intl.DateTimeFormatOptions = {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    };
-    
-    return {
-      date: date.toLocaleDateString('en-US', options),
-      time: date.toLocaleTimeString('en-US', timeOptions),
-      full: `${date.toLocaleDateString('en-US', options)} at ${date.toLocaleTimeString('en-US', timeOptions)}`
-    };
-  };
-
-  const handleSaveToMemoryBook = () => {
-    if (!savedActivityId) return;
-
-    const savedActivity = getSavedActivity(savedActivityId);
-    if (!savedActivity) return;
-
-    // Ensure activity is marked as completed with timestamp
-    if (!savedActivity.isCompleted || !savedActivity.completedAt) {
-      const completedAt = Date.now();
-      markAsCompleted(savedActivityId, completedAt);
-    }
-
-    // Generate memory title
-    const memoryTitle = generateMemoryTitle(activity.title, mode);
-    
-    // Get formatted timestamp
-    const completedAt = savedActivity.completedAt || Date.now();
-    const timestamp = formatTimestamp(completedAt);
-
-    // Create memory entry with all details
-    const memoryEntry = {
-      id: savedActivityId,
-      title: memoryTitle,
-      originalTitle: activity.title,
-      timestamp: {
-        date: timestamp.date,
-        time: timestamp.time,
-        full: timestamp.full,
-        raw: completedAt
-      },
-      activity: {
-        title: activity.title,
-        description: activity.description,
-        cost: activity.cost,
-        duration: activity.duration,
-        category: activity.category,
-        proTip: activity.proTip,
-        supplies: activity.supplies,
-      },
-      notes: notesText || undefined,
-      photos: photos.length > 0 ? photos : undefined,
-      location: savedActivity.locationSnapshot || location || undefined,
-      mode: mode,
-      savedAt: savedActivity.savedAt,
-      completedAt: completedAt,
-    };
-
-    // The activity is already in Memory Book, we just need to confirm it's saved
-    // with all the memory details
-    // Memory entry created successfully
-
-    Alert.alert(
-      'Saved to Memory Book!',
-      `"${memoryTitle}"\n\n${timestamp.full}\n\nThis memory has been saved with all your photos and notes. You can view it anytime in your Memory Book.`,
-      [
-        {
-          text: 'View Memory Book',
-          onPress: () => {
-            router.replace('/(main)/memory-book' as any);
-          }
-        },
-        {
-          text: 'Stay Here',
-          style: 'cancel'
-        }
-      ]
+      ],
+      'info'
     );
   };
 
@@ -719,8 +622,8 @@ export default function ActivityInProgressScreen() {
             </View>
           </View>
 
-          {/* Completion and Save Section */}
-          {!isCompleted ? (
+          {/* Completion Section */}
+          {!isCompleted && (
             <View style={styles.completionSection}>
               <TouchableOpacity
                 style={styles.completeButton}
@@ -735,32 +638,8 @@ export default function ActivityInProgressScreen() {
                 >
                   <CheckCircle size={24} color={Colors.white} />
                   <Text style={styles.completeButtonText}>
-                    Mark as {mode === 'couples' ? 'Date' : 'Activity'} Complete
+                    Complete {mode === 'couples' ? 'Date' : 'Activity'}
                   </Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <View style={styles.saveSection}>
-              <View style={styles.completedBanner}>
-                <CheckCircle size={20} color={Colors.accent} />
-                <Text style={styles.completedText}>
-                  {mode === 'couples' ? 'Date completed!' : 'Activity completed!'}
-                </Text>
-              </View>
-              <TouchableOpacity
-                style={styles.saveToMemoryButton}
-                onPress={handleSaveToMemoryBook}
-                activeOpacity={0.8}
-              >
-                <LinearGradient
-                  colors={[Colors.primaryGradientStart, Colors.primary, Colors.primaryGradientEnd]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.saveButtonGradient}
-                >
-                  <Heart size={24} color={Colors.white} />
-                  <Text style={styles.saveButtonText}>Save to Memory Book</Text>
                 </LinearGradient>
               </TouchableOpacity>
             </View>
@@ -1157,50 +1036,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.xl,
   },
   completeButtonText: {
-    fontSize: Typography.sizes.h3,
-    fontWeight: '400' as const,
-    color: Colors.white,
-  },
-  saveSection: {
-    marginTop: Spacing.lg,
-    marginBottom: Spacing.xl,
-    gap: Spacing.md,
-  },
-  completedBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.sm,
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.lg,
-    backgroundColor: Colors.accent + '15',
-    borderRadius: BorderRadius.medium,
-    borderWidth: 1,
-    borderColor: Colors.accent + '30',
-  },
-  completedText: {
-    fontSize: Typography.sizes.body,
-    color: Colors.accent,
-    fontWeight: '400' as const,
-  },
-  saveToMemoryButton: {
-    borderRadius: BorderRadius.large,
-    overflow: 'hidden',
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  saveButtonGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.sm,
-    paddingVertical: Spacing.lg,
-    paddingHorizontal: Spacing.xl,
-  },
-  saveButtonText: {
     fontSize: Typography.sizes.h3,
     fontWeight: '400' as const,
     color: Colors.white,

@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, Animated, ActivityIndicator, Alert, TouchableOpacity, Image, Dimensions, InteractionManager } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Animated, ActivityIndicator, TouchableOpacity, Image, Dimensions, InteractionManager, Modal, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Heart, Users, MapPin, ChevronLeft, Clock, DollarSign, Lightbulb, Play, RefreshCw, Share2, ThumbsDown, Bookmark, Sun, Cloud, CloudRain, Snowflake, Zap, Coffee, Palette, Utensils, Mountain, Home as HomeIcon, Shuffle } from 'lucide-react-native';
+import { Heart, Users, MapPin, ChevronLeft, Clock, DollarSign, Lightbulb, Play, RefreshCw, Share2, ThumbsDown, Bookmark, Sun, Cloud, CloudRain, Snowflake, Zap, Coffee, Palette, Utensils, Mountain, Home as HomeIcon, Shuffle, User, LogOut, Settings, X, Sliders, Crown, Check, Timer } from 'lucide-react-native';
 import Logo from '@/components/ui/Logo';
 import Colors from '@/constants/colors';
 import Typography from '@/constants/typography';
@@ -16,7 +16,10 @@ import LocationSelector from '@/components/ui/LocationSelector';
 import { useActivity } from '@/contexts/ActivityContext';
 import { useLocation } from '@/contexts/LocationContext';
 import { useSubscription } from '@/contexts/SubscriptionContext';
-import { Filters } from '@/types/activity';
+import { useAlert } from '@/contexts/AlertContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { usePreferences } from '@/contexts/PreferencesContext';
+import { Filters, AdvancedFilters, CuisineType, AccessibilityOption, TimeOfDay, GroupSize, CUISINE_OPTIONS, ACCESSIBILITY_OPTIONS, GROUP_SIZE_OPTIONS, TIME_OF_DAY_OPTIONS } from '@/types/activity';
 import { shareActivity } from '@/utils/shareActivity';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -32,6 +35,24 @@ interface WizardAnswers {
   timing?: string;
   setting?: 'indoor' | 'outdoor' | 'either';
 }
+
+// Default advanced filters
+const DEFAULT_ADVANCED_FILTERS: AdvancedFilters = {};
+
+// Helper to format cooldown time
+const formatCooldownTime = (ms: number): string => {
+  const hours = Math.floor(ms / (1000 * 60 * 60));
+  const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
+  const seconds = Math.floor((ms % (1000 * 60)) / 1000);
+  
+  if (hours > 0) {
+    return `${hours}h ${minutes}m`;
+  }
+  if (minutes > 0) {
+    return `${minutes}m ${seconds}s`;
+  }
+  return `${seconds}s`;
+};
 
 // Category icons mapping
 const getCategoryIcon = (category: string, size: number = 20, color: string = Colors.text) => {
@@ -71,6 +92,10 @@ export default function HomeScreen() {
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const scratchCardKeyRef = useRef<string>(`card-${Date.now()}`);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [advancedFilters, setAdvancedFilters] = useState<AdvancedFilters>(DEFAULT_ADVANCED_FILTERS);
+  const [cooldownDisplay, setCooldownDisplay] = useState<string | null>(null);
   
   const { 
     currentActivity, 
@@ -83,18 +108,48 @@ export default function HomeScreen() {
     remainingScratches,
     markAsNotInterested,
     clearCurrentActivity,
-    generationError
+    generationError,
+    isCooldownActive,
+    getCooldownRemaining,
   } = useActivity();
 
   const { location } = useLocation();
   const { isPremium } = useSubscription();
+  const { alert, showSuccess, showError, showInfo } = useAlert();
+  const { user, isAuthenticated, logout } = useAuth();
+  const { getDisplayName, getPersonalization } = usePreferences();
   const [isSharing, setIsSharing] = useState(false);
   const [isSavedForLater, setIsSavedForLater] = useState(false);
+  
+  // Get personalized display name
+  const displayName = getDisplayName();
+  const personalization = getPersonalization();
+
+  // Cooldown timer update
+  useEffect(() => {
+    if (isPremium) {
+      setCooldownDisplay(null);
+      return;
+    }
+    
+    const updateCooldown = () => {
+      const remaining = getCooldownRemaining();
+      if (remaining > 0) {
+        setCooldownDisplay(formatCooldownTime(remaining));
+      } else {
+        setCooldownDisplay(null);
+      }
+    };
+    
+    updateCooldown();
+    const interval = setInterval(updateCooldown, 1000);
+    return () => clearInterval(interval);
+  }, [isPremium, getCooldownRemaining]);
 
   // Show error alert when generation fails
   useEffect(() => {
     if (generationError) {
-      Alert.alert(
+      alert(
         'Generation Failed',
         generationError,
         [
@@ -109,6 +164,7 @@ export default function HomeScreen() {
                   timing: wizardAnswers.timing || 'Any',
                   setting: wizardAnswers.setting,
                   location: location || undefined,
+                  advancedFilters: isPremium ? advancedFilters : undefined,
                 };
                 await generateActivity(filters);
               } else {
@@ -117,7 +173,8 @@ export default function HomeScreen() {
             }
           },
           { text: 'OK', style: 'cancel' }
-        ]
+        ],
+        'error'
       );
     }
   }, [generationError]);
@@ -172,13 +229,14 @@ export default function HomeScreen() {
 
   const handleWizardAnswer = useCallback((key: keyof WizardAnswers, value: string | 'indoor' | 'outdoor' | 'either') => {
     if (key === 'category' && isCategoryPremium(value as string) && !isPremium) {
-      Alert.alert(
+      alert(
         'Premium Category',
         `'${value}' is a premium category. Upgrade to unlock exclusive activity categories!`,
         [
           { text: 'Not Now', style: 'cancel' },
           { text: 'Upgrade', onPress: () => router.push('/paywall' as any) }
-        ]
+        ],
+        'info'
       );
       return;
     }
@@ -195,18 +253,34 @@ export default function HomeScreen() {
 
     if (key === 'setting' && mode) {
       if (isLimitReached && !isPremium) {
-        Alert.alert(
+        alert(
           'Scratch Limit Reached',
           `You've used your 3 free scratches this month! Upgrade to premium for unlimited scratches.`,
           [
             { text: 'Not Now', style: 'cancel' },
             { text: 'Upgrade', onPress: () => router.push('/paywall' as any) }
-          ]
+          ],
+          'warning'
         );
         return;
       }
 
-      InteractionManager.runAfterInteractions(() => {
+      // Check cooldown for free users
+      if (!isPremium && isCooldownActive()) {
+        const remaining = getCooldownRemaining();
+        alert(
+          'Cooldown Active',
+          `Free users can scratch once every 24 hours. Your next scratch is available in ${formatCooldownTime(remaining)}.\n\nUpgrade to Premium for unlimited scratches with no cooldown!`,
+          [
+            { text: 'Not Now', style: 'cancel' },
+            { text: 'Upgrade', onPress: () => router.push('/paywall' as any) }
+          ],
+          'warning'
+        );
+        return;
+      }
+
+      InteractionManager.runAfterInteractions(async () => {
         const filters: Filters = {
           mode,
           category: updatedAnswers.category || 'Any',
@@ -214,11 +288,24 @@ export default function HomeScreen() {
           timing: updatedAnswers.timing || 'Any',
           setting: updatedAnswers.setting || 'either',
           location: location || undefined,
+          advancedFilters: isPremium ? advancedFilters : undefined,
         };
-        generateActivity(filters);
+        const result = await generateActivity(filters);
+        if (!result.success && result.reason === 'cooldown_active') {
+          const remaining = getCooldownRemaining();
+          alert(
+            'Cooldown Active',
+            `Your next scratch is available in ${formatCooldownTime(remaining)}.`,
+            [
+              { text: 'Not Now', style: 'cancel' },
+              { text: 'Upgrade', onPress: () => router.push('/paywall' as any) }
+            ],
+            'warning'
+          );
+        }
       });
     }
-  }, [isCategoryPremium, isPremium, router, slideAnim, wizardStep, wizardAnswers, mode, isLimitReached, location, generateActivity]);
+  }, [isCategoryPremium, isPremium, router, slideAnim, wizardStep, wizardAnswers, mode, isLimitReached, location, generateActivity, isCooldownActive, getCooldownRemaining, advancedFilters]);
 
   const handleWizardBack = useCallback(() => {
     const stepOrder: WizardStep[] = ['welcome', 'category', 'budget', 'timing', 'setting', 'summary'];
@@ -283,7 +370,7 @@ export default function HomeScreen() {
     try {
       await shareActivity(currentActivity);
     } catch (error) {
-      Alert.alert('Share Failed', 'Unable to share activity. Please try again.');
+      showError('Share Failed', 'Unable to share activity. Please try again.');
     } finally {
       setIsSharing(false);
     }
@@ -293,7 +380,7 @@ export default function HomeScreen() {
     if (!currentActivity || isSavedForLater) return;
 
     if (isActivitySavedForLater(currentActivity.title)) {
-      Alert.alert('Already Saved', 'This activity is already in your saved list.');
+      showInfo('Already Saved', 'This activity is already in your saved list.');
       return;
     }
     
@@ -302,7 +389,7 @@ export default function HomeScreen() {
     InteractionManager.runAfterInteractions(async () => {
       const success = await saveForLaterActivity();
       if (success) {
-        Alert.alert('Saved!', 'Activity saved to your Memories for later.');
+        showSuccess('Saved!', 'Activity saved to your Memories for later.');
       } else {
         setIsSavedForLater(false);
       }
@@ -313,13 +400,29 @@ export default function HomeScreen() {
     if (isGenerating) return;
 
     if (isLimitReached && !isPremium) {
-      Alert.alert(
+      alert(
         'Scratch Limit Reached',
         `You've used your 3 free scratches this month! Upgrade to premium for unlimited scratches.`,
         [
           { text: 'Not Now', style: 'cancel' },
           { text: 'Upgrade', onPress: () => router.push('/paywall' as any) }
-        ]
+        ],
+        'warning'
+      );
+      return;
+    }
+
+    // Check cooldown for free users
+    if (!isPremium && isCooldownActive()) {
+      const remaining = getCooldownRemaining();
+      alert(
+        'Cooldown Active',
+        `Free users can scratch once every 24 hours. Your next scratch is available in ${formatCooldownTime(remaining)}.\n\nUpgrade to Premium for unlimited scratches with no cooldown!`,
+        [
+          { text: 'Not Now', style: 'cancel' },
+          { text: 'Upgrade', onPress: () => router.push('/paywall' as any) }
+        ],
+        'warning'
       );
       return;
     }
@@ -328,12 +431,24 @@ export default function HomeScreen() {
     setHasStartedScratch(false);
     setIsDescriptionExpanded(false);
     scratchCardKeyRef.current = `card-${Date.now()}`;
-    await regenerateActivity();
+    const result = await regenerateActivity();
+    if (!result.success && result.reason === 'cooldown_active') {
+      const remaining = getCooldownRemaining();
+      alert(
+        'Cooldown Active',
+        `Your next scratch is available in ${formatCooldownTime(remaining)}.`,
+        [
+          { text: 'Not Now', style: 'cancel' },
+          { text: 'Upgrade', onPress: () => router.push('/paywall' as any) }
+        ],
+        'warning'
+      );
+    }
   };
 
   const handleScratchComplete = useCallback(() => {
     if (!currentActivity) {
-      Alert.alert(
+      showInfo(
         'Activity Not Ready',
         'The activity is still being generated. Please wait a moment and try again.'
       );
@@ -345,7 +460,7 @@ export default function HomeScreen() {
   const handleNotInterested = async () => {
     if (!currentActivity) return;
     
-    Alert.alert(
+    alert(
       'Not Interested',
       "We'll avoid suggesting similar activities in the future.",
       [
@@ -358,22 +473,95 @@ export default function HomeScreen() {
             setScrollEnabled(true);
             scratchCardKeyRef.current = `card-${Date.now()}`;
             if (isLimitReached && !isPremium) {
-              Alert.alert(
+              alert(
                 'Scratch Limit Reached',
                 `You've used your 3 free scratches this month!`,
                 [
                   { text: 'Not Now', style: 'cancel' },
                   { text: 'Upgrade', onPress: () => router.push('/paywall' as any) }
-                ]
+                ],
+                'warning'
               );
             } else {
               await regenerateActivity();
             }
           }
         }
-      ]
+      ],
+      'info'
     );
   };
+
+  const handleLogout = () => {
+    setShowProfileModal(false);
+    alert(
+      'Sign Out',
+      'Are you sure you want to sign out?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await logout();
+              router.replace('/welcome' as any);
+            } catch (error) {
+              showError('Error', 'Failed to sign out. Please try again.');
+            }
+          },
+        },
+      ],
+      'warning'
+    );
+  };
+
+  const handleGoToSettings = () => {
+    setShowProfileModal(false);
+    router.push('/settings' as any);
+  };
+
+  // Advanced filters handlers
+  const toggleCuisine = (cuisine: CuisineType) => {
+    setAdvancedFilters(prev => {
+      const current = prev.cuisinePreferences || [];
+      const updated = current.includes(cuisine)
+        ? current.filter(c => c !== cuisine)
+        : [...current, cuisine];
+      return { ...prev, cuisinePreferences: updated };
+    });
+  };
+
+  const toggleAccessibility = (option: AccessibilityOption) => {
+    setAdvancedFilters(prev => {
+      const current = prev.accessibility || [];
+      const updated = current.includes(option)
+        ? current.filter(a => a !== option)
+        : [...current, option];
+      return { ...prev, accessibility: updated };
+    });
+  };
+
+  const setTimeOfDay = (time: TimeOfDay) => {
+    setAdvancedFilters(prev => ({ ...prev, preferredTimeOfDay: time }));
+  };
+
+  const setGroupSize = (size: GroupSize) => {
+    setAdvancedFilters(prev => ({ ...prev, groupSize: size }));
+  };
+
+  const clearAdvancedFilters = () => {
+    setAdvancedFilters(DEFAULT_ADVANCED_FILTERS);
+  };
+
+  const hasAdvancedFilters = useMemo(() => {
+    return (
+      (advancedFilters.cuisinePreferences && advancedFilters.cuisinePreferences.length > 0) ||
+      (advancedFilters.accessibility && advancedFilters.accessibility.length > 0) ||
+      (advancedFilters.preferredTimeOfDay && advancedFilters.preferredTimeOfDay !== 'any') ||
+      advancedFilters.groupSize !== undefined
+    );
+  }, [advancedFilters]);
 
   const categories = mode === 'couples' 
     ? [
@@ -423,6 +611,16 @@ export default function HomeScreen() {
 
     switch (wizardStep) {
       case 'welcome':
+        const getWelcomeTitle = () => {
+          if (displayName) {
+            if (mode === 'couples') {
+              return `Ready for a date, ${displayName}?`;
+            }
+            return `Ready for some fun, ${displayName}?`;
+          }
+          return mode === 'couples' ? 'Ready for a special moment?' : 'Ready for family fun?';
+        };
+        
         return (
           <Animated.View style={[styles.wizardContent, { transform: [{ translateX: slideTransform }], opacity }]}>
             <View style={styles.welcomeContainer}>
@@ -430,7 +628,7 @@ export default function HomeScreen() {
                 <Logo size={56} color={Colors.primary} />
               </View>
               <Text style={styles.welcomeTitle}>
-                Ready for {mode === 'couples' ? 'a special moment' : 'family fun'}?
+                {getWelcomeTitle()}
               </Text>
               <Text style={styles.welcomeDescription}>
                 Answer a few quick questions and we'll find the perfect {mode === 'couples' ? 'date' : 'activity'} for you.
@@ -450,6 +648,53 @@ export default function HomeScreen() {
                   <Logo size={22} color={Colors.backgroundDark} />
                 </LinearGradient>
               </TouchableOpacity>
+
+              {/* Advanced Filters Button */}
+              {isPremium ? (
+                <TouchableOpacity
+                  style={styles.advancedFiltersButton}
+                  onPress={() => setShowAdvancedFilters(true)}
+                  activeOpacity={0.7}
+                >
+                  <Sliders size={18} color={Colors.primary} />
+                  <Text style={styles.advancedFiltersButtonText}>
+                    Advanced Filters
+                    {hasAdvancedFilters && ' •'}
+                  </Text>
+                  {hasAdvancedFilters && (
+                    <View style={styles.filterCountBadge}>
+                      <Text style={styles.filterCountText}>
+                        {(advancedFilters.cuisinePreferences?.length || 0) + 
+                         (advancedFilters.accessibility?.length || 0) +
+                         (advancedFilters.preferredTimeOfDay && advancedFilters.preferredTimeOfDay !== 'any' ? 1 : 0) +
+                         (advancedFilters.groupSize ? 1 : 0)}
+                      </Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={styles.advancedFiltersButtonLocked}
+                  onPress={() => {
+                    alert(
+                      'Premium Feature',
+                      'Advanced filters including cuisine preferences, accessibility options, and more are available with Premium.\n\nUpgrade to customize your activity suggestions!',
+                      [
+                        { text: 'Not Now', style: 'cancel' },
+                        { text: 'Upgrade', onPress: () => router.push('/paywall' as any) }
+                      ],
+                      'info'
+                    );
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Crown size={16} color={Colors.accent} />
+                  <Text style={styles.advancedFiltersButtonLockedText}>Advanced Filters</Text>
+                  <View style={styles.proBadgeSmall}>
+                    <Text style={styles.proBadgeSmallText}>PRO</Text>
+                  </View>
+                </TouchableOpacity>
+              )}
             </View>
           </Animated.View>
         );
@@ -828,16 +1073,300 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      {/* Advanced Filters Modal (Premium Only) */}
+      <Modal
+        visible={showAdvancedFilters}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowAdvancedFilters(false)}
+      >
+        <Pressable 
+          style={styles.modalOverlay} 
+          onPress={() => setShowAdvancedFilters(false)}
+        >
+          <Pressable style={styles.advancedFiltersModal} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.advancedFiltersHeader}>
+              <View style={styles.advancedFiltersTitleRow}>
+                <Sliders size={20} color={Colors.primary} />
+                <Text style={styles.advancedFiltersTitle}>Advanced Filters</Text>
+                <View style={styles.premiumBadge}>
+                  <Crown size={12} color={Colors.backgroundDark} />
+                  <Text style={styles.premiumBadgeText}>PREMIUM</Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                style={styles.advancedFiltersClose}
+                onPress={() => setShowAdvancedFilters(false)}
+                activeOpacity={0.7}
+              >
+                <X size={20} color={Colors.textLight} />
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView style={styles.advancedFiltersContent} showsVerticalScrollIndicator={false}>
+              {/* Cuisine Preferences */}
+              {(wizardAnswers.category === 'Foodie' || !wizardAnswers.category) && (
+                <View style={styles.filterSection}>
+                  <Text style={styles.filterSectionTitle}>Cuisine Preferences</Text>
+                  <Text style={styles.filterSectionSubtitle}>Select your preferred cuisines</Text>
+                  <View style={styles.filterChipsGrid}>
+                    {CUISINE_OPTIONS.map((cuisine) => (
+                      <TouchableOpacity
+                        key={cuisine.value}
+                        style={[
+                          styles.filterChip,
+                          advancedFilters.cuisinePreferences?.includes(cuisine.value) && styles.filterChipSelected
+                        ]}
+                        onPress={() => toggleCuisine(cuisine.value)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[
+                          styles.filterChipText,
+                          advancedFilters.cuisinePreferences?.includes(cuisine.value) && styles.filterChipTextSelected
+                        ]}>
+                          {cuisine.label}
+                        </Text>
+                        {advancedFilters.cuisinePreferences?.includes(cuisine.value) && (
+                          <Check size={14} color={Colors.primary} />
+                        )}
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {/* Accessibility Options */}
+              <View style={styles.filterSection}>
+                <Text style={styles.filterSectionTitle}>Accessibility Needs</Text>
+                <Text style={styles.filterSectionSubtitle}>Venues must meet these requirements</Text>
+                <View style={styles.filterChipsGrid}>
+                  {ACCESSIBILITY_OPTIONS.map((option) => (
+                    <TouchableOpacity
+                      key={option.value}
+                      style={[
+                        styles.filterChip,
+                        advancedFilters.accessibility?.includes(option.value) && styles.filterChipSelected
+                      ]}
+                      onPress={() => toggleAccessibility(option.value)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.filterChipIcon}>{option.icon}</Text>
+                      <Text style={[
+                        styles.filterChipText,
+                        advancedFilters.accessibility?.includes(option.value) && styles.filterChipTextSelected
+                      ]}>
+                        {option.label}
+                      </Text>
+                      {advancedFilters.accessibility?.includes(option.value) && (
+                        <Check size={14} color={Colors.primary} />
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* Time of Day */}
+              <View style={styles.filterSection}>
+                <Text style={styles.filterSectionTitle}>Preferred Time</Text>
+                <Text style={styles.filterSectionSubtitle}>Best time for this activity</Text>
+                <View style={styles.timeOptionsGrid}>
+                  {TIME_OF_DAY_OPTIONS.map((time) => (
+                    <TouchableOpacity
+                      key={time.value}
+                      style={[
+                        styles.timeOption,
+                        advancedFilters.preferredTimeOfDay === time.value && styles.timeOptionSelected
+                      ]}
+                      onPress={() => setTimeOfDay(time.value)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[
+                        styles.timeOptionLabel,
+                        advancedFilters.preferredTimeOfDay === time.value && styles.timeOptionLabelSelected
+                      ]}>
+                        {time.label}
+                      </Text>
+                      <Text style={styles.timeOptionHours}>{time.hours}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* Group Size */}
+              <View style={styles.filterSection}>
+                <Text style={styles.filterSectionTitle}>Group Size</Text>
+                <Text style={styles.filterSectionSubtitle}>How many people?</Text>
+                <View style={styles.groupSizeGrid}>
+                  {GROUP_SIZE_OPTIONS.map((group) => (
+                    <TouchableOpacity
+                      key={group.value}
+                      style={[
+                        styles.groupSizeOption,
+                        advancedFilters.groupSize === group.value && styles.groupSizeOptionSelected
+                      ]}
+                      onPress={() => setGroupSize(group.value)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[
+                        styles.groupSizeLabel,
+                        advancedFilters.groupSize === group.value && styles.groupSizeLabelSelected
+                      ]}>
+                        {group.label}
+                      </Text>
+                      <Text style={styles.groupSizeDescription}>{group.description}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            </ScrollView>
+
+            <View style={styles.advancedFiltersFooter}>
+              <TouchableOpacity
+                style={styles.clearFiltersButton}
+                onPress={clearAdvancedFilters}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.clearFiltersText}>Clear All</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.applyFiltersButton}
+                onPress={() => setShowAdvancedFilters(false)}
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={[Colors.primaryGradientStart, Colors.primaryGradientEnd]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.applyFiltersGradient}
+                >
+                  <Text style={styles.applyFiltersText}>Apply Filters</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Profile Modal */}
+      <Modal
+        visible={showProfileModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowProfileModal(false)}
+      >
+        <Pressable 
+          style={styles.modalOverlay} 
+          onPress={() => setShowProfileModal(false)}
+        >
+          <Pressable style={styles.profileModal} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.profileModalHeader}>
+              <Text style={styles.profileModalTitle}>Profile</Text>
+              <TouchableOpacity
+                style={styles.profileModalClose}
+                onPress={() => setShowProfileModal(false)}
+                activeOpacity={0.7}
+              >
+                <X size={20} color={Colors.textLight} />
+              </TouchableOpacity>
+            </View>
+            
+            {isAuthenticated && user ? (
+              <>
+                <View style={styles.profileInfo}>
+                  {user.photoUrl ? (
+                    <Image 
+                      source={{ uri: user.photoUrl }} 
+                      style={styles.profileModalAvatar}
+                    />
+                  ) : (
+                    <View style={styles.profileModalAvatarPlaceholder}>
+                      <User size={32} color={Colors.textLight} />
+                    </View>
+                  )}
+                  <Text style={styles.profileName}>{user.name}</Text>
+                  <Text style={styles.profileEmail}>{user.email}</Text>
+                  {user.provider !== 'none' && (
+                    <View style={styles.providerBadge}>
+                      <Text style={styles.providerBadgeText}>
+                        Signed in with {user.provider === 'google' ? 'Google' : 'Facebook'}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+                
+                <View style={styles.profileActions}>
+                  <TouchableOpacity
+                    style={styles.profileActionButton}
+                    onPress={handleGoToSettings}
+                    activeOpacity={0.7}
+                  >
+                    <Settings size={20} color={Colors.text} />
+                    <Text style={styles.profileActionText}>Settings</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity
+                    style={[styles.profileActionButton, styles.logoutActionButton]}
+                    onPress={handleLogout}
+                    activeOpacity={0.7}
+                  >
+                    <LogOut size={20} color={Colors.error} />
+                    <Text style={styles.logoutActionText}>Sign Out</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            ) : (
+              <View style={styles.profileInfo}>
+                <View style={styles.profileModalAvatarPlaceholder}>
+                  <User size={32} color={Colors.textLight} />
+                </View>
+                <Text style={styles.profileName}>Guest</Text>
+                <Text style={styles.profileEmail}>Not signed in</Text>
+                <TouchableOpacity
+                  style={styles.signInButton}
+                  onPress={() => {
+                    setShowProfileModal(false);
+                    router.push('/welcome' as any);
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.signInButtonText}>Sign In</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </Pressable>
+        </Pressable>
+      </Modal>
+
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <Logo size={28} color={Colors.primary} />
           <View>
             <Text style={styles.appName}>Scratch & Go</Text>
-            <Text style={styles.modeLabel}>{mode === 'couples' ? 'Couples' : 'Family'}</Text>
+            <Text style={styles.modeLabel}>
+              {displayName || (mode === 'couples' ? 'Couples' : 'Family')}
+            </Text>
           </View>
         </View>
-        <LocationSelector />
+        <View style={styles.headerRight}>
+          <LocationSelector />
+          <TouchableOpacity
+            style={styles.profileButton}
+            onPress={() => setShowProfileModal(true)}
+            activeOpacity={0.7}
+          >
+            {isAuthenticated && user?.photoUrl ? (
+              <Image 
+                source={{ uri: user.photoUrl }} 
+                style={styles.profileAvatar}
+              />
+            ) : (
+              <View style={styles.profileAvatarPlaceholder}>
+                <User size={18} color={Colors.textLight} />
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView 
@@ -870,12 +1399,27 @@ export default function HomeScreen() {
 
         {renderWizardContent()}
 
-        {/* Scratch Counter */}
+        {/* Scratch Counter & Cooldown */}
         {wizardStep === 'summary' && (
           <View style={styles.scratchCountContainer}>
-            <Text style={styles.scratchCountText}>
-              {isPremium ? 'Unlimited scratches' : `${remainingScratches} scratches left this month`}
-            </Text>
+            {cooldownDisplay && !isPremium ? (
+              <View style={styles.cooldownContainer}>
+                <Timer size={14} color={Colors.accent} />
+                <Text style={styles.cooldownText}>
+                  Next scratch in {cooldownDisplay}
+                </Text>
+                <TouchableOpacity 
+                  onPress={() => router.push('/paywall' as any)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.upgradeLink}>Upgrade for no cooldown</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <Text style={styles.scratchCountText}>
+                {isPremium ? 'Unlimited scratches • No cooldown' : `${remainingScratches} scratches left this month`}
+              </Text>
+            )}
           </View>
         )}
       </ScrollView>
@@ -902,6 +1446,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.md,
   },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
   appName: {
     fontSize: Typography.sizes.body,
     fontWeight: '600' as const,
@@ -912,6 +1461,138 @@ const styles = StyleSheet.create({
     color: Colors.textLight,
     marginTop: 2,
   },
+  profileButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    overflow: 'hidden',
+  },
+  profileAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+  },
+  profileAvatarPlaceholder: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.backgroundLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  
+  // Profile Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.lg,
+  },
+  profileModal: {
+    backgroundColor: Colors.cardBackground,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.xl,
+    width: '100%',
+    maxWidth: 340,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  profileModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.lg,
+  },
+  profileModalTitle: {
+    fontSize: Typography.sizes.h3,
+    fontWeight: '600' as const,
+    color: Colors.text,
+  },
+  profileModalClose: {
+    padding: Spacing.xs,
+  },
+  profileInfo: {
+    alignItems: 'center',
+    marginBottom: Spacing.xl,
+  },
+  profileModalAvatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    marginBottom: Spacing.md,
+  },
+  profileModalAvatarPlaceholder: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: Colors.backgroundLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  profileName: {
+    fontSize: Typography.sizes.h3,
+    fontWeight: '600' as const,
+    color: Colors.text,
+    marginBottom: Spacing.xs,
+  },
+  profileEmail: {
+    fontSize: Typography.sizes.body,
+    color: Colors.textLight,
+    marginBottom: Spacing.sm,
+  },
+  providerBadge: {
+    backgroundColor: Colors.backgroundLight,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.full,
+  },
+  providerBadgeText: {
+    fontSize: Typography.sizes.small,
+    color: Colors.textMuted,
+  },
+  profileActions: {
+    gap: Spacing.sm,
+  },
+  profileActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    padding: Spacing.md,
+    backgroundColor: Colors.backgroundLight,
+    borderRadius: BorderRadius.medium,
+  },
+  profileActionText: {
+    fontSize: Typography.sizes.body,
+    color: Colors.text,
+    fontWeight: '500' as const,
+  },
+  logoutActionButton: {
+    backgroundColor: Colors.errorMuted,
+  },
+  logoutActionText: {
+    fontSize: Typography.sizes.body,
+    color: Colors.error,
+    fontWeight: '500' as const,
+  },
+  signInButton: {
+    marginTop: Spacing.md,
+    backgroundColor: Colors.primary,
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.medium,
+  },
+  signInButtonText: {
+    fontSize: Typography.sizes.body,
+    color: Colors.backgroundDark,
+    fontWeight: '600' as const,
+  },
+  
   content: {
     flex: 1,
   },
@@ -1422,5 +2103,280 @@ const styles = StyleSheet.create({
     fontSize: Typography.sizes.small,
     color: Colors.textMuted,
     textAlign: 'center',
+  },
+  
+  // Cooldown styles
+  cooldownContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    flexWrap: 'wrap',
+  },
+  cooldownText: {
+    fontSize: Typography.sizes.small,
+    color: Colors.accent,
+    fontWeight: '500' as const,
+  },
+  upgradeLink: {
+    fontSize: Typography.sizes.small,
+    color: Colors.primary,
+    textDecorationLine: 'underline',
+  },
+  
+  // Advanced Filters Button styles
+  advancedFiltersButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    marginTop: Spacing.lg,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    backgroundColor: Colors.primaryMuted,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+  },
+  advancedFiltersButtonText: {
+    fontSize: Typography.sizes.body,
+    color: Colors.primary,
+    fontWeight: '500' as const,
+  },
+  filterCountBadge: {
+    backgroundColor: Colors.primary,
+    borderRadius: BorderRadius.full,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 2,
+    minWidth: 20,
+    alignItems: 'center',
+  },
+  filterCountText: {
+    fontSize: Typography.sizes.tiny,
+    color: Colors.backgroundDark,
+    fontWeight: '600' as const,
+  },
+  advancedFiltersButtonLocked: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    marginTop: Spacing.lg,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    backgroundColor: Colors.backgroundLight,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  advancedFiltersButtonLockedText: {
+    fontSize: Typography.sizes.body,
+    color: Colors.textMuted,
+    fontWeight: '500' as const,
+  },
+  proBadgeSmall: {
+    backgroundColor: Colors.accent,
+    borderRadius: BorderRadius.xs,
+    paddingHorizontal: Spacing.xs,
+    paddingVertical: 1,
+  },
+  proBadgeSmallText: {
+    fontSize: 9,
+    color: Colors.backgroundDark,
+    fontWeight: '700' as const,
+  },
+  
+  // Advanced Filters Modal styles
+  advancedFiltersModal: {
+    backgroundColor: Colors.cardBackground,
+    borderTopLeftRadius: BorderRadius.xl,
+    borderTopRightRadius: BorderRadius.xl,
+    maxHeight: '85%',
+    width: '100%',
+    position: 'absolute',
+    bottom: 0,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    borderBottomWidth: 0,
+  },
+  advancedFiltersHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: Spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.cardBorder,
+  },
+  advancedFiltersTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  advancedFiltersTitle: {
+    fontSize: Typography.sizes.h3,
+    fontWeight: '600' as const,
+    color: Colors.text,
+  },
+  premiumBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: Colors.accent,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 3,
+    borderRadius: BorderRadius.xs,
+  },
+  premiumBadgeText: {
+    fontSize: 10,
+    color: Colors.backgroundDark,
+    fontWeight: '700' as const,
+  },
+  advancedFiltersClose: {
+    padding: Spacing.xs,
+  },
+  advancedFiltersContent: {
+    padding: Spacing.lg,
+    maxHeight: 400,
+  },
+  filterSection: {
+    marginBottom: Spacing.xl,
+  },
+  filterSectionTitle: {
+    fontSize: Typography.sizes.body,
+    fontWeight: '600' as const,
+    color: Colors.text,
+    marginBottom: Spacing.xs,
+  },
+  filterSectionSubtitle: {
+    fontSize: Typography.sizes.small,
+    color: Colors.textLight,
+    marginBottom: Spacing.md,
+  },
+  filterChipsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
+  },
+  filterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    backgroundColor: Colors.backgroundLight,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  filterChipSelected: {
+    backgroundColor: Colors.primaryMuted,
+    borderColor: Colors.primary,
+  },
+  filterChipIcon: {
+    fontSize: 14,
+  },
+  filterChipText: {
+    fontSize: Typography.sizes.small,
+    color: Colors.textLight,
+  },
+  filterChipTextSelected: {
+    color: Colors.primary,
+    fontWeight: '500' as const,
+  },
+  timeOptionsGrid: {
+    gap: Spacing.sm,
+  },
+  timeOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: Spacing.md,
+    backgroundColor: Colors.backgroundLight,
+    borderRadius: BorderRadius.medium,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  timeOptionSelected: {
+    backgroundColor: Colors.primaryMuted,
+    borderColor: Colors.primary,
+  },
+  timeOptionLabel: {
+    fontSize: Typography.sizes.body,
+    color: Colors.text,
+    fontWeight: '500' as const,
+  },
+  timeOptionLabelSelected: {
+    color: Colors.primary,
+  },
+  timeOptionHours: {
+    fontSize: Typography.sizes.small,
+    color: Colors.textLight,
+  },
+  groupSizeGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
+  },
+  groupSizeOption: {
+    width: (SCREEN_WIDTH - Spacing.lg * 2 - Spacing.sm) / 2 - Spacing.lg,
+    padding: Spacing.md,
+    backgroundColor: Colors.backgroundLight,
+    borderRadius: BorderRadius.medium,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    alignItems: 'center',
+  },
+  groupSizeOptionSelected: {
+    backgroundColor: Colors.primaryMuted,
+    borderColor: Colors.primary,
+  },
+  groupSizeLabel: {
+    fontSize: Typography.sizes.body,
+    color: Colors.text,
+    fontWeight: '500' as const,
+    marginBottom: 2,
+  },
+  groupSizeLabelSelected: {
+    color: Colors.primary,
+  },
+  groupSizeDescription: {
+    fontSize: Typography.sizes.small,
+    color: Colors.textLight,
+  },
+  advancedFiltersFooter: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+    padding: Spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: Colors.cardBorder,
+  },
+  clearFiltersButton: {
+    flex: 1,
+    padding: Spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: BorderRadius.medium,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  clearFiltersText: {
+    fontSize: Typography.sizes.body,
+    color: Colors.textLight,
+    fontWeight: '500' as const,
+  },
+  applyFiltersButton: {
+    flex: 2,
+    borderRadius: BorderRadius.medium,
+    overflow: 'hidden',
+  },
+  applyFiltersGradient: {
+    padding: Spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  applyFiltersText: {
+    fontSize: Typography.sizes.body,
+    color: Colors.backgroundDark,
+    fontWeight: '600' as const,
   },
 });

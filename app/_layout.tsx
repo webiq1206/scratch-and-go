@@ -14,6 +14,7 @@ import { StatsProvider } from "@/contexts/StatsContext";
 import { YearRecapProvider } from "@/contexts/YearRecapContext";
 import { AuthContext } from "@/contexts/AuthContext";
 import { AnalyticsProvider } from "@/contexts/AnalyticsContext";
+import { AlertProvider } from "@/contexts/AlertContext";
 import ErrorBoundary from "@/components/ErrorBoundary";
 
 SplashScreen.preventAutoHideAsync();
@@ -98,9 +99,11 @@ export default function RootLayout() {
                         <CollaborativeProvider>
                           <StatsProvider>
                             <YearRecapProvider>
-                              <GestureHandlerRootView style={{ flex: 1 }}>
-                                <RootLayoutNav />
-                              </GestureHandlerRootView>
+                              <AlertProvider>
+                                <GestureHandlerRootView style={{ flex: 1 }}>
+                                  <RootLayoutNav />
+                                </GestureHandlerRootView>
+                              </AlertProvider>
                             </YearRecapProvider>
                           </StatsProvider>
                         </CollaborativeProvider>

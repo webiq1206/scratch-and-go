@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert, Linking, Platform } from 'react-native';
+import React, { useState, useEffect, useMemo } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Linking, Platform, TextInput, Modal, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -20,7 +20,14 @@ import {
   TreePine,
   Palette,
   Music,
-  Sparkles
+  Sparkles,
+  User,
+  Plus,
+  Trash2,
+  Edit3,
+  Check,
+  X,
+  Camera
 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import Typography from '@/constants/typography';
@@ -29,24 +36,91 @@ import { BorderRadius } from '@/constants/design';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { RELIGIONS } from '@/types/preferences';
+import { useAlert } from '@/contexts/AlertContext';
+import { useMemoryBook } from '@/contexts/MemoryBookContext';
+import { RELIGIONS, FamilyMember, GroupType } from '@/types/preferences';
+import PolaroidFrame from '@/components/ui/PolaroidFrame';
 
 const MODE_KEY = 'scratch_and_go_mode';
 
 type Mode = 'couples' | 'family';
 
+// Mode-specific content
+const getModeContent = (mode: Mode) => ({
+  couples: {
+    modeLabel: 'For two',
+    modeDescription: 'Perfect for romantic adventures',
+    personalizationTitle: 'Your Names',
+    personalizationDescription: 'Add your names for a more personalized date experience',
+  },
+  family: {
+    modeLabel: 'For everyone',
+    modeDescription: 'Fun for the whole family',
+    personalizationTitle: 'Your Family',
+    personalizationDescription: 'Add your family details for personalized activity suggestions',
+  },
+});
+
 export default function SettingsScreen() {
   const router = useRouter();
-  const { preferences, updatePreferences } = usePreferences();
+  const { 
+    preferences, 
+    updatePreferences,
+    getPersonalization,
+    updatePersonalization,
+    setCoupleNames,
+    setFamilyLastName,
+    addFamilyMember,
+    updateFamilyMember,
+    removeFamilyMember,
+    getDisplayName
+  } = usePreferences();
   const { isPremium, isTrial, getTrialDaysRemaining, getSubscriptionEndDate, restorePurchases } = useSubscription();
   const { user, logout, isAuthenticated } = useAuth();
+  const { alert, showSuccess, showError, showInfo } = useAlert();
+  const { getCompletedActivities } = useMemoryBook();
   const [mode, setMode] = useState<Mode>('couples');
   const [showReligionPicker, setShowReligionPicker] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
+  
+  // Get user photos for decorative element
+  const userPhotos = useMemo(() => {
+    const completed = getCompletedActivities();
+    return completed
+      .filter(a => a.photos && a.photos.length > 0)
+      .flatMap(a => a.photos!)
+      .slice(0, 2);
+  }, [getCompletedActivities]);
+  
+  const content = getModeContent(mode);
+  
+  // Personalization state
+  const [partner1Name, setPartner1Name] = useState('');
+  const [partner2Name, setPartner2Name] = useState('');
+  const [familyLastName, setFamilyLastNameLocal] = useState('');
+  const [showAddMemberModal, setShowAddMemberModal] = useState(false);
+  const [showEditMemberModal, setShowEditMemberModal] = useState(false);
+  const [editingMember, setEditingMember] = useState<FamilyMember | null>(null);
+  const [newMemberName, setNewMemberName] = useState('');
+  const [newMemberAge, setNewMemberAge] = useState('');
 
   useEffect(() => {
     loadMode();
+    loadPersonalization();
   }, []);
+
+  const loadPersonalization = () => {
+    const personalization = getPersonalization();
+    if (personalization) {
+      if (personalization.coupleNames) {
+        setPartner1Name(personalization.coupleNames.partner1 || '');
+        setPartner2Name(personalization.coupleNames.partner2 || '');
+      }
+      if (personalization.familyLastName) {
+        setFamilyLastNameLocal(personalization.familyLastName);
+      }
+    }
+  };
 
   const loadMode = async () => {
     try {
@@ -63,11 +137,123 @@ export default function SettingsScreen() {
     try {
       await AsyncStorage.setItem(MODE_KEY, newMode);
       setMode(newMode);
+      // Also update personalization groupType
+      await updatePersonalization({ groupType: newMode as GroupType });
     } catch (error) {
       console.error('Error saving mode:', error);
-      Alert.alert('Error', 'Failed to save mode. Please try again.');
+      showError('Error', 'Failed to save mode. Please try again.');
     }
   };
+
+  const handleSaveCoupleNames = async () => {
+    if (!partner1Name.trim() && !partner2Name.trim()) {
+      return; // Don't save empty names
+    }
+    try {
+      await setCoupleNames({
+        partner1: partner1Name.trim(),
+        partner2: partner2Name.trim(),
+      });
+      showSuccess('Saved', 'Names saved successfully!');
+    } catch (error) {
+      showError('Error', 'Failed to save names. Please try again.');
+    }
+  };
+
+  const handleSaveFamilyName = async () => {
+    if (!familyLastName.trim()) {
+      return;
+    }
+    try {
+      await setFamilyLastName(familyLastName.trim());
+      showSuccess('Saved', 'Family name saved successfully!');
+    } catch (error) {
+      showError('Error', 'Failed to save family name. Please try again.');
+    }
+  };
+
+  const handleAddFamilyMember = async () => {
+    const name = newMemberName.trim();
+    const age = parseInt(newMemberAge, 10);
+    
+    if (!name) {
+      showError('Error', 'Please enter a name.');
+      return;
+    }
+    if (isNaN(age) || age < 0 || age > 120) {
+      showError('Error', 'Please enter a valid age.');
+      return;
+    }
+
+    try {
+      await addFamilyMember({ name, age });
+      setNewMemberName('');
+      setNewMemberAge('');
+      setShowAddMemberModal(false);
+      showSuccess('Added', `${name} has been added to the family!`);
+    } catch (error) {
+      showError('Error', 'Failed to add family member. Please try again.');
+    }
+  };
+
+  const handleEditFamilyMember = async () => {
+    if (!editingMember) return;
+    
+    const name = newMemberName.trim();
+    const age = parseInt(newMemberAge, 10);
+    
+    if (!name) {
+      showError('Error', 'Please enter a name.');
+      return;
+    }
+    if (isNaN(age) || age < 0 || age > 120) {
+      showError('Error', 'Please enter a valid age.');
+      return;
+    }
+
+    try {
+      await updateFamilyMember(editingMember.id, { name, age });
+      setEditingMember(null);
+      setNewMemberName('');
+      setNewMemberAge('');
+      setShowEditMemberModal(false);
+      showSuccess('Updated', `${name}'s information has been updated!`);
+    } catch (error) {
+      showError('Error', 'Failed to update family member. Please try again.');
+    }
+  };
+
+  const handleRemoveFamilyMember = (member: FamilyMember) => {
+    alert(
+      'Remove Family Member',
+      `Are you sure you want to remove ${member.name} from your family?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await removeFamilyMember(member.id);
+              showSuccess('Removed', `${member.name} has been removed.`);
+            } catch (error) {
+              showError('Error', 'Failed to remove family member.');
+            }
+          },
+        },
+      ],
+      'warning'
+    );
+  };
+
+  const openEditMemberModal = (member: FamilyMember) => {
+    setEditingMember(member);
+    setNewMemberName(member.name);
+    setNewMemberAge(member.age.toString());
+    setShowEditMemberModal(true);
+  };
+
+  const familyMembers = preferences.personalization?.familyMembers || [];
 
   const handleToggle = async (key: keyof typeof preferences, value: boolean) => {
     if (key === 'includeReligious' && value && !preferences.religion) {
@@ -101,7 +287,7 @@ export default function SettingsScreen() {
       default: 'Subscription management is available through the app store on mobile devices.',
     });
     
-    Alert.alert('Manage Subscription', message, [
+    alert('Manage Subscription', message, [
       { text: 'OK', style: 'default' },
       Platform.OS === 'ios' ? {
         text: 'Open Settings',
@@ -110,7 +296,7 @@ export default function SettingsScreen() {
         text: 'Open Play Store',
         onPress: () => Linking.openURL('https://play.google.com/store/account/subscriptions'),
       } : undefined,
-    ].filter(Boolean) as any);
+    ].filter(Boolean) as any, 'info');
   };
 
   const handleRestorePurchases = async () => {
@@ -120,19 +306,19 @@ export default function SettingsScreen() {
     try {
       const restored = await restorePurchases();
       if (restored) {
-        Alert.alert('Success', 'Your purchases have been restored!');
+        showSuccess('Success', 'Your purchases have been restored!');
       } else {
-        Alert.alert('No Purchases Found', 'We couldn\'t find any previous purchases to restore.');
+        showInfo('No Purchases Found', 'We couldn\'t find any previous purchases to restore.');
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to restore purchases. Please try again.');
+      showError('Error', 'Failed to restore purchases. Please try again.');
     } finally {
       setIsRestoring(false);
     }
   };
 
   const handleResetPreferences = () => {
-    Alert.alert(
+    alert(
       'Reset Preferences',
       'This will reset all content preferences to defaults. Continue?',
       [
@@ -150,15 +336,16 @@ export default function SettingsScreen() {
               includeLiveEntertainment: true,
               religion: undefined,
             });
-            Alert.alert('Done', 'Preferences have been reset.');
+            showSuccess('Done', 'Preferences have been reset.');
           },
         },
-      ]
+      ],
+      'warning'
     );
   };
 
   const handleLogout = () => {
-    Alert.alert(
+    alert(
       'Sign Out',
       'Are you sure you want to sign out?',
       [
@@ -171,11 +358,12 @@ export default function SettingsScreen() {
               await logout();
               router.replace('/welcome' as any);
             } catch (error) {
-              Alert.alert('Error', 'Failed to sign out. Please try again.');
+              showError('Error', 'Failed to sign out. Please try again.');
             }
           },
         },
-      ]
+      ],
+      'warning'
     );
   };
 
@@ -318,10 +506,14 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        {/* Mode Section */}
+        {/* Mode Section - Enhanced */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <SettingsIcon size={18} color={Colors.primary} />
+            {mode === 'couples' ? (
+              <Heart size={18} color={Colors.primary} fill={Colors.primary} />
+            ) : (
+              <Users size={18} color={Colors.primary} />
+            )}
             <Text style={styles.sectionTitle}>Mode</Text>
           </View>
           
@@ -331,10 +523,22 @@ export default function SettingsScreen() {
               onPress={() => handleModeChange('couples')}
               activeOpacity={0.7}
             >
-              <Heart size={20} color={mode === 'couples' ? Colors.primary : Colors.textLight} />
-              <Text style={[styles.modeButtonText, mode === 'couples' && styles.modeButtonTextActive]}>
-                Couples
-              </Text>
+              <View style={styles.modeIconContainer}>
+                <Heart size={24} color={mode === 'couples' ? Colors.primary : Colors.textLight} fill={mode === 'couples' ? Colors.primary : 'none'} />
+              </View>
+              <View style={styles.modeTextContainer}>
+                <Text style={[styles.modeButtonText, mode === 'couples' && styles.modeButtonTextActive]}>
+                  Couples
+                </Text>
+                <Text style={styles.modeDescription}>
+                  {getModeContent('couples').modeDescription}
+                </Text>
+              </View>
+              {mode === 'couples' && (
+                <View style={styles.modeCheckmark}>
+                  <Check size={14} color={Colors.backgroundDark} />
+                </View>
+              )}
             </TouchableOpacity>
             
             <TouchableOpacity
@@ -342,12 +546,179 @@ export default function SettingsScreen() {
               onPress={() => handleModeChange('family')}
               activeOpacity={0.7}
             >
-              <Users size={20} color={mode === 'family' ? Colors.primary : Colors.textLight} />
-              <Text style={[styles.modeButtonText, mode === 'family' && styles.modeButtonTextActive]}>
-                Family
-              </Text>
+              <View style={styles.modeIconContainer}>
+                <Users size={24} color={mode === 'family' ? Colors.primary : Colors.textLight} />
+              </View>
+              <View style={styles.modeTextContainer}>
+                <Text style={[styles.modeButtonText, mode === 'family' && styles.modeButtonTextActive]}>
+                  Family
+                </Text>
+                <Text style={styles.modeDescription}>
+                  {getModeContent('family').modeDescription}
+                </Text>
+              </View>
+              {mode === 'family' && (
+                <View style={styles.modeCheckmark}>
+                  <Check size={14} color={Colors.backgroundDark} />
+                </View>
+              )}
             </TouchableOpacity>
           </View>
+        </View>
+
+        {/* Personalization Section - Enhanced */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Sparkles size={18} color={Colors.primary} />
+            <Text style={styles.sectionTitle}>{content.personalizationTitle}</Text>
+          </View>
+          
+          {mode === 'couples' ? (
+            <View style={styles.personalizationCard}>
+              {/* Mini polaroid accent */}
+              {userPhotos.length > 0 && (
+                <View style={styles.personalizationPolaroidAccent}>
+                  <PolaroidFrame
+                    imageUri={userPhotos[0]}
+                    size="small"
+                    rotation={-6}
+                    mode={mode}
+                    style={{ opacity: 0.6 }}
+                  />
+                </View>
+              )}
+              <Text style={styles.personalizationDescription}>
+                {content.personalizationDescription}
+              </Text>
+              
+              <View style={styles.nameInputContainer}>
+                <View style={styles.nameInputWrapper}>
+                  <Text style={styles.nameLabel}>Partner 1</Text>
+                  <TextInput
+                    style={styles.nameInput}
+                    value={partner1Name}
+                    onChangeText={setPartner1Name}
+                    placeholder="Enter name"
+                    placeholderTextColor={Colors.textMuted}
+                    onBlur={handleSaveCoupleNames}
+                    returnKeyType="next"
+                  />
+                </View>
+                
+                <View style={styles.nameInputWrapper}>
+                  <Text style={styles.nameLabel}>Partner 2</Text>
+                  <TextInput
+                    style={styles.nameInput}
+                    value={partner2Name}
+                    onChangeText={setPartner2Name}
+                    placeholder="Enter name"
+                    placeholderTextColor={Colors.textMuted}
+                    onBlur={handleSaveCoupleNames}
+                    returnKeyType="done"
+                  />
+                </View>
+              </View>
+              
+              {(partner1Name || partner2Name) && (
+                <View style={styles.previewContainer}>
+                  <Text style={styles.previewLabel}>Preview:</Text>
+                  <Text style={styles.previewText}>
+                    {partner1Name && partner2Name 
+                      ? `${partner1Name} & ${partner2Name}` 
+                      : partner1Name || partner2Name}
+                  </Text>
+                </View>
+              )}
+            </View>
+          ) : (
+            <View style={styles.personalizationCard}>
+              {/* Mini polaroid accent */}
+              {userPhotos.length > 0 && (
+                <View style={styles.personalizationPolaroidAccent}>
+                  <PolaroidFrame
+                    imageUri={userPhotos[0]}
+                    size="small"
+                    rotation={6}
+                    mode={mode}
+                    style={{ opacity: 0.6 }}
+                  />
+                </View>
+              )}
+              <Text style={styles.personalizationDescription}>
+                {content.personalizationDescription}
+              </Text>
+              
+              {/* Family Last Name */}
+              <View style={styles.familyNameSection}>
+                <Text style={styles.nameLabel}>Family Name</Text>
+                <View style={styles.familyNameInputRow}>
+                  <Text style={styles.familyNamePrefix}>The</Text>
+                  <TextInput
+                    style={styles.familyNameInput}
+                    value={familyLastName}
+                    onChangeText={setFamilyLastNameLocal}
+                    placeholder="Your last name"
+                    placeholderTextColor={Colors.textMuted}
+                    onBlur={handleSaveFamilyName}
+                    returnKeyType="done"
+                  />
+                  <Text style={styles.familyNameSuffix}>Family</Text>
+                </View>
+              </View>
+              
+              {/* Family Members */}
+              <View style={styles.familyMembersSection}>
+                <View style={styles.familyMembersHeader}>
+                  <Text style={styles.familyMembersTitle}>Family Members</Text>
+                  <TouchableOpacity
+                    style={styles.addMemberButton}
+                    onPress={() => {
+                      setNewMemberName('');
+                      setNewMemberAge('');
+                      setShowAddMemberModal(true);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Plus size={16} color={Colors.primary} />
+                    <Text style={styles.addMemberButtonText}>Add</Text>
+                  </TouchableOpacity>
+                </View>
+                
+                {familyMembers.length === 0 ? (
+                  <Text style={styles.noMembersText}>
+                    No family members added yet. Add members to get age-appropriate activity suggestions.
+                  </Text>
+                ) : (
+                  <View style={styles.membersList}>
+                    {familyMembers.map((member) => (
+                      <View key={member.id} style={styles.memberItem}>
+                        <View style={styles.memberInfo}>
+                          <Text style={styles.memberName}>{member.name}</Text>
+                          <Text style={styles.memberAge}>Age {member.age}</Text>
+                        </View>
+                        <View style={styles.memberActions}>
+                          <TouchableOpacity
+                            style={styles.memberActionButton}
+                            onPress={() => openEditMemberModal(member)}
+                            activeOpacity={0.7}
+                          >
+                            <Edit3 size={16} color={Colors.textLight} />
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={styles.memberActionButton}
+                            onPress={() => handleRemoveFamilyMember(member)}
+                            activeOpacity={0.7}
+                          >
+                            <Trash2 size={16} color={Colors.error} />
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+            </View>
+          )}
         </View>
 
         {/* Content Preferences Section */}
@@ -477,6 +848,164 @@ export default function SettingsScreen() {
         {/* Version */}
         <Text style={styles.versionText}>Version 1.0.0</Text>
       </ScrollView>
+
+      {/* Add Family Member Modal */}
+      <Modal
+        visible={showAddMemberModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowAddMemberModal(false)}
+      >
+        <Pressable 
+          style={styles.modalOverlay} 
+          onPress={() => setShowAddMemberModal(false)}
+        >
+          <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Add Family Member</Text>
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => setShowAddMemberModal(false)}
+                activeOpacity={0.7}
+              >
+                <X size={20} color={Colors.textLight} />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.modalBody}>
+              <View style={styles.modalInputGroup}>
+                <Text style={styles.modalInputLabel}>Name</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  value={newMemberName}
+                  onChangeText={setNewMemberName}
+                  placeholder="Enter name"
+                  placeholderTextColor={Colors.textMuted}
+                  autoFocus
+                />
+              </View>
+              
+              <View style={styles.modalInputGroup}>
+                <Text style={styles.modalInputLabel}>Age</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  value={newMemberAge}
+                  onChangeText={setNewMemberAge}
+                  placeholder="Enter age"
+                  placeholderTextColor={Colors.textMuted}
+                  keyboardType="number-pad"
+                  maxLength={3}
+                />
+              </View>
+            </View>
+            
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={() => setShowAddMemberModal(false)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.modalCancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={styles.modalSaveButton}
+                onPress={handleAddFamilyMember}
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={[Colors.primaryGradientStart, Colors.primaryGradientEnd]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.modalSaveButtonGradient}
+                >
+                  <Plus size={16} color={Colors.backgroundDark} />
+                  <Text style={styles.modalSaveButtonText}>Add Member</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Edit Family Member Modal */}
+      <Modal
+        visible={showEditMemberModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowEditMemberModal(false)}
+      >
+        <Pressable 
+          style={styles.modalOverlay} 
+          onPress={() => setShowEditMemberModal(false)}
+        >
+          <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Edit Family Member</Text>
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => setShowEditMemberModal(false)}
+                activeOpacity={0.7}
+              >
+                <X size={20} color={Colors.textLight} />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.modalBody}>
+              <View style={styles.modalInputGroup}>
+                <Text style={styles.modalInputLabel}>Name</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  value={newMemberName}
+                  onChangeText={setNewMemberName}
+                  placeholder="Enter name"
+                  placeholderTextColor={Colors.textMuted}
+                  autoFocus
+                />
+              </View>
+              
+              <View style={styles.modalInputGroup}>
+                <Text style={styles.modalInputLabel}>Age</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  value={newMemberAge}
+                  onChangeText={setNewMemberAge}
+                  placeholder="Enter age"
+                  placeholderTextColor={Colors.textMuted}
+                  keyboardType="number-pad"
+                  maxLength={3}
+                />
+              </View>
+            </View>
+            
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={() => setShowEditMemberModal(false)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.modalCancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={styles.modalSaveButton}
+                onPress={handleEditFamilyMember}
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={[Colors.primaryGradientStart, Colors.primaryGradientEnd]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.modalSaveButtonGradient}
+                >
+                  <Check size={16} color={Colors.backgroundDark} />
+                  <Text style={styles.modalSaveButtonText}>Save Changes</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -625,34 +1154,56 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
   },
   
-  // Mode
+  // Mode - Enhanced
   modeContainer: {
-    flexDirection: 'row',
     gap: Spacing.md,
   },
   modeButton: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.sm,
+    gap: Spacing.md,
     paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing.lg,
     backgroundColor: Colors.cardBackground,
-    borderRadius: BorderRadius.medium,
-    borderWidth: 1,
+    borderRadius: BorderRadius.large,
+    borderWidth: 2,
     borderColor: Colors.cardBorder,
   },
   modeButtonActive: {
     borderColor: Colors.primary,
     backgroundColor: Colors.primaryMuted,
   },
+  modeIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Colors.backgroundLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modeTextContainer: {
+    flex: 1,
+  },
   modeButtonText: {
     fontSize: Typography.sizes.body,
-    color: Colors.textLight,
+    fontWeight: '600' as const,
+    color: Colors.text,
+    marginBottom: 2,
   },
   modeButtonTextActive: {
     color: Colors.primary,
-    fontWeight: '500' as const,
+  },
+  modeDescription: {
+    fontSize: Typography.sizes.small,
+    color: Colors.textLight,
+  },
+  modeCheckmark: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   
   // Preferences
@@ -810,5 +1361,256 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 10,
     backgroundColor: Colors.primary,
+  },
+  
+  // Personalization
+  personalizationCard: {
+    backgroundColor: Colors.cardBackground,
+    borderRadius: BorderRadius.large,
+    padding: Spacing.lg,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  personalizationPolaroidAccent: {
+    position: 'absolute',
+    top: -20,
+    right: -20,
+    transform: [{ rotate: '15deg' }],
+    opacity: 0.4,
+  },
+  personalizationDescription: {
+    fontSize: Typography.sizes.body,
+    color: Colors.textLight,
+    marginBottom: Spacing.lg,
+    lineHeight: 22,
+  },
+  nameInputContainer: {
+    gap: Spacing.md,
+  },
+  nameInputWrapper: {
+    gap: Spacing.xs,
+  },
+  nameLabel: {
+    fontSize: Typography.sizes.small,
+    color: Colors.textLight,
+    fontWeight: '500' as const,
+  },
+  nameInput: {
+    backgroundColor: Colors.backgroundLight,
+    borderRadius: BorderRadius.medium,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md,
+    fontSize: Typography.sizes.body,
+    color: Colors.text,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  previewContainer: {
+    marginTop: Spacing.lg,
+    paddingTop: Spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: Colors.cardBorder,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  previewLabel: {
+    fontSize: Typography.sizes.small,
+    color: Colors.textMuted,
+  },
+  previewText: {
+    fontSize: Typography.sizes.body,
+    color: Colors.primary,
+    fontWeight: '500' as const,
+  },
+  familyNameSection: {
+    marginBottom: Spacing.xl,
+  },
+  familyNameInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginTop: Spacing.xs,
+  },
+  familyNamePrefix: {
+    fontSize: Typography.sizes.body,
+    color: Colors.textLight,
+  },
+  familyNameInput: {
+    flex: 1,
+    backgroundColor: Colors.backgroundLight,
+    borderRadius: BorderRadius.medium,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md,
+    fontSize: Typography.sizes.body,
+    color: Colors.text,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  familyNameSuffix: {
+    fontSize: Typography.sizes.body,
+    color: Colors.textLight,
+  },
+  familyMembersSection: {
+    borderTopWidth: 1,
+    borderTopColor: Colors.cardBorder,
+    paddingTop: Spacing.lg,
+  },
+  familyMembersHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+  },
+  familyMembersTitle: {
+    fontSize: Typography.sizes.body,
+    color: Colors.text,
+    fontWeight: '500' as const,
+  },
+  addMemberButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    backgroundColor: Colors.primaryMuted,
+    borderRadius: BorderRadius.medium,
+  },
+  addMemberButtonText: {
+    fontSize: Typography.sizes.small,
+    color: Colors.primary,
+    fontWeight: '500' as const,
+  },
+  noMembersText: {
+    fontSize: Typography.sizes.small,
+    color: Colors.textMuted,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    paddingVertical: Spacing.lg,
+  },
+  membersList: {
+    gap: Spacing.sm,
+  },
+  memberItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: Colors.backgroundLight,
+    borderRadius: BorderRadius.medium,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md,
+  },
+  memberInfo: {
+    flex: 1,
+  },
+  memberName: {
+    fontSize: Typography.sizes.body,
+    color: Colors.text,
+    fontWeight: '500' as const,
+  },
+  memberAge: {
+    fontSize: Typography.sizes.small,
+    color: Colors.textLight,
+    marginTop: 2,
+  },
+  memberActions: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+  },
+  memberActionButton: {
+    padding: Spacing.sm,
+  },
+  
+  // Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.lg,
+  },
+  modalContent: {
+    backgroundColor: Colors.cardBackground,
+    borderRadius: BorderRadius.xl,
+    width: '100%',
+    maxWidth: 340,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: Spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.cardBorder,
+  },
+  modalTitle: {
+    fontSize: Typography.sizes.h3,
+    fontWeight: '600' as const,
+    color: Colors.text,
+  },
+  modalCloseButton: {
+    padding: Spacing.xs,
+  },
+  modalBody: {
+    padding: Spacing.lg,
+    gap: Spacing.lg,
+  },
+  modalInputGroup: {
+    gap: Spacing.xs,
+  },
+  modalInputLabel: {
+    fontSize: Typography.sizes.small,
+    color: Colors.textLight,
+    fontWeight: '500' as const,
+  },
+  modalInput: {
+    backgroundColor: Colors.backgroundLight,
+    borderRadius: BorderRadius.medium,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md,
+    fontSize: Typography.sizes.body,
+    color: Colors.text,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    padding: Spacing.lg,
+    paddingTop: 0,
+    gap: Spacing.md,
+  },
+  modalCancelButton: {
+    flex: 1,
+    paddingVertical: Spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: BorderRadius.medium,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  modalCancelButtonText: {
+    fontSize: Typography.sizes.body,
+    color: Colors.textLight,
+  },
+  modalSaveButton: {
+    flex: 1,
+    borderRadius: BorderRadius.medium,
+    overflow: 'hidden',
+  },
+  modalSaveButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.xs,
+    paddingVertical: Spacing.md,
+  },
+  modalSaveButtonText: {
+    fontSize: Typography.sizes.body,
+    fontWeight: '600' as const,
+    color: Colors.backgroundDark,
   },
 });

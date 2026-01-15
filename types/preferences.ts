@@ -1,3 +1,23 @@
+export type GroupType = 'couples' | 'family';
+
+export interface FamilyMember {
+  id: string;
+  name: string;
+  age: number;
+}
+
+export interface CoupleNames {
+  partner1: string;
+  partner2: string;
+}
+
+export interface PersonalizationData {
+  groupType: GroupType;
+  coupleNames?: CoupleNames;
+  familyLastName?: string;
+  familyMembers?: FamilyMember[];
+}
+
 export interface UserPreferences {
   includeAlcohol: boolean;
   includeReligious: boolean;
@@ -7,6 +27,7 @@ export interface UserPreferences {
   includeArtsAndCulture: boolean;
   includeLiveEntertainment: boolean;
   completedOnboarding: boolean;
+  personalization?: PersonalizationData;
 }
 
 export const DEFAULT_PREFERENCES: UserPreferences = {
@@ -18,6 +39,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   includeArtsAndCulture: true,
   includeLiveEntertainment: true,
   completedOnboarding: false,
+  personalization: undefined,
 };
 
 export interface OnboardingQuestion {

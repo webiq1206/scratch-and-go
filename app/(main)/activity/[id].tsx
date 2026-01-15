@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, KeyboardAvoidingView, Platform, Image as RNImage, Dimensions, NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform, Image as RNImage, Dimensions, NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, Stack, router } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -7,6 +7,7 @@ import { Image } from 'expo-image';
 import { useMemoryBook } from '@/contexts/MemoryBookContext';
 import { useCollaborative } from '@/contexts/CollaborativeContext';
 import { useLocation } from '@/contexts/LocationContext';
+import { useAlert } from '@/contexts/AlertContext';
 import { shareActivity, shareMemory, shareMemoryToFacebook, shareMemoryToInstagram } from '@/utils/shareActivity';
 import { addActivityToCalendar, calculateEndDate } from '@/utils/calendarUtils';
 import Colors from '@/constants/colors';
@@ -22,6 +23,7 @@ export default function ActivityDetailScreen() {
   const { getSavedActivity, startActivity, stopActivity, markAsCompleted, markAsIncomplete, updateRating, updateNotes, unsaveActivity, addPhoto, removePhoto, updateLocationSnapshot } = useMemoryBook();
   const { addToQueue } = useCollaborative();
   const { location } = useLocation();
+  const { alert, showSuccess, showError, showInfo } = useAlert();
   
   // Handle id as string or array (Expo Router can return arrays)
   const activityId = Array.isArray(id) ? id[0] : id;
@@ -104,10 +106,10 @@ export default function ActivityDetailScreen() {
     try {
       updateNotes(activity.id, notesText);
       setIsEditingNotes(false);
-      Alert.alert('Saved', 'Your notes have been saved');
+      showSuccess('Saved', 'Your notes have been saved');
     } catch (error) {
       console.error('Error saving notes:', error);
-      Alert.alert('Error', 'Failed to save notes. Please try again.');
+      showError('Error', 'Failed to save notes. Please try again.');
     }
   };
 
@@ -121,20 +123,19 @@ export default function ActivityDetailScreen() {
     if (!activity) return;
     try {
       startActivity(activity.id);
-      Alert.alert(
+      showSuccess(
         'Activity Started!',
-        'Time to make some amazing memories! Don\'t forget to take photos and add notes along the way.',
-        [{ text: 'Got it!' }]
+        'Time to make some amazing memories! Don\'t forget to take photos and add notes along the way.'
       );
     } catch (error) {
       console.error('Error starting activity:', error);
-      Alert.alert('Error', 'Failed to start activity. Please try again.');
+      showError('Error', 'Failed to start activity. Please try again.');
     }
   };
 
   const handleStopActivity = () => {
     if (!activity) return;
-    Alert.alert(
+    alert(
       'Pause Activity?',
       'You can continue this activity later.',
       [
@@ -144,21 +145,22 @@ export default function ActivityDetailScreen() {
           onPress: () => {
             try {
               stopActivity(activity.id);
-              Alert.alert('Activity Paused', 'You can resume anytime!');
+              showInfo('Activity Paused', 'You can resume anytime!');
             } catch (error) {
               console.error('Error pausing activity:', error);
-              Alert.alert('Error', 'Failed to pause activity. Please try again.');
+              showError('Error', 'Failed to pause activity. Please try again.');
             }
           }
         }
-      ]
+      ],
+      'info'
     );
   };
 
   const handleMarkComplete = () => {
     if (!activity) return;
     if (!activity.photos || activity.photos.length === 0) {
-      Alert.alert(
+      alert(
         'Add Photos First?',
         'Capture this special moment before completing! Photos help you remember this memory forever.',
         [
@@ -169,7 +171,8 @@ export default function ActivityDetailScreen() {
             onPress: () => completeActivity()
           },
           { text: 'Cancel', style: 'cancel' }
-        ]
+        ],
+        'info'
       );
     } else {
       completeActivity();
@@ -180,17 +183,18 @@ export default function ActivityDetailScreen() {
     if (!activity) return;
     try {
       markAsCompleted(activity.id);
-      Alert.alert(
-        '✨ Memory Complete!',
+      alert(
+        'Memory Complete!',
         'Would you like to share this experience?',
         [
           { text: 'Not Now', style: 'cancel' },
           { text: 'Share', onPress: handleShareActivity }
-        ]
+        ],
+        'success'
       );
     } catch (error) {
       console.error('Error completing activity:', error);
-      Alert.alert('Error', 'Failed to mark activity as complete. Please try again.');
+      showError('Error', 'Failed to mark activity as complete. Please try again.');
     }
   };
 
@@ -198,16 +202,16 @@ export default function ActivityDetailScreen() {
     if (!activity) return;
     try {
       markAsIncomplete(activity.id);
-      Alert.alert('Unmarked', 'Activity marked as incomplete');
+      showInfo('Unmarked', 'Activity marked as incomplete');
     } catch (error) {
       console.error('Error marking incomplete:', error);
-      Alert.alert('Error', 'Failed to update activity. Please try again.');
+      showError('Error', 'Failed to update activity. Please try again.');
     }
   };
 
   const handleDelete = () => {
     if (!activity) return;
-    Alert.alert(
+    alert(
       'Delete Activity',
       'Are you sure you want to delete this activity? This cannot be undone.',
       [
@@ -221,11 +225,12 @@ export default function ActivityDetailScreen() {
               router.back();
             } catch (error) {
               console.error('Error deleting activity:', error);
-              Alert.alert('Error', 'Failed to delete activity. Please try again.');
+              showError('Error', 'Failed to delete activity. Please try again.');
             }
           },
         },
-      ]
+      ],
+      'warning'
     );
   };
 
@@ -235,7 +240,7 @@ export default function ActivityDetailScreen() {
       updateRating(activity.id, rating);
     } catch (error) {
       console.error('Error updating rating:', error);
-      Alert.alert('Error', 'Failed to update rating. Please try again.');
+      showError('Error', 'Failed to update rating. Please try again.');
     }
   };
 
@@ -247,11 +252,7 @@ export default function ActivityDetailScreen() {
       await shareActivity(activity);
     } catch (error) {
       console.error('Error sharing activity:', error);
-      Alert.alert(
-        'Share Failed',
-        'Unable to share activity. Please try again.',
-        [{ text: 'OK' }]
-      );
+      showError('Share Failed', 'Unable to share activity. Please try again.');
     } finally {
       setIsSharing(false);
     }
@@ -262,7 +263,7 @@ export default function ActivityDetailScreen() {
     await addToQueue(activity, queueNote);
     setShowQueueModal(false);
     setQueueNote('');
-    Alert.alert('Added!', 'Activity added to collaborative queue');
+    showSuccess('Added!', 'Activity added to collaborative queue');
   };
 
   const handleAddToCalendar = async () => {
@@ -312,7 +313,7 @@ export default function ActivityDetailScreen() {
         const permissionResult = await requestMediaLibraryPermissionsAsync();
         
         if (!permissionResult.granted) {
-          Alert.alert('Permission Required', 'Please allow access to your photo library to add photos.');
+          alert('Permission Required', 'Please allow access to your photo library to add photos.', undefined, 'warning');
           return;
         }
 
@@ -325,7 +326,7 @@ export default function ActivityDetailScreen() {
 
         if (!result.canceled && result.assets[0]) {
           addPhoto(activity.id, result.assets[0].uri);
-          Alert.alert('Success', 'Photo added successfully!');
+          showSuccess('Success', 'Photo added successfully!');
         }
       } else {
         const input = document.createElement('input');
@@ -338,7 +339,7 @@ export default function ActivityDetailScreen() {
             reader.onload = (event) => {
               if (event.target?.result && activity) {
                 addPhoto(activity.id, event.target.result as string);
-                Alert.alert('Success', 'Photo added successfully!');
+                showSuccess('Success', 'Photo added successfully!');
               }
             };
             reader.readAsDataURL(file);
@@ -348,7 +349,7 @@ export default function ActivityDetailScreen() {
       }
     } catch (error) {
       console.error('Error picking photo:', error);
-      Alert.alert('Error', 'Failed to add photo. Please try again.');
+      showError('Error', 'Failed to add photo. Please try again.');
     } finally {
       setIsUploadingPhoto(false);
     }
@@ -363,7 +364,7 @@ export default function ActivityDetailScreen() {
         const permissionResult = await requestCameraPermissionsAsync();
         
         if (!permissionResult.granted) {
-          Alert.alert('Permission Required', 'Please allow access to your camera to take photos.');
+          alert('Permission Required', 'Please allow access to your camera to take photos.', undefined, 'warning');
           return;
         }
 
@@ -376,14 +377,14 @@ export default function ActivityDetailScreen() {
 
         if (!result.canceled && result.assets[0]) {
           addPhoto(activity.id, result.assets[0].uri);
-          Alert.alert('Success', 'Photo added successfully!');
+          showSuccess('Success', 'Photo added successfully!');
         }
       } else {
-        Alert.alert('Not Supported', 'Camera is not supported on web. Please use "Add from Library" instead.');
+        showInfo('Not Supported', 'Camera is not supported on web. Please use "Add from Library" instead.');
       }
     } catch (error) {
       console.error('Error taking photo:', error);
-      Alert.alert('Error', 'Failed to take photo. Please try again.');
+      showError('Error', 'Failed to take photo. Please try again.');
     } finally {
       setIsUploadingPhoto(false);
     }
@@ -391,7 +392,7 @@ export default function ActivityDetailScreen() {
 
   const handleRemovePhoto = (photoUri: string) => {
     if (!activity) return;
-    Alert.alert(
+    alert(
       'Remove Photo',
       'Are you sure you want to remove this photo?',
       [
@@ -401,14 +402,15 @@ export default function ActivityDetailScreen() {
           style: 'destructive',
           onPress: () => removePhoto(activity.id, photoUri),
         },
-      ]
+      ],
+      'warning'
     );
   };
 
   const handleUpdateLocation = () => {
     if (!activity) return;
     updateLocationSnapshot(activity.id);
-    Alert.alert('Updated', 'Location snapshot updated to current location');
+    showSuccess('Updated', 'Location snapshot updated to current location');
   };
 
   const handleShareMemory = async () => {
@@ -430,7 +432,7 @@ export default function ActivityDetailScreen() {
       await shareMemoryToFacebook(activity);
     } catch (error) {
       console.error('Error sharing to Facebook:', error);
-      Alert.alert('Error', 'Failed to share to Facebook');
+      showError('Error', 'Failed to share to Facebook');
     } finally {
       setIsSharingMemory(false);
     }
@@ -443,7 +445,7 @@ export default function ActivityDetailScreen() {
       await shareMemoryToInstagram(activity);
     } catch (error) {
       console.error('Error sharing to Instagram:', error);
-      Alert.alert('Error', 'Failed to share to Instagram');
+      showError('Error', 'Failed to share to Instagram');
     } finally {
       setIsSharingMemory(false);
     }
@@ -980,7 +982,7 @@ export default function ActivityDetailScreen() {
               onPress={() => setShowQueueModal(true)}
               activeOpacity={0.8}
             >
-              <Users size={20} color={Colors.white} />
+              <Users size={20} color={Colors.primary} />
               <Text style={styles.queueButtonText}>Add to Queue</Text>
             </TouchableOpacity>
 
@@ -1681,7 +1683,7 @@ const styles = StyleSheet.create({
   queueButtonText: {
     fontSize: Typography.sizes.body,
     fontWeight: '400' as const,
-    color: Colors.white,
+    color: Colors.primary,
   },
   calendarButton: {
     flexDirection: 'row',

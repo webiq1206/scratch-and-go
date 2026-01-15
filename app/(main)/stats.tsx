@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, router } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useStats } from '@/contexts/StatsContext';
+import { useMemoryBook } from '@/contexts/MemoryBookContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { 
   Trophy,
@@ -14,18 +16,74 @@ import {
   Bookmark,
   CheckCircle2,
   Flame,
-  ChevronRight
+  ChevronRight,
+  Heart,
+  Users,
+  Sparkles,
+  Camera
 } from 'lucide-react-native';
 import Logo from '@/components/ui/Logo';
+import PolaroidFrame from '@/components/ui/PolaroidFrame';
+import FloatingPolaroids from '@/components/ui/FloatingPolaroids';
 import Colors from '@/constants/colors';
 import Typography from '@/constants/typography';
 import Spacing from '@/constants/spacing';
-import { BorderRadius } from '@/constants/design';
+import { BorderRadius, Shadows } from '@/constants/design';
 
 const { width } = Dimensions.get('window');
+const MODE_KEY = 'scratch_and_go_mode';
+type Mode = 'couples' | 'family';
+
+// Mode-specific content
+const getModeContent = (mode: Mode) => ({
+  couples: {
+    title: 'Your Love Story',
+    subtitle: 'Track your journey together',
+    emptyTitle: 'Start Your Love Story',
+    emptyText: 'Scratch your first date to begin tracking your adventures together!',
+    streakLabel: 'Date Streak',
+    completedLabel: 'Dates Completed',
+    timeLabel: 'Time spent together',
+    moneyLabel: 'Invested in us',
+  },
+  family: {
+    title: 'Family Adventures',
+    subtitle: 'Track your journey as a family',
+    emptyTitle: 'Start Your Family Journey',
+    emptyText: 'Scratch your first activity to begin tracking family adventures!',
+    streakLabel: 'Activity Streak',
+    completedLabel: 'Adventures Completed',
+    timeLabel: 'Quality time together',
+    moneyLabel: 'Invested in memories',
+  },
+});
 
 export default function StatsScreen() {
   const { stats, streakData } = useStats();
+  const { getCompletedActivities } = useMemoryBook();
+  const [mode, setMode] = useState<Mode>('couples');
+
+  // Load mode
+  useEffect(() => {
+    const loadMode = async () => {
+      const savedMode = await AsyncStorage.getItem(MODE_KEY);
+      if (savedMode) {
+        setMode(savedMode as Mode);
+      }
+    };
+    loadMode();
+  }, []);
+
+  const content = getModeContent(mode);
+
+  // Get user photos for decorative polaroids
+  const userPhotos = useMemo(() => {
+    const completed = getCompletedActivities();
+    return completed
+      .filter(a => a.photos && a.photos.length > 0)
+      .flatMap(a => a.photos!)
+      .slice(0, 8);
+  }, [getCompletedActivities]);
 
   const formatTime = (minutes: number): string => {
     if (minutes < 60) return `${minutes}m`;
@@ -48,6 +106,20 @@ export default function StatsScreen() {
           headerShown: false,
         }}
       />
+
+      {/* Decorative Floating Polaroids (behind content) */}
+      {userPhotos.length > 0 && (
+        <View style={styles.floatingPolaroidsContainer}>
+          <FloatingPolaroids
+            userImages={userPhotos}
+            mode={mode}
+            density="sparse"
+            showGradient={false}
+            animated={true}
+          />
+        </View>
+      )}
+
       <ScrollView 
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -55,12 +127,22 @@ export default function StatsScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <View style={styles.headerIcon}>
-            <TrendingUp size={28} color={Colors.primary} />
+          <View style={styles.headerIconContainer}>
+            <View style={styles.headerIcon}>
+              {mode === 'couples' ? (
+                <Heart size={28} color={Colors.primary} fill={Colors.primary} />
+              ) : (
+                <Users size={28} color={Colors.primary} />
+              )}
+            </View>
+            {/* Polaroid accent */}
+            <View style={styles.headerPolaroidAccent}>
+              <TrendingUp size={12} color={Colors.accent} />
+            </View>
           </View>
-          <Text style={styles.headerTitle}>Your Journey</Text>
+          <Text style={styles.headerTitle}>{content.title}</Text>
           <Text style={styles.headerSubtitle}>
-            Track your progress and achievements
+            {content.subtitle}
           </Text>
         </View>
 
@@ -89,7 +171,7 @@ export default function StatsScreen() {
           </LinearGradient>
         </TouchableOpacity>
 
-        {/* Streak Card */}
+        {/* Streak Card - Enhanced with Polaroid flair */}
         {stats.currentStreak > 0 && (
           <View style={styles.streakCard}>
             <LinearGradient
@@ -98,12 +180,19 @@ export default function StatsScreen() {
               end={{ x: 1, y: 1 }}
               style={styles.streakGradient}
             >
-              <View style={styles.streakIcon}>
-                <Flame size={24} color={Colors.accent} />
+              <View style={styles.streakIconContainer}>
+                <View style={styles.streakIcon}>
+                  <Flame size={24} color={Colors.accent} />
+                </View>
+                <View style={styles.streakSparkle}>
+                  <Sparkles size={12} color={Colors.primary} />
+                </View>
               </View>
               <View style={styles.streakContent}>
-                <Text style={styles.streakValue}>{stats.currentStreak} Week Streak</Text>
-                <Text style={styles.streakLabel}>Keep it going!</Text>
+                <Text style={styles.streakValue}>{stats.currentStreak} Week {content.streakLabel}</Text>
+                <Text style={styles.streakLabel}>
+                  {mode === 'couples' ? 'Keep the spark alive!' : 'Keep making memories!'}
+                </Text>
               </View>
               {stats.longestStreak > stats.currentStreak && (
                 <View style={styles.streakBest}>
@@ -112,6 +201,46 @@ export default function StatsScreen() {
                 </View>
               )}
             </LinearGradient>
+          </View>
+        )}
+
+        {/* Highlight Memories - Mini Polaroid Row */}
+        {userPhotos.length > 0 && (
+          <View style={styles.highlightSection}>
+            <View style={styles.sectionTitleRow}>
+              <Camera size={16} color={Colors.primary} />
+              <Text style={styles.sectionTitle}>Recent Memories</Text>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.highlightScroll}
+            >
+              {userPhotos.slice(0, 5).map((photo, index) => (
+                <View 
+                  key={index} 
+                  style={[
+                    styles.highlightPolaroid,
+                    { transform: [{ rotate: `${(index % 2 === 0 ? -3 : 3)}deg` }] }
+                  ]}
+                >
+                  <PolaroidFrame
+                    imageUri={photo}
+                    size="small"
+                    mode={mode}
+                    rotation={0}
+                  />
+                </View>
+              ))}
+              {userPhotos.length === 0 && (
+                <PolaroidFrame
+                  size="small"
+                  isEmpty
+                  mode={mode}
+                  emptyPrompt="Add photos"
+                />
+              )}
+            </ScrollView>
           </View>
         )}
 
@@ -134,15 +263,15 @@ export default function StatsScreen() {
           </View>
 
           <View style={[styles.statCard, { width: cardWidth }]}>
-            <View style={styles.statIcon}>
+            <View style={[styles.statIcon, { backgroundColor: Colors.successMuted }]}>
               <CheckCircle2 size={20} color={Colors.success} />
             </View>
             <Text style={styles.statValue}>{stats.totalCompleted}</Text>
-            <Text style={styles.statLabel}>Completed</Text>
+            <Text style={styles.statLabel}>{content.completedLabel}</Text>
           </View>
 
           <View style={[styles.statCard, { width: cardWidth }]}>
-            <View style={styles.statIcon}>
+            <View style={[styles.statIcon, { backgroundColor: Colors.accentMuted }]}>
               <Target size={20} color={Colors.accent} />
             </View>
             <Text style={styles.statValue}>{stats.currentMonthScratches}</Text>
@@ -159,14 +288,14 @@ export default function StatsScreen() {
                 <Clock size={24} color={Colors.primary} />
               </View>
               <Text style={styles.investmentValue}>{formatTime(stats.estimatedTimeSpent)}</Text>
-              <Text style={styles.investmentLabel}>Time invested</Text>
+              <Text style={styles.investmentLabel}>{content.timeLabel}</Text>
             </View>
             <View style={styles.investmentCard}>
               <View style={[styles.investmentIcon, { backgroundColor: Colors.successMuted }]}>
                 <DollarSign size={24} color={Colors.success} />
               </View>
               <Text style={styles.investmentValue}>{formatMoney(stats.estimatedMoneySpent)}</Text>
-              <Text style={styles.investmentLabel}>Money invested</Text>
+              <Text style={styles.investmentLabel}>{content.moneyLabel}</Text>
             </View>
           </View>
         </View>
@@ -174,17 +303,24 @@ export default function StatsScreen() {
         {/* Favorite Categories */}
         {stats.favoriteCategories.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Top Categories</Text>
+            <Text style={styles.sectionTitle}>
+              {mode === 'couples' ? 'Your Favorite Date Types' : 'Your Favorite Activities'}
+            </Text>
             <View style={styles.categoriesContainer}>
               {stats.favoriteCategories.slice(0, 5).map((category, index) => (
                 <View key={category.category} style={styles.categoryItem}>
-                  <View style={styles.categoryRank}>
-                    <Text style={styles.categoryRankText}>{index + 1}</Text>
+                  <View style={[styles.categoryRank, index === 0 && styles.categoryRankTop]}>
+                    <Text style={[styles.categoryRankText, index === 0 && styles.categoryRankTextTop]}>
+                      {index + 1}
+                    </Text>
                   </View>
                   <View style={styles.categoryInfo}>
                     <Text style={styles.categoryName}>{category.category}</Text>
                     <View style={styles.categoryBar}>
-                      <View 
+                      <LinearGradient
+                        colors={[Colors.primaryGradientStart, Colors.primaryGradientEnd]}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
                         style={[
                           styles.categoryBarFill, 
                           { width: `${category.percentage}%` }
@@ -251,12 +387,33 @@ export default function StatsScreen() {
         {/* Empty State */}
         {stats.totalCompleted === 0 && stats.totalScratched === 0 && (
           <View style={styles.emptyState}>
-            <View style={styles.emptyIcon}>
-              <Logo size={56} color={Colors.textMuted} />
+            {/* Empty Polaroid decoration */}
+            <View style={styles.emptyPolaroidsRow}>
+              <PolaroidFrame
+                size="small"
+                isEmpty
+                mode={mode}
+                rotation={-8}
+                style={{ opacity: 0.5 }}
+              />
+              <PolaroidFrame
+                size="medium"
+                isEmpty
+                mode={mode}
+                rotation={3}
+                emptyPrompt={mode === 'couples' ? 'Your first date' : 'Your first adventure'}
+              />
+              <PolaroidFrame
+                size="small"
+                isEmpty
+                mode={mode}
+                rotation={-4}
+                style={{ opacity: 0.5 }}
+              />
             </View>
-            <Text style={styles.emptyTitle}>Start Your Journey</Text>
+            <Text style={styles.emptyTitle}>{content.emptyTitle}</Text>
             <Text style={styles.emptyText}>
-              Scratch your first activity to begin tracking your adventures!
+              {content.emptyText}
             </Text>
           </View>
         )}
@@ -272,8 +429,18 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
+  floatingPolaroidsContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 0,
+    pointerEvents: 'none',
+  },
   scrollView: {
     flex: 1,
+    zIndex: 1,
   },
   scrollContent: {
     padding: Spacing.lg,
@@ -284,6 +451,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: Spacing.xl,
   },
+  headerIconContainer: {
+    position: 'relative',
+    marginBottom: Spacing.md,
+  },
   headerIcon: {
     width: 64,
     height: 64,
@@ -291,7 +462,19 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primaryMuted,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: Spacing.md,
+  },
+  headerPolaroidAccent: {
+    position: 'absolute',
+    bottom: -4,
+    right: -8,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: Colors.accentMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: Colors.background,
   },
   headerTitle: {
     fontSize: Typography.sizes.h1,
@@ -302,6 +485,24 @@ const styles = StyleSheet.create({
   headerSubtitle: {
     fontSize: Typography.sizes.caption,
     color: Colors.textLight,
+  },
+  
+  // Highlights
+  highlightSection: {
+    marginBottom: Spacing.xl,
+  },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  highlightScroll: {
+    paddingVertical: Spacing.sm,
+    gap: Spacing.md,
+  },
+  highlightPolaroid: {
+    marginRight: Spacing.sm,
   },
   
   // Year Recap
@@ -354,6 +555,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: Spacing.lg,
   },
+  streakIconContainer: {
+    position: 'relative',
+    marginRight: Spacing.md,
+  },
   streakIcon: {
     width: 48,
     height: 48,
@@ -361,7 +566,17 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.accentMuted,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: Spacing.md,
+  },
+  streakSparkle: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: Colors.primaryMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   streakContent: {
     flex: 1,
@@ -404,7 +619,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: Colors.backgroundLight,
+    backgroundColor: Colors.primaryMuted,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: Spacing.sm,
@@ -418,6 +633,7 @@ const styles = StyleSheet.create({
   statLabel: {
     fontSize: Typography.sizes.small,
     color: Colors.textLight,
+    textAlign: 'center',
   },
   
   // Sections
@@ -468,6 +684,7 @@ const styles = StyleSheet.create({
   investmentLabel: {
     fontSize: Typography.sizes.small,
     color: Colors.textLight,
+    textAlign: 'center',
   },
   
   // Categories
@@ -492,10 +709,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: Spacing.md,
   },
+  categoryRankTop: {
+    backgroundColor: Colors.primaryMuted,
+  },
   categoryRankText: {
     fontSize: Typography.sizes.small,
-    color: Colors.primary,
+    color: Colors.textLight,
     fontWeight: '600' as const,
+  },
+  categoryRankTextTop: {
+    color: Colors.primary,
   },
   categoryInfo: {
     flex: 1,
@@ -514,7 +737,6 @@ const styles = StyleSheet.create({
   },
   categoryBarFill: {
     height: '100%',
-    backgroundColor: Colors.primary,
     borderRadius: 2,
   },
   categoryCount: {
@@ -587,14 +809,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: Spacing.xxxl,
   },
-  emptyIcon: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: Colors.cardBackground,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: Spacing.lg,
+  emptyPolaroidsRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: Spacing.sm,
+    marginBottom: Spacing.xl,
   },
   emptyTitle: {
     fontSize: Typography.sizes.h3,
@@ -614,4 +833,3 @@ const styles = StyleSheet.create({
     height: Spacing.xxl,
   },
 });
-

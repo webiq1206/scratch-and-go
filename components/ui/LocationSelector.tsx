@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, ActivityIndicator } from 'react-native';
 import Colors from '@/constants/colors';
 import Typography from '@/constants/typography';
 import Spacing from '@/constants/spacing';
 import { useLocation } from '@/contexts/LocationContext';
+import { useAlert } from '@/contexts/AlertContext';
 
 export default function LocationSelector() {
   const { location, getCurrentLocation, setManualLocation, isLoading } = useLocation();
+  const { showSuccess, showError } = useAlert();
   const [modalVisible, setModalVisible] = useState(false);
   const [manualCity, setManualCity] = useState('');
   const [manualRegion, setManualRegion] = useState('');
@@ -15,15 +17,15 @@ export default function LocationSelector() {
     const result = await getCurrentLocation();
     if (result) {
       setModalVisible(false);
-      Alert.alert('Location Detected', `We found you in ${result.city}, ${result.region}!`);
+      showSuccess('Location Detected', `We found you in ${result.city}, ${result.region}!`);
     } else {
-      Alert.alert('Location Error', 'Unable to detect your location. Please enter it manually.');
+      showError('Location Error', 'Unable to detect your location. Please enter it manually.');
     }
   };
 
   const handleManualSubmit = () => {
     if (!manualCity.trim() || !manualRegion.trim()) {
-      Alert.alert('Missing Information', 'Please enter both city and region.');
+      showError('Missing Information', 'Please enter both city and region.');
       return;
     }
 
