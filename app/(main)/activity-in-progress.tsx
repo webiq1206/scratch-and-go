@@ -30,7 +30,7 @@ export default function ActivityInProgressScreen() {
   const { 
     saveActivity, 
     getSavedActivity,
-    getSavedActivities,
+    savedActivities,
     startActivity, 
     updateLocationSnapshot,
     updateNotes,
@@ -99,8 +99,8 @@ export default function ActivityInProgressScreen() {
     initializedActivityKeyRef.current = activityKey;
 
     // Check for existing activity by title and description to prevent duplicates
-    const allActivities = getSavedActivities();
-    const existingByContent = allActivities.find(
+    // Use savedActivities directly (not getSavedActivities) to include active activities
+    const existingByContent = savedActivities.find(
       a => a.title === activity.title && 
            a.description === activity.description &&
            Math.abs(a.savedAt - Date.now()) < 60000 // Within last minute
@@ -135,7 +135,7 @@ export default function ActivityInProgressScreen() {
       router.back();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activity.title, activity.description, activity.category]);
+  }, [activity.title, activity.description, activity.category, savedActivities.length]);
 
   // Update completion status when saved activity changes
   useEffect(() => {

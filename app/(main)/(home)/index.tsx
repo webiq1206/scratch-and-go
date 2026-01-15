@@ -860,7 +860,7 @@ export default function HomeScreen() {
                         <ScrollView 
                           style={styles.revealScroll}
                           contentContainerStyle={styles.revealScrollContent}
-                          showsVerticalScrollIndicator={false}
+                          showsVerticalScrollIndicator={true}
                           nestedScrollEnabled
                         >
                           {/* Activity Title */}
@@ -872,14 +872,14 @@ export default function HomeScreen() {
                             <Text style={styles.categoryBadgeText}>{currentActivity.category}</Text>
                           </View>
                           
-                          {/* Description */}
+                          {/* Description - limited to 2 lines initially */}
                           <Text 
                             style={styles.revealDescription} 
-                            numberOfLines={isDescriptionExpanded ? undefined : 3}
+                            numberOfLines={isDescriptionExpanded ? undefined : 2}
                           >
                             {currentActivity.description}
                           </Text>
-                          {currentActivity.description && currentActivity.description.length > 120 && (
+                          {currentActivity.description && currentActivity.description.length > 80 && (
                             <TouchableOpacity
                               onPress={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
                               activeOpacity={0.7}
@@ -902,18 +902,7 @@ export default function HomeScreen() {
                             </View>
                           </View>
                           
-                          {/* Pro Tip */}
-                          {currentActivity.proTip && (
-                            <View style={styles.proTipContainer}>
-                              <View style={styles.proTipHeader}>
-                                <Lightbulb size={16} color={Colors.accent} />
-                                <Text style={styles.proTipLabel}>Pro Tip</Text>
-                              </View>
-                              <Text style={styles.proTipText}>{currentActivity.proTip}</Text>
-                            </View>
-                          )}
-                          
-                          {/* Primary Action */}
+                          {/* PRIMARY ACTION - Start Activity Button (prominent placement) */}
                           <TouchableOpacity
                             style={styles.primaryAction}
                             onPress={handleStartActivity}
@@ -931,6 +920,17 @@ export default function HomeScreen() {
                               </Text>
                             </LinearGradient>
                           </TouchableOpacity>
+                          
+                          {/* Pro Tip - Now below the primary action */}
+                          {currentActivity.proTip && (
+                            <View style={styles.proTipContainer}>
+                              <View style={styles.proTipHeader}>
+                                <Lightbulb size={16} color={Colors.accent} />
+                                <Text style={styles.proTipLabel}>Pro Tip</Text>
+                              </View>
+                              <Text style={styles.proTipText}>{currentActivity.proTip}</Text>
+                            </View>
+                          )}
                           
                           {/* Secondary Actions */}
                           <View style={styles.secondaryActions}>
@@ -1849,12 +1849,13 @@ const styles = StyleSheet.create({
   
   // Summary
   summaryContainer: {
-    paddingTop: Spacing.lg,
+    paddingTop: Spacing.md,
     alignItems: 'center',
   },
   cardContainer: {
     width: '100%',
-    marginBottom: Spacing.lg,
+    alignItems: 'center',
+    marginBottom: Spacing.md,
   },
   
   // Reveal Content
@@ -1866,28 +1867,29 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: Spacing.xl,
+    padding: Spacing.lg,
   },
   loadingText: {
     fontSize: Typography.sizes.body,
     color: Colors.textLight,
-    marginTop: Spacing.lg,
+    marginTop: Spacing.md,
     textAlign: 'center',
   },
   revealScroll: {
     flex: 1,
   },
   revealScrollContent: {
-    padding: Spacing.lg,
-    paddingTop: Spacing.xl,
+    padding: Spacing.md,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.md,
   },
   revealTitle: {
     fontSize: Typography.sizes.h2,
     fontWeight: '600' as const,
     color: Colors.text,
     textAlign: 'center',
-    marginBottom: Spacing.md,
-    lineHeight: 28,
+    marginBottom: Spacing.sm,
+    lineHeight: 26,
   },
   categoryBadge: {
     flexDirection: 'row',
@@ -1895,10 +1897,10 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     gap: Spacing.xs,
     backgroundColor: Colors.primaryMuted,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
     borderRadius: BorderRadius.full,
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.md,
   },
   categoryBadgeText: {
     fontSize: Typography.sizes.small,
@@ -1909,28 +1911,28 @@ const styles = StyleSheet.create({
     fontSize: Typography.sizes.body,
     color: Colors.textLight,
     textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: Spacing.sm,
+    lineHeight: 20,
+    marginBottom: Spacing.xs,
   },
   expandButton: {
     fontSize: Typography.sizes.small,
     color: Colors.primary,
     textAlign: 'center',
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.md,
   },
   quickStats: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: Spacing.md,
-    marginBottom: Spacing.lg,
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
   },
   statChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.xs,
     backgroundColor: Colors.backgroundLight,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
     borderRadius: BorderRadius.full,
   },
   statChipText: {
@@ -1940,14 +1942,14 @@ const styles = StyleSheet.create({
   proTipContainer: {
     backgroundColor: Colors.accentMuted,
     borderRadius: BorderRadius.medium,
-    padding: Spacing.md,
-    marginBottom: Spacing.lg,
+    padding: Spacing.sm,
+    marginBottom: Spacing.md,
   },
   proTipHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.xs,
-    marginBottom: Spacing.sm,
+    marginBottom: Spacing.xs,
   },
   proTipLabel: {
     fontSize: Typography.sizes.small,
@@ -1955,23 +1957,23 @@ const styles = StyleSheet.create({
     color: Colors.accent,
   },
   proTipText: {
-    fontSize: Typography.sizes.small,
+    fontSize: Typography.sizes.caption,
     color: Colors.text,
-    lineHeight: 18,
+    lineHeight: 17,
   },
   
   // Actions
   primaryAction: {
     borderRadius: BorderRadius.medium,
     overflow: 'hidden',
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.md,
   },
   primaryActionGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: Spacing.sm,
-    paddingVertical: Spacing.lg,
+    paddingVertical: Spacing.md,
   },
   primaryActionText: {
     fontSize: Typography.sizes.body,
@@ -1981,15 +1983,16 @@ const styles = StyleSheet.create({
   secondaryActions: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: Spacing.xl,
-    marginBottom: Spacing.lg,
+    gap: Spacing.lg,
+    marginBottom: Spacing.sm,
   },
   secondaryAction: {
     alignItems: 'center',
-    gap: Spacing.xs,
+    gap: 2,
+    paddingHorizontal: Spacing.sm,
   },
   secondaryActionText: {
-    fontSize: Typography.sizes.small,
+    fontSize: Typography.sizes.caption,
     color: Colors.textLight,
   },
   skipAction: {
@@ -1997,10 +2000,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: Spacing.xs,
-    paddingVertical: Spacing.sm,
+    paddingVertical: Spacing.xs,
   },
   skipActionText: {
-    fontSize: Typography.sizes.small,
+    fontSize: Typography.sizes.caption,
     color: Colors.textMuted,
   },
   

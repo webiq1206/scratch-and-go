@@ -203,65 +203,115 @@ export default function WelcomeScreen() {
     }
   };
 
+  // Couples mode polaroid images - romantic couple stock photos
+  const couplesPolaroids = [
+    { uri: 'https://images.unsplash.com/photo-1522673607200-164d1b6ce486?w=400&h=500&fit=crop&crop=faces', rotate: '-4deg' },
+    { uri: 'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?w=400&h=500&fit=crop&crop=faces', rotate: '3deg' },
+    { uri: 'https://images.unsplash.com/photo-1529634806980-85c3dd6d34ac?w=400&h=500&fit=crop&crop=faces', rotate: '-2deg' },
+  ];
+
+  // Family mode polaroid images - happy family stock photos
+  const familyPolaroids = [
+    { uri: 'https://images.unsplash.com/photo-1511895426328-dc8714191300?w=400&h=500&fit=crop&crop=faces', rotate: '-3deg' },
+    { uri: 'https://images.unsplash.com/photo-1475503572774-15a45e5d60b9?w=400&h=500&fit=crop&crop=faces', rotate: '4deg' },
+    { uri: 'https://images.unsplash.com/photo-1609220136736-443140cffec6?w=400&h=500&fit=crop&crop=faces', rotate: '-2deg' },
+  ];
+
   if (step === 'mode') {
     return (
       <View style={styles.container}>
         <ScrollView 
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={styles.modeScrollContent}
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.headerContainer}>
+          <View style={styles.modeHeaderContainer}>
             <Text style={styles.setupTitle}>Choose Your Mode</Text>
             <Text style={styles.setupSubtitle}>Select how you'll use Scratch & Go</Text>
           </View>
 
-          <View style={styles.modeSelectionContainer}>
+          <View style={styles.modeCardsContainer}>
+            {/* Couples Mode Card */}
             <TouchableOpacity
               style={[
-                styles.modeOption,
-                selectedMode === 'couples' && styles.modeOptionSelected
+                styles.modePolaroidCard,
+                selectedMode === 'couples' && styles.modePolaroidCardSelected
               ]}
               onPress={() => handleModeSelect('couples')}
-              activeOpacity={0.8}
+              activeOpacity={0.9}
             >
-              <View style={styles.modeOptionContent}>
-                <View style={styles.modeIconContainer}>
-                  <Heart size={28} color={selectedMode === 'couples' ? Colors.primary : Colors.textLight} />
+              <View style={styles.polaroidCluster}>
+                {couplesPolaroids.map((photo, index) => (
+                  <View
+                    key={index}
+                    style={[
+                      styles.clusterPolaroid,
+                      {
+                        transform: [{ rotate: photo.rotate }],
+                        marginLeft: index * 28,
+                        zIndex: 3 - index,
+                      }
+                    ]}
+                  >
+                    <Image source={{ uri: photo.uri }} style={styles.clusterPolaroidImage} />
+                  </View>
+                ))}
+              </View>
+              <View style={styles.modeCardContent}>
+                <View style={styles.modeCardTitleRow}>
+                  <Heart size={20} color={Colors.primary} />
+                  <Text style={styles.modeCardTitle}>Couples</Text>
+                  {selectedMode === 'couples' && (
+                    <View style={styles.modeCardCheckmark}>
+                      <Check size={14} color="#1A1A1A" strokeWidth={3} />
+                    </View>
+                  )}
                 </View>
-                <Text style={styles.modeOptionTitle}>Couples Mode</Text>
-                <Text style={styles.modeOptionDescription}>
-                  Perfect for romantic dates and couple activities
+                <Text style={styles.modeCardDescription}>
+                  Romantic dates & couple activities
                 </Text>
               </View>
-              {selectedMode === 'couples' && (
-                <View style={styles.modeCheckmark}>
-                  <Check size={20} color="#1A1A1A" strokeWidth={3} />
-                </View>
-              )}
             </TouchableOpacity>
 
+            {/* Family Mode Card */}
             <TouchableOpacity
               style={[
-                styles.modeOption,
-                selectedMode === 'family' && styles.modeOptionSelected
+                styles.modePolaroidCard,
+                selectedMode === 'family' && styles.modePolaroidCardSelected
               ]}
               onPress={() => handleModeSelect('family')}
-              activeOpacity={0.8}
+              activeOpacity={0.9}
             >
-              <View style={styles.modeOptionContent}>
-                <View style={styles.modeIconContainer}>
-                  <Users size={28} color={selectedMode === 'family' ? Colors.primary : Colors.textLight} />
+              <View style={styles.polaroidCluster}>
+                {familyPolaroids.map((photo, index) => (
+                  <View
+                    key={index}
+                    style={[
+                      styles.clusterPolaroid,
+                      {
+                        transform: [{ rotate: photo.rotate }],
+                        marginLeft: index * 28,
+                        zIndex: 3 - index,
+                      }
+                    ]}
+                  >
+                    <Image source={{ uri: photo.uri }} style={styles.clusterPolaroidImage} />
+                  </View>
+                ))}
+              </View>
+              <View style={styles.modeCardContent}>
+                <View style={styles.modeCardTitleRow}>
+                  <Users size={20} color={Colors.primary} />
+                  <Text style={styles.modeCardTitle}>Family</Text>
+                  {selectedMode === 'family' && (
+                    <View style={styles.modeCardCheckmark}>
+                      <Check size={14} color="#1A1A1A" strokeWidth={3} />
+                    </View>
+                  )}
                 </View>
-                <Text style={styles.modeOptionTitle}>Family Mode</Text>
-                <Text style={styles.modeOptionDescription}>
-                  Great for family activities and creating memories together
+                <Text style={styles.modeCardDescription}>
+                  Family activities & memories together
                 </Text>
               </View>
-              {selectedMode === 'family' && (
-                <View style={styles.modeCheckmark}>
-                  <Check size={20} color="#1A1A1A" strokeWidth={3} />
-                </View>
-              )}
             </TouchableOpacity>
           </View>
 
@@ -786,63 +836,92 @@ const styles = StyleSheet.create({
     fontWeight: '400' as const,
     color: '#FFFFFF',
   },
-  modeSelectionContainer: {
-    width: '100%',
-    gap: Spacing.lg,
-    marginBottom: Spacing.lg,
-  },
-  modeOption: {
-    width: '100%',
-    minHeight: 140,
-    padding: Spacing.xl,
-    borderRadius: BorderRadius.large,
-    backgroundColor: '#1A1A1A',
-    borderWidth: 2,
-    borderColor: '#333333',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  modeOptionSelected: {
-    borderColor: Colors.primary,
-    backgroundColor: 'rgba(255, 107, 157, 0.1)',
-  },
-  modeOptionContent: {
-    flex: 1,
-    alignItems: 'flex-start',
-    minHeight: 100,
+  modeScrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: Spacing.lg,
+    paddingTop: 80,
+    paddingBottom: Spacing.xxl,
     justifyContent: 'flex-start',
   },
-  modeIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255, 107, 157, 0.15)',
+  modeHeaderContainer: {
+    alignItems: 'center',
+    marginBottom: Spacing.xxl,
+  },
+  modeCardsContainer: {
+    width: '100%',
+    gap: Spacing.xl,
+    marginBottom: Spacing.lg,
+  },
+  modePolaroidCard: {
+    width: '100%',
+    backgroundColor: '#1A1A1A',
+    borderRadius: BorderRadius.large,
+    borderWidth: 2,
+    borderColor: '#333333',
+    overflow: 'hidden',
+  },
+  modePolaroidCardSelected: {
+    borderColor: Colors.primary,
+    backgroundColor: 'rgba(255, 107, 157, 0.08)',
+  },
+  polaroidCluster: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: Spacing.sm,
+    paddingTop: Spacing.xl,
+    paddingBottom: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    height: 140,
   },
-  modeOptionTitle: {
-    fontSize: Typography.sizes.h2,
-    fontWeight: '400' as const,
-    color: '#FFFFFF',
+  clusterPolaroid: {
+    width: 85,
+    height: 105,
+    backgroundColor: '#E8E8E8',
+    padding: 5,
+    paddingBottom: 18,
+    borderRadius: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 8,
+    position: 'absolute',
+  },
+  clusterPolaroidImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 2,
+  },
+  modeCardContent: {
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.lg,
+    paddingTop: Spacing.sm,
+  },
+  modeCardTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
     marginBottom: Spacing.xs,
   },
-  modeOptionDescription: {
-    fontSize: Typography.sizes.body,
-    color: Colors.textLight,
-    lineHeight: 22,
+  modeCardTitle: {
+    fontSize: Typography.sizes.h2,
+    fontWeight: '500' as const,
+    color: '#FFFFFF',
     flex: 1,
   },
-  modeCheckmark: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+  modeCardCheckmark: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: Spacing.md,
-    flexShrink: 0,
+  },
+  modeCardDescription: {
+    fontSize: Typography.sizes.body,
+    color: Colors.textLight,
+    lineHeight: 22,
+    paddingLeft: 28,
   },
   modeNote: {
     fontSize: Typography.sizes.small,

@@ -5,13 +5,13 @@ import * as Haptics from 'expo-haptics';
 import { BorderRadius } from '@/constants/design';
 import Colors from '@/constants/colors';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const CARD_WIDTH = SCREEN_WIDTH - 48;
-const CARD_HEIGHT = 400;
-const SCRATCH_THRESHOLD = 80; // Auto-reveal at 80%
-const BRUSH_RADIUS = 35; // Circular brush radius in pixels
-const INTERPOLATION_STEP = 3; // Pixels between interpolated points for smooth lines
-const GRID_SIZE = 5; // Grid size for accurate area calculation (5px grid)
+const CARD_HEIGHT = Math.min(SCREEN_HEIGHT * 0.65, 550); // Responsive height, max 550px
+const SCRATCH_THRESHOLD = 55; // Auto-reveal at 55% - achievable threshold
+const BRUSH_RADIUS = 30; // Circular brush radius in pixels
+const INTERPOLATION_STEP = 4; // Pixels between interpolated points for smooth lines
+const GRID_SIZE = 6; // Grid size for accurate area calculation (6px grid)
 
 interface ScratchCardProps {
   onScratchStart?: () => void;
@@ -47,12 +47,17 @@ export default function ScratchCard({
   const circleIdCounter = useRef(0);
   // Pixel-based tracking for accurate area calculation
   const scratchedGridRef = useRef<Set<string>>(new Set());
-  
-  // Calculate total grid cells
-  const totalGridCells = Math.ceil(CARD_WIDTH / GRID_SIZE) * Math.ceil(CARD_HEIGHT / GRID_SIZE);
 
   disabledRef.current = disabled;
   isRevealedRef.current = isRevealed;
+
+  // Calculate scratchable area (accounting for brush radius clamping at edges)
+  // Users can only scratch from BRUSH_RADIUS to CARD_WIDTH - BRUSH_RADIUS
+  const scratchableWidth = CARD_WIDTH - 2 * BRUSH_RADIUS;
+  const scratchableHeight = CARD_HEIGHT - 2 * BRUSH_RADIUS;
+  
+  // Total grid cells based on SCRATCHABLE area, not full card
+  const totalGridCells = Math.ceil(scratchableWidth / GRID_SIZE) * Math.ceil(scratchableHeight / GRID_SIZE);
 
   // Reset when resetKey changes (NOT when opacity changes!)
   useEffect(() => {
@@ -67,6 +72,32 @@ export default function ScratchCard({
     opacity.setValue(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resetKey]); // Only reset when resetKey changes, not opacity!
+
+  // Re-check threshold when isActivityReady becomes true
+  // This handles the case where user scratched enough before activity loaded
+  useEffect(() => {
+    if (isActivityReady && !isRevealedRef.current && scratchedGridRef.current.size > 0) {
+      const scratchedCount = scratchedGridRef.current.size;
+      const percentage = (scratchedCount / totalGridCells) * 100;
+      
+      if (percentage >= SCRATCH_THRESHOLD) {
+        setIsRevealed(true);
+        isRevealedRef.current = true;
+
+        if (Platform.OS !== 'web') {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        }
+
+        Animated.timing(opacity, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }).start(() => {
+          onScratchComplete();
+        });
+      }
+    }
+  }, [isActivityReady, totalGridCells, opacity, onScratchComplete]);
 
   // Calculate scratched percentage using accurate pixel-based method
   const calculateScratchedPercentage = useCallback(() => {
@@ -105,39 +136,41 @@ export default function ScratchCard({
   }, [opacity, onScratchComplete, calculateScratchedPercentage, isActivityReady]);
 
   // Add scratched grid cells for accurate area calculation
+  // Grid is based on the scratchable area (offset by BRUSH_RADIUS from edges)
   const addScratchedGridCells = useCallback((x: number, y: number) => {
-    // Clamp coordinates to card bounds
-    const clampedX = Math.max(0, Math.min(CARD_WIDTH, x));
-    const clampedY = Math.max(0, Math.min(CARD_HEIGHT, y));
+    // Convert to scratchable area coordinates (0,0 is at BRUSH_RADIUS, BRUSH_RADIUS)
+    const scratchX = x - BRUSH_RADIUS;
+    const scratchY = y - BRUSH_RADIUS;
 
-    // Calculate grid bounds for the circle
-    const minGridX = Math.max(0, Math.floor((clampedX - BRUSH_RADIUS) / GRID_SIZE));
-    const maxGridX = Math.min(Math.ceil(CARD_WIDTH / GRID_SIZE) - 1, Math.ceil((clampedX + BRUSH_RADIUS) / GRID_SIZE));
-    const minGridY = Math.max(0, Math.floor((clampedY - BRUSH_RADIUS) / GRID_SIZE));
-    const maxGridY = Math.min(Math.ceil(CARD_HEIGHT / GRID_SIZE) - 1, Math.ceil((clampedY + BRUSH_RADIUS) / GRID_SIZE));
+    // Calculate grid bounds for the circle within scratchable area
+    const maxGridX = Math.ceil(scratchableWidth / GRID_SIZE) - 1;
+    const maxGridY = Math.ceil(scratchableHeight / GRID_SIZE) - 1;
+
+    const minGridXCell = Math.max(0, Math.floor((scratchX - BRUSH_RADIUS) / GRID_SIZE));
+    const maxGridXCell = Math.min(maxGridX, Math.ceil((scratchX + BRUSH_RADIUS) / GRID_SIZE));
+    const minGridYCell = Math.max(0, Math.floor((scratchY - BRUSH_RADIUS) / GRID_SIZE));
+    const maxGridYCell = Math.min(maxGridY, Math.ceil((scratchY + BRUSH_RADIUS) / GRID_SIZE));
 
     // Check each grid cell within the circle
-    for (let gridY = minGridY; gridY <= maxGridY; gridY++) {
-      for (let gridX = minGridX; gridX <= maxGridX; gridX++) {
-        // Calculate center of grid cell
+    for (let gridY = minGridYCell; gridY <= maxGridYCell; gridY++) {
+      for (let gridX = minGridXCell; gridX <= maxGridXCell; gridX++) {
+        // Calculate center of grid cell in scratchable coordinates
         const cellCenterX = gridX * GRID_SIZE + GRID_SIZE / 2;
         const cellCenterY = gridY * GRID_SIZE + GRID_SIZE / 2;
         
         // Check if cell center is within circle radius
         const distance = Math.sqrt(
-          Math.pow(clampedX - cellCenterX, 2) + 
-          Math.pow(clampedY - cellCenterY, 2)
+          Math.pow(scratchX - cellCenterX, 2) + 
+          Math.pow(scratchY - cellCenterY, 2)
         );
         
         if (distance <= BRUSH_RADIUS) {
           const gridKey = `${gridX},${gridY}`;
-          if (!scratchedGridRef.current.has(gridKey)) {
-            scratchedGridRef.current.add(gridKey);
-          }
+          scratchedGridRef.current.add(gridKey);
         }
       }
     }
-  }, []);
+  }, [scratchableWidth, scratchableHeight]);
 
   // Add scratch point and update circles
   const addScratchPoint = useCallback((x: number, y: number) => {
