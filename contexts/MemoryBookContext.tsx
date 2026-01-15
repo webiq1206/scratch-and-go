@@ -1,17 +1,30 @@
 import createContextHook from '@nkzw/create-context-hook';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Activity, SavedActivity } from '@/types/activity';
-import { useActivity } from './ActivityContext';
-import { useLocation } from './LocationContext';
+import { Activity, SavedActivity, LocationData } from '@/types/activity';
 
 const SAVED_ACTIVITIES_KEY = 'scratch_and_go_saved_activities';
+const LOCATION_KEY = 'scratch_and_go_location';
 
 export const [MemoryBookProvider, useMemoryBook] = createContextHook(() => {
-  const { trackInteraction } = useActivity();
-  const { location } = useLocation();
   const [savedActivities, setSavedActivities] = useState<SavedActivity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentLocation, setCurrentLocation] = useState<LocationData | null>(null);
+
+  // Load location from storage to avoid circular dependency with LocationContext
+  useEffect(() => {
+    const loadLocation = async () => {
+      try {
+        const stored = await AsyncStorage.getItem(LOCATION_KEY);
+        if (stored) {
+          setCurrentLocation(JSON.parse(stored));
+        }
+      } catch (error) {
+        console.error('Failed to load location in MemoryBook:', error);
+      }
+    };
+    loadLocation();
+  }, []);
 
   useEffect(() => {
     loadSavedActivities();
@@ -48,7 +61,7 @@ export const [MemoryBookProvider, useMemoryBook] = createContextHook(() => {
       isActive: !isScheduled, // If scheduled for later, don't mark as active yet
       isCompleted: false,
       photos: [],
-      locationSnapshot: location || undefined,
+      locationSnapshot: currentLocation || undefined,
       scheduledFor: scheduledFor,
       isScheduled: isScheduled,
       startedAt: isScheduled ? undefined : Date.now(), // Start immediately if not scheduled
@@ -57,7 +70,7 @@ export const [MemoryBookProvider, useMemoryBook] = createContextHook(() => {
     const updated = [savedActivity, ...savedActivities];
     setSavedActivities(updated);
     saveSavedActivities(updated);
-    trackInteraction(activity, 'saved');
+    // Note: Activity interactions are tracked separately via ActivityContext when needed
 
     console.log('Activity saved:', savedActivity.title, isScheduled ? `scheduled for ${new Date(scheduledFor!).toLocaleString()}` : 'starting now');
     return savedActivity;
@@ -91,7 +104,7 @@ export const [MemoryBookProvider, useMemoryBook] = createContextHook(() => {
       completedAt: Date.now(),
       photos: activityData.photos || [],
       notes: activityData.notes || '',
-      locationSnapshot: location || undefined,
+      locationSnapshot: currentLocation || undefined,
     };
 
     const updated = [savedActivity, ...savedActivities];
@@ -132,7 +145,6 @@ export const [MemoryBookProvider, useMemoryBook] = createContextHook(() => {
   };
 
   const markAsCompleted = (activityId: string, completedAt: number = Date.now()) => {
-    const activity = savedActivities.find(a => a.id === activityId);
     const updated = savedActivities.map(act =>
       act.id === activityId
         ? { ...act, isActive: false, isCompleted: true, completedAt }
@@ -140,9 +152,7 @@ export const [MemoryBookProvider, useMemoryBook] = createContextHook(() => {
     );
     setSavedActivities(updated);
     saveSavedActivities(updated);
-    if (activity) {
-      trackInteraction(activity, 'completed');
-    }
+    // Note: Activity interactions are tracked separately via ActivityContext when needed
     console.log('Activity marked as completed:', activityId);
   };
 
@@ -201,10 +211,10 @@ export const [MemoryBookProvider, useMemoryBook] = createContextHook(() => {
     console.log('Photo removed from activity:', activityId);
   };
 
-  const updateLocationSnapshot = (activityId: string) => {
+  const updateLocationSnapshot = (activityId: string, locationData?: LocationData) => {
     const updated = savedActivities.map(activity =>
       activity.id === activityId
-        ? { ...activity, locationSnapshot: location || undefined }
+        ? { ...activity, locationSnapshot: locationData || currentLocation || undefined }
         : activity
     );
     setSavedActivities(updated);

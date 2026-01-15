@@ -1,12 +1,42 @@
 import createContextHook from '@nkzw/create-context-hook';
-import { useMemo } from 'react';
-import { useActivity } from './ActivityContext';
-import { useMemoryBook } from './MemoryBookContext';
+import { useMemo, useState, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Activity, SavedActivity } from '@/types/activity';
 import { ActivityStats, CategoryStat, MonthlyRecap, StreakData, WeeklyActivity } from '@/types/stats';
 
+const HISTORY_KEY = 'scratch_and_go_history';
+const SCRATCH_COUNT_KEY = 'scratch_and_go_count';
+const SAVED_ACTIVITIES_KEY = 'scratch_and_go_saved_activities';
+
 export const [StatsProvider, useStats] = createContextHook(() => {
-  const { activityHistory, scratchCount } = useActivity();
-  const { savedActivities } = useMemoryBook();
+  const [activityHistory, setActivityHistory] = useState<Activity[]>([]);
+  const [scratchCount, setScratchCount] = useState(0);
+  const [savedActivities, setSavedActivities] = useState<SavedActivity[]>([]);
+
+  // Load data from AsyncStorage to avoid circular dependencies
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [historyStr, countStr, savedStr] = await Promise.all([
+          AsyncStorage.getItem(HISTORY_KEY),
+          AsyncStorage.getItem(SCRATCH_COUNT_KEY),
+          AsyncStorage.getItem(SAVED_ACTIVITIES_KEY),
+        ]);
+        
+        if (historyStr) setActivityHistory(JSON.parse(historyStr));
+        if (countStr) setScratchCount(parseInt(countStr));
+        if (savedStr) setSavedActivities(JSON.parse(savedStr));
+      } catch (error) {
+        console.error('Failed to load stats data:', error);
+      }
+    };
+    
+    loadData();
+    
+    // Set up interval to refresh data periodically
+    const interval = setInterval(loadData, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   const calculateCategoryCounts = useMemo(() => {
     const counts: Record<string, number> = {};

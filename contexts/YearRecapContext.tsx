@@ -1,14 +1,85 @@
 import createContextHook from '@nkzw/create-context-hook';
-import { useMemo, useCallback } from 'react';
-import { useMemoryBook } from './MemoryBookContext';
-import { useActivity } from './ActivityContext';
-import { useStats } from './StatsContext';
+import { useMemo, useCallback, useState, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Activity, SavedActivity } from '@/types/activity';
 import { YearRecapData, MonthData, YearActivity, YearHighlight } from '@/types/yearRecap';
 
+const HISTORY_KEY = 'scratch_and_go_history';
+const SAVED_ACTIVITIES_KEY = 'scratch_and_go_saved_activities';
+
 export const [YearRecapProvider, useYearRecap] = createContextHook(() => {
-  const { savedActivities } = useMemoryBook();
-  const { activityHistory } = useActivity();
-  const { streakData } = useStats();
+  const [savedActivities, setSavedActivities] = useState<SavedActivity[]>([]);
+  const [activityHistory, setActivityHistory] = useState<Activity[]>([]);
+
+  // Load data from AsyncStorage to avoid circular dependencies
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [savedStr, historyStr] = await Promise.all([
+          AsyncStorage.getItem(SAVED_ACTIVITIES_KEY),
+          AsyncStorage.getItem(HISTORY_KEY),
+        ]);
+        
+        if (savedStr) setSavedActivities(JSON.parse(savedStr));
+        if (historyStr) setActivityHistory(JSON.parse(historyStr));
+      } catch (error) {
+        console.error('Failed to load year recap data:', error);
+      }
+    };
+    
+    loadData();
+    
+    // Refresh data periodically
+    const interval = setInterval(loadData, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Calculate streak data locally instead of depending on StatsContext
+  const streakData = useMemo(() => {
+    const completedActivities = savedActivities
+      .filter(a => a.isCompleted && a.completedAt)
+      .sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0));
+
+    if (completedActivities.length === 0) {
+      return { currentStreak: 0, longestStreak: 0, weeklyActivities: [] };
+    }
+
+    const weeklyActivities: { weekStart: number; weekEnd: number; hasActivity: boolean }[] = [];
+    const now = Date.now();
+    const oneWeek = 7 * 24 * 60 * 60 * 1000;
+
+    for (let i = 0; i < 52; i++) {
+      const weekEnd = now - (i * oneWeek);
+      const weekStart = weekEnd - oneWeek;
+      
+      const hasActivity = completedActivities.some(
+        activity => activity.completedAt && activity.completedAt >= weekStart && activity.completedAt <= weekEnd
+      );
+
+      weeklyActivities.push({ weekStart, weekEnd, hasActivity });
+    }
+
+    let currentStreak = 0;
+    let longestStreak = 0;
+    let tempStreak = 0;
+
+    for (let i = 0; i < weeklyActivities.length; i++) {
+      if (weeklyActivities[i].hasActivity) {
+        tempStreak++;
+        if (i === 0 || weeklyActivities[i - 1].hasActivity) {
+          currentStreak = tempStreak;
+        }
+        longestStreak = Math.max(longestStreak, tempStreak);
+      } else {
+        if (i === 0) {
+          currentStreak = 0;
+        }
+        tempStreak = 0;
+      }
+    }
+
+    return { currentStreak, longestStreak, weeklyActivities: weeklyActivities.slice(0, 12) };
+  }, [savedActivities]);
 
   const getYearRecap = useCallback((year: number = new Date().getFullYear()): YearRecapData => {
     const yearStart = new Date(year, 0, 1).getTime();
