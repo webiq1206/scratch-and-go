@@ -87,11 +87,23 @@ export const [LocationProvider, useLocation] = createContextHook(() => {
     }
   };
 
-  const fetchWeather = async (latitude: number, longitude: number): Promise<WeatherData | null> => {
+  const fetchWeather = useCallback(async (latitude: number, longitude: number): Promise<WeatherData | null> => {
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
       const response = await fetch(
-        `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,wind_speed_10m,weather_code&temperature_unit=fahrenheit&wind_speed_unit=mph`
+        `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,wind_speed_10m,weather_code&temperature_unit=fahrenheit&wind_speed_unit=mph`,
+        { signal: controller.signal }
       );
+      
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        console.error('Weather API response not ok:', response.status);
+        return null;
+      }
+
       const data = await response.json();
 
       if (!data.current) {
@@ -116,10 +128,14 @@ export const [LocationProvider, useLocation] = createContextHook(() => {
       console.log('Weather data fetched:', weatherData);
       return weatherData;
     } catch (error) {
-      console.error('Weather fetch failed:', error);
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.error('Weather fetch timed out');
+      } else {
+        console.error('Weather fetch failed:', error);
+      }
       return null;
     }
-  };
+  }, []);
 
   const reverseGeocode = useCallback(async (latitude: number, longitude: number): Promise<LocationData | null> => {
     const createFallbackLocation = (): LocationData => ({
@@ -205,7 +221,7 @@ export const [LocationProvider, useLocation] = createContextHook(() => {
       saveLocation(fallbackLocation).catch(err => console.error('Failed to save fallback location:', err));
       return fallbackLocation;
     }
-  }, []);
+  }, [saveLocation, fetchWeather]);
 
   const getWebLocation = useCallback((): Promise<LocationData | null> => {
     return new Promise((resolve) => {
@@ -285,7 +301,15 @@ export const [LocationProvider, useLocation] = createContextHook(() => {
 
       if (geocoded && geocoded.length > 0) {
         const place = geocoded[0];
-        const weather = await fetchWeather(latitude, longitude);
+        
+        // Fetch weather with error handling
+        let weather: WeatherData | null = null;
+        try {
+          weather = await fetchWeather(latitude, longitude);
+        } catch (weatherError) {
+          console.error('Weather fetch failed in native location:', weatherError);
+          // Continue without weather data
+        }
 
         const locationData: LocationData = {
           city: place.city || place.subregion || 'Unknown City',
@@ -305,7 +329,7 @@ export const [LocationProvider, useLocation] = createContextHook(() => {
       console.error('Native location error:', error);
       throw error;
     }
-  }, []);
+  }, [fetchWeather, saveLocation]);
 
   const getCurrentLocation = useCallback(async (forceRetry: boolean = false): Promise<LocationData | null> => {
     if (hasPermissionError && !forceRetry) {
@@ -418,15 +442,41 @@ export const [LocationProvider, useLocation] = createContextHook(() => {
   }, []);
 
   useEffect(() => {
-    loadSavedLocation();
+    let mounted = true;
+    
+    const initializeLocation = async () => {
+      await loadSavedLocation();
+      
+      // If no saved location and tracking is enabled, try to get current location
+      // Wait a bit for the app to fully load before requesting location
+      setTimeout(async () => {
+        if (!mounted) return;
+        
+        // Check if location was loaded from storage
+        const stored = await AsyncStorage.getItem(LOCATION_KEY);
+        if (!stored && isTrackingEnabled && !hasPermissionError) {
+          console.log('No saved location found, attempting to get current location...');
+          try {
+            await getCurrentLocation();
+          } catch (error) {
+            console.log('Initial location request failed (this is normal if permission not granted):', error);
+          }
+        }
+      }, 2000);
+    };
+    
+    initializeLocation();
     
     const delayedSetup = setTimeout(() => {
-      setupLocationTracking();
+      if (mounted) {
+        setupLocationTracking();
+      }
     }, 3000);
     
     const subscription = AppState.addEventListener('change', handleAppStateChange);
     
     return () => {
+      mounted = false;
       clearTimeout(delayedSetup);
       subscription.remove();
       stopLocationTracking();

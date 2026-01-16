@@ -79,11 +79,12 @@ export default function ActivitySharedScreen() {
 
     setIsSaving(true);
     try {
-      await saveActivity(activity);
+      // Save to Memory Book without marking as active (saved for later)
+      saveActivity(activity, undefined, false);
       showSuccess('Saved!', 'Activity added to your Memory Book');
     } catch (error) {
       console.error('Error saving activity:', error);
-      showError('Error', 'Failed to save activity');
+      showError('Error', 'Failed to save activity. Please try again.');
     } finally {
       setIsSaving(false);
     }
@@ -204,7 +205,7 @@ export default function ActivitySharedScreen() {
           {activity.proTip && (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Lightbulb size={20} color={Colors.accent} />
+                <Lightbulb size={20} color={Colors.primary} />
                 <Text style={styles.sectionTitle}>Pro Tip</Text>
               </View>
               <Text style={styles.sectionText}>{activity.proTip}</Text>

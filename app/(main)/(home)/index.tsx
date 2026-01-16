@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Heart, Users, MapPin, ChevronLeft, Clock, DollarSign, Lightbulb, Play, RefreshCw, Share2, ThumbsDown, Bookmark, Sun, Cloud, CloudRain, Snowflake, Zap, Coffee, Palette, Utensils, Mountain, Home as HomeIcon, Shuffle, User, LogOut, Settings, X, Sliders, Crown, Check, Timer } from 'lucide-react-native';
+import { Heart, Users, MapPin, ChevronLeft, Clock, DollarSign, Lightbulb, Play, RefreshCw, Share2, ThumbsDown, Bookmark, Sun, Cloud, CloudRain, Snowflake, Zap, Coffee, Palette, Utensils, Mountain, Home as HomeIcon, Shuffle, User, LogOut, Settings, X, Sliders, Crown, Check, Timer, CheckCircle } from 'lucide-react-native';
 import Logo from '@/components/ui/Logo';
 import Colors from '@/constants/colors';
 import Typography from '@/constants/typography';
@@ -20,6 +20,7 @@ import { useSubscription } from '@/contexts/SubscriptionContext';
 import { useAlert } from '@/contexts/AlertContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePreferences } from '@/contexts/PreferencesContext';
+import { useMemoryBook } from '@/contexts/MemoryBookContext';
 import { Filters, AdvancedFilters, CuisineType, AccessibilityOption, TimeOfDay, GroupSize, CUISINE_OPTIONS, ACCESSIBILITY_OPTIONS, GROUP_SIZE_OPTIONS, TIME_OF_DAY_OPTIONS } from '@/types/activity';
 import { shareActivity } from '@/utils/shareActivity';
 
@@ -102,8 +103,6 @@ export default function HomeScreen() {
     currentActivity, 
     generateActivity, 
     regenerateActivity,
-    saveForLaterActivity,
-    isActivitySavedForLater,
     isGenerating, 
     isLimitReached, 
     remainingScratches,
@@ -119,10 +118,16 @@ export default function HomeScreen() {
   const { alert, showSuccess, showError, showInfo } = useAlert();
   const { user, isAuthenticated, logout } = useAuth();
   const { preferences, getDisplayName, getPersonalization } = usePreferences();
+  const { getCompletedActivities, saveActivity, savedActivities, isActivitySaved } = useMemoryBook();
   const [isSharing, setIsSharing] = useState(false);
-  const [isSavedForLater, setIsSavedForLater] = useState(false);
   const [showPreferencesSetup, setShowPreferencesSetup] = useState(false);
   const pendingWizardActionRef = useRef<(() => void) | null>(null);
+  
+  // Check if current activity is saved in Memory Book
+  const isActivitySavedInMemoryBook = useMemo(() => {
+    if (!currentActivity) return false;
+    return savedActivities.some(a => a.title === currentActivity.title);
+  }, [currentActivity, savedActivities]);
   
   // Get personalized display name
   const displayName = getDisplayName();
@@ -401,23 +406,22 @@ export default function HomeScreen() {
   }, [currentActivity, isSharing]);
 
   const handleSaveForLater = async () => {
-    if (!currentActivity || isSavedForLater) return;
+    if (!currentActivity) return;
 
-    if (isActivitySavedForLater(currentActivity.title)) {
-      showInfo('Already Saved', 'This activity is already in your saved list.');
+    // Check if already saved to Memory Book
+    if (isActivitySavedInMemoryBook) {
+      showInfo('Already Saved', 'This activity is already in your Memory Book.');
       return;
     }
     
-    setIsSavedForLater(true);
-    
-    InteractionManager.runAfterInteractions(async () => {
-      const success = await saveForLaterActivity();
-      if (success) {
-        showSuccess('Saved!', 'Activity saved to your Memories for later.');
-      } else {
-        setIsSavedForLater(false);
-      }
-    });
+    try {
+      // Save to Memory Book without marking as active (saved for later)
+      saveActivity(currentActivity, undefined, false);
+      showSuccess('Saved!', 'Activity saved to your Memory Book.');
+    } catch (error) {
+      console.error('Error saving activity:', error);
+      showError('Error', 'Failed to save activity. Please try again.');
+    }
   };
 
   const handleRegenerateActivity = async () => {
@@ -927,29 +931,53 @@ export default function HomeScreen() {
                           </View>
                           
                           {/* PRIMARY ACTION - Start Activity Button (prominent placement) */}
-                          <TouchableOpacity
-                            style={styles.primaryAction}
-                            onPress={handleStartActivity}
-                            activeOpacity={0.8}
-                          >
-                            <LinearGradient
-                              colors={[Colors.primaryGradientStart, Colors.primaryGradientEnd]}
-                              start={{ x: 0, y: 0 }}
-                              end={{ x: 1, y: 0 }}
-                              style={styles.primaryActionGradient}
-                            >
-                              <Play size={20} color={Colors.backgroundDark} fill={Colors.backgroundDark} />
-                              <Text style={styles.primaryActionText}>
-                                {mode === 'couples' ? 'Start This Date' : 'Start Activity'}
-                              </Text>
-                            </LinearGradient>
-                          </TouchableOpacity>
+                          {(() => {
+                            // Check if this activity has been completed
+                            const completedActivities = getCompletedActivities();
+                            const isCompleted = completedActivities.some(
+                              a => a.title === currentActivity.title && 
+                                   a.description === currentActivity.description
+                            );
+                            
+                            if (isCompleted) {
+                              return (
+                                <View style={[styles.primaryAction, styles.completedAction]}>
+                                  <View style={styles.primaryActionGradient}>
+                                    <CheckCircle size={20} color={Colors.success} />
+                                    <Text style={[styles.primaryActionText, { color: Colors.success }]}>
+                                      {mode === 'couples' ? 'Date Completed' : 'Activity Completed'}
+                                    </Text>
+                                  </View>
+                                </View>
+                              );
+                            }
+                            
+                            return (
+                              <TouchableOpacity
+                                style={styles.primaryAction}
+                                onPress={handleStartActivity}
+                                activeOpacity={0.8}
+                              >
+                                <LinearGradient
+                                  colors={[Colors.primaryGradientStart, Colors.primaryGradientEnd]}
+                                  start={{ x: 0, y: 0 }}
+                                  end={{ x: 1, y: 0 }}
+                                  style={styles.primaryActionGradient}
+                                >
+                                  <Play size={20} color={Colors.backgroundDark} fill={Colors.backgroundDark} />
+                                  <Text style={styles.primaryActionText}>
+                                    {mode === 'couples' ? 'Start This Date' : 'Start Activity'}
+                                  </Text>
+                                </LinearGradient>
+                              </TouchableOpacity>
+                            );
+                          })()}
                           
                           {/* Pro Tip - Now below the primary action */}
                           {currentActivity.proTip && (
                             <View style={styles.proTipContainer}>
                               <View style={styles.proTipHeader}>
-                                <Lightbulb size={16} color={Colors.accent} />
+                                <Lightbulb size={16} color={Colors.primary} />
                                 <Text style={styles.proTipLabel}>Pro Tip</Text>
                               </View>
                               <Text style={styles.proTipText}>{currentActivity.proTip}</Text>
@@ -971,12 +999,12 @@ export default function HomeScreen() {
                             <TouchableOpacity
                               style={styles.secondaryAction}
                               onPress={handleSaveForLater}
-                              disabled={isSavedForLater}
+                              disabled={isActivitySavedInMemoryBook}
                               activeOpacity={0.7}
                             >
-                              <Bookmark size={18} color={isSavedForLater ? Colors.accent : Colors.textLight} fill={isSavedForLater ? Colors.accent : 'none'} />
-                              <Text style={[styles.secondaryActionText, isSavedForLater && { color: Colors.accent }]}>
-                                {isSavedForLater ? 'Saved' : 'Save'}
+                              <Bookmark size={18} color={isActivitySavedInMemoryBook ? Colors.primary : Colors.textLight} fill={isActivitySavedInMemoryBook ? Colors.primary : 'none'} />
+                              <Text style={[styles.secondaryActionText, isActivitySavedInMemoryBook && { color: Colors.primary }]}>
+                                {isActivitySavedInMemoryBook ? 'Saved' : 'Save'}
                               </Text>
                             </TouchableOpacity>
                             
@@ -1971,10 +1999,12 @@ const styles = StyleSheet.create({
     color: Colors.textLight,
   },
   proTipContainer: {
-    backgroundColor: Colors.accentMuted,
+    backgroundColor: Colors.primaryMuted,
     borderRadius: BorderRadius.medium,
-    padding: Spacing.sm,
+    padding: Spacing.md,
     marginBottom: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.primary + '40',
   },
   proTipHeader: {
     flexDirection: 'row',
@@ -1985,12 +2015,12 @@ const styles = StyleSheet.create({
   proTipLabel: {
     fontSize: Typography.sizes.small,
     fontWeight: '600' as const,
-    color: Colors.accent,
+    color: Colors.primary,
   },
   proTipText: {
     fontSize: Typography.sizes.caption,
     color: Colors.text,
-    lineHeight: 17,
+    lineHeight: 20,
   },
   
   // Actions
@@ -1998,6 +2028,11 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.medium,
     overflow: 'hidden',
     marginBottom: Spacing.md,
+  },
+  completedAction: {
+    backgroundColor: Colors.cardBackground,
+    borderWidth: 1,
+    borderColor: Colors.success + '40',
   },
   primaryActionGradient: {
     flexDirection: 'row',

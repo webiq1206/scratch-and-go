@@ -129,7 +129,8 @@ export default function QueueScreen() {
         proTip: activity.proTip,
         supplies: activity.supplies,
       };
-      saveActivity(activityToSave);
+      // Save to Memory Book without marking as active (saved for later)
+      saveActivity(activityToSave, undefined, false);
       showSuccess('Saved!', mode === 'couples' 
         ? 'Date idea saved for your next adventure together!' 
         : 'Activity saved for your next family adventure!');

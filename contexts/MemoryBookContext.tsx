@@ -68,28 +68,39 @@ export const [MemoryBookProvider, useMemoryBook] = createContextHook(() => {
     }
   };
 
-  const saveActivity = (activity: Activity, scheduledFor?: number) => {
-    const isScheduled = scheduledFor !== undefined && scheduledFor > Date.now();
-    const savedActivity: SavedActivity = {
-      ...activity,
-      id: Date.now().toString() + Math.random().toString(36),
-      savedAt: Date.now(),
-      isActive: !isScheduled, // If scheduled for later, don't mark as active yet
-      isCompleted: false,
-      photos: [],
-      locationSnapshot: currentLocation || undefined,
-      scheduledFor: scheduledFor,
-      isScheduled: isScheduled,
-      startedAt: isScheduled ? undefined : Date.now(), // Start immediately if not scheduled
-    };
+  const saveActivity = (activity: Activity, scheduledFor?: number, markAsActive: boolean = true) => {
+    try {
+      if (!activity || !activity.title || !activity.description) {
+        console.error('Invalid activity data provided to saveActivity');
+        throw new Error('Invalid activity data');
+      }
 
-    const updated = [savedActivity, ...savedActivities];
-    setSavedActivities(updated);
-    saveSavedActivities(updated);
-    // Note: Activity interactions are tracked separately via ActivityContext when needed
+      const isScheduled = scheduledFor !== undefined && scheduledFor > Date.now();
+      const shouldBeActive = markAsActive && !isScheduled;
+      const savedActivity: SavedActivity = {
+        ...activity,
+        id: Date.now().toString() + Math.random().toString(36),
+        savedAt: Date.now(),
+        isActive: shouldBeActive, // Only mark as active if explicitly requested and not scheduled
+        isCompleted: false,
+        photos: [],
+        locationSnapshot: currentLocation || undefined,
+        scheduledFor: scheduledFor,
+        isScheduled: isScheduled,
+        startedAt: shouldBeActive ? Date.now() : undefined, // Only set startedAt if marking as active
+      };
 
-    console.log('Activity saved:', savedActivity.title, isScheduled ? `scheduled for ${new Date(scheduledFor!).toLocaleString()}` : 'starting now');
-    return savedActivity;
+      const updated = [savedActivity, ...savedActivities];
+      setSavedActivities(updated);
+      saveSavedActivities(updated);
+      // Note: Activity interactions are tracked separately via ActivityContext when needed
+
+      console.log('Activity saved:', savedActivity.title, isScheduled ? `scheduled for ${new Date(scheduledFor!).toLocaleString()}` : shouldBeActive ? 'starting now' : 'saved for later');
+      return savedActivity;
+    } catch (error) {
+      console.error('Error saving activity to Memory Book:', error);
+      throw error;
+    }
   };
 
   const createManualActivity = (activityData: {

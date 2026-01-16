@@ -13,7 +13,7 @@ try {
   console.warn('[Auth] Failed to complete auth session:', error);
 }
 
-export type AuthProvider = 'google' | 'facebook' | 'none';
+export type AuthProvider = 'google' | 'facebook' | 'email' | 'none';
 
 export interface User {
   id: string;
@@ -228,6 +228,120 @@ export const [AuthContext, useAuth] = createContextHook(() => {
     }
   };
 
+  const signupWithEmail = async (email: string, password: string, name: string) => {
+    try {
+      setAuthError(null);
+      
+      // Basic validation
+      if (!email || !email.includes('@')) {
+        setAuthError('Please enter a valid email address.');
+        return;
+      }
+      
+      if (!password || password.length < 6) {
+        setAuthError('Password must be at least 6 characters.');
+        return;
+      }
+      
+      if (!name || name.trim().length < 2) {
+        setAuthError('Please enter your name.');
+        return;
+      }
+
+      // Check if email already exists (in a real app, this would check a backend)
+      const existingUsers = await AsyncStorage.getItem('email_users');
+      const users = existingUsers ? JSON.parse(existingUsers) : {};
+      
+      if (users[email.toLowerCase()]) {
+        setAuthError('An account with this email already exists. Please sign in instead.');
+        return;
+      }
+
+      // Create user (in production, this would be handled by a backend)
+      const userId = `email_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const newUser: User = {
+        id: userId,
+        name: name.trim(),
+        email: email.toLowerCase().trim(),
+        provider: 'email',
+      };
+
+      // Store user credentials (in production, passwords should NEVER be stored locally)
+      // This is a simplified implementation for local-only auth
+      users[email.toLowerCase()] = {
+        password, // In production, this should be hashed and stored on a backend
+        userId,
+      };
+      await AsyncStorage.setItem('email_users', JSON.stringify(users));
+      
+      await AsyncStorage.setItem(AUTH_USER_KEY, JSON.stringify(newUser));
+      setUser(newUser);
+      setAuthError(null);
+    } catch (error) {
+      console.error('Error during email signup:', error);
+      setAuthError('Failed to create account. Please try again.');
+    }
+  };
+
+  const loginWithEmail = async (email: string, password: string) => {
+    try {
+      setAuthError(null);
+      
+      if (!email || !email.includes('@')) {
+        setAuthError('Please enter a valid email address.');
+        return;
+      }
+      
+      if (!password) {
+        setAuthError('Please enter your password.');
+        return;
+      }
+
+      // Check credentials (in production, this would check a backend)
+      const existingUsers = await AsyncStorage.getItem('email_users');
+      const users = existingUsers ? JSON.parse(existingUsers) : {};
+      const userData = users[email.toLowerCase()];
+      
+      if (!userData || userData.password !== password) {
+        setAuthError('Invalid email or password. Please try again.');
+        return;
+      }
+
+      // Load user data
+      const savedUser = await AsyncStorage.getItem(AUTH_USER_KEY);
+      let user: User | null = null;
+      
+      if (savedUser) {
+        try {
+          const parsed = JSON.parse(savedUser);
+          if (parsed && parsed.id === userData.userId) {
+            user = parsed;
+          }
+        } catch (e) {
+          // User data might be missing, create it
+        }
+      }
+      
+      // If user data doesn't exist, we need to recreate it (this shouldn't happen in normal flow)
+      if (!user) {
+        // Try to get name from stored user data or use email
+        user = {
+          id: userData.userId,
+          name: userData.name || email.split('@')[0],
+          email: email.toLowerCase().trim(),
+          provider: 'email',
+        };
+        await AsyncStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
+      }
+      
+      setUser(user);
+      setAuthError(null);
+    } catch (error) {
+      console.error('Error during email login:', error);
+      setAuthError('Failed to sign in. Please try again.');
+    }
+  };
+
   const logout = async () => {
     try {
       await AsyncStorage.removeItem(AUTH_USER_KEY);
@@ -246,6 +360,8 @@ export const [AuthContext, useAuth] = createContextHook(() => {
     clearError,
     loginWithGoogle,
     loginWithFacebook,
+    signupWithEmail,
+    loginWithEmail,
     logout,
     isAuthenticated: !!user,
   };

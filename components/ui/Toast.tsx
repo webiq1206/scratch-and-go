@@ -29,21 +29,21 @@ const getStylesForType = (type: ToastProps['type']) => {
       return {
         Icon: CheckCircle,
         color: Colors.success,
-        backgroundColor: Colors.successMuted,
+        backgroundColor: 'rgba(34, 197, 94, 0.95)',
         borderColor: Colors.success,
       };
     case 'warning':
       return {
         Icon: AlertTriangle,
         color: Colors.warning,
-        backgroundColor: Colors.accentMuted,
+        backgroundColor: 'rgba(245, 158, 11, 0.95)',
         borderColor: Colors.warning,
       };
     case 'error':
       return {
         Icon: AlertCircle,
         color: Colors.error,
-        backgroundColor: Colors.errorMuted,
+        backgroundColor: 'rgba(239, 68, 68, 0.95)',
         borderColor: Colors.error,
       };
     case 'info':
@@ -51,7 +51,7 @@ const getStylesForType = (type: ToastProps['type']) => {
       return {
         Icon: Info,
         color: Colors.primary,
-        backgroundColor: Colors.primaryMuted,
+        backgroundColor: 'rgba(255, 107, 138, 0.95)',
         borderColor: Colors.primary,
       };
   }
@@ -148,8 +148,8 @@ export default function Toast({
           },
         ]}
       >
-        <View style={[styles.iconContainer, { backgroundColor: color + '30' }]}>
-          <Icon size={20} color={color} />
+        <View style={[styles.iconContainer, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
+          <Icon size={20} color={Colors.white} />
         </View>
         
         <View style={styles.content}>
@@ -163,7 +163,7 @@ export default function Toast({
           activeOpacity={0.7}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <X size={18} color={Colors.textLight} />
+          <X size={18} color={Colors.white} />
         </TouchableOpacity>
       </View>
     </Animated.View>
@@ -207,11 +207,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: Typography.sizes.body,
     fontWeight: Typography.weights.semibold,
-    color: Colors.text,
+    color: Colors.white,
   },
   message: {
     fontSize: Typography.sizes.caption,
-    color: Colors.textLight,
+    color: 'rgba(255, 255, 255, 0.9)',
     marginTop: 2,
   },
   closeButton: {

@@ -23,21 +23,52 @@ export default function LocationSelector() {
     }
   };
 
-  const handleManualSubmit = () => {
+  const handleManualSubmit = async () => {
     if (!manualCity.trim() || !manualRegion.trim()) {
       showError('Missing Information', 'Please enter both city and region.');
       return;
     }
 
+    const city = manualCity.trim();
+    const region = manualRegion.trim();
+
+    // Try to geocode the city/region to get coordinates
+    let coords: { latitude: number; longitude: number } | undefined;
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(city + ', ' + region)}&format=json&limit=1`,
+        {
+          headers: {
+            'Accept': 'application/json',
+          },
+          mode: 'cors',
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data && data.length > 0) {
+          coords = {
+            latitude: parseFloat(data[0].lat),
+            longitude: parseFloat(data[0].lon),
+          };
+        }
+      }
+    } catch (error) {
+      console.log('Geocoding failed for manual location, continuing without coordinates:', error);
+    }
+
     setManualLocation({
-      city: manualCity.trim(),
-      region: manualRegion.trim(),
+      city,
+      region,
       country: 'USA',
+      ...(coords && { coords }),
     });
 
     setModalVisible(false);
     setManualCity('');
     setManualRegion('');
+    showSuccess('Location Set', `Location set to ${city}, ${region}`);
   };
 
   return (

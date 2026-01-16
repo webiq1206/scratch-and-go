@@ -116,12 +116,18 @@ export default function MemoryBookScreen() {
     }
   }, [params.tab]);
 
-  // Combine saved and active for "upcoming" tab
+  // Separate saved for later and active activities for "upcoming" tab
+  const savedForLaterActivities = useMemo(() => {
+    return getSavedActivities(); // Activities saved but not started (isActive: false, isCompleted: false)
+  }, [getSavedActivities]);
+  
+  const activeActivities = useMemo(() => {
+    return getActiveActivities(); // Activities currently in progress (isActive: true, isCompleted: false)
+  }, [getActiveActivities]);
+  
   const upcomingActivities = useMemo(() => {
-    const saved = getSavedActivities();
-    const active = getActiveActivities();
-    return [...saved, ...active].filter(a => !a.isCompleted);
-  }, [getSavedActivities, getActiveActivities]);
+    return [...savedForLaterActivities, ...activeActivities];
+  }, [savedForLaterActivities, activeActivities]);
 
   const completedActivities = getCompletedActivities();
 
@@ -134,6 +140,7 @@ export default function MemoryBookScreen() {
   }, [completedActivities]);
 
   const filteredActivities = useMemo(() => {
+    // For upcoming tab, we need to filter from the combined list but maintain separation
     const activities = activeTab === 'upcoming' ? upcomingActivities : completedActivities;
     
     let filtered = activities;
@@ -501,16 +508,72 @@ export default function MemoryBookScreen() {
               ))}
             </View>
           ) : (
-            // Upcoming list - enhanced cards
-            filteredActivities.map((activity) => (
-              <UpcomingActivityCard
-                key={activity.id}
-                activity={activity}
-                mode={mode}
-                onPress={() => handleActivityPress(activity)}
-                onDelete={() => handleDelete(activity.id, activity.title, false)}
-              />
-            ))
+            // Upcoming list - separated by "Saved for Later" and "In Progress"
+            <View>
+              {/* In Progress Section */}
+              {(() => {
+                const activeFiltered = filteredActivities.filter(a => a.isActive && !a.isCompleted);
+                if (activeFiltered.length === 0) return null;
+                
+                return (
+                  <>
+                    <View style={styles.sectionHeader}>
+                      <View style={styles.sectionHeaderContent}>
+                        <View style={styles.sectionIconContainer}>
+                          <Clock size={16} color={Colors.primary} />
+                        </View>
+                        <Text style={styles.sectionTitle}>In Progress</Text>
+                        <View style={styles.sectionBadge}>
+                          <Text style={styles.sectionBadgeText}>{activeFiltered.length}</Text>
+                        </View>
+                      </View>
+                    </View>
+                    {activeFiltered.map((activity) => (
+                      <UpcomingActivityCard
+                        key={activity.id}
+                        activity={activity}
+                        mode={mode}
+                        isActive={true}
+                        onPress={() => handleActivityPress(activity)}
+                        onDelete={() => handleDelete(activity.id, activity.title, false)}
+                      />
+                    ))}
+                  </>
+                );
+              })()}
+              
+              {/* Saved for Later Section */}
+              {(() => {
+                const savedFiltered = filteredActivities.filter(a => !a.isActive && !a.isCompleted);
+                if (savedFiltered.length === 0) return null;
+                
+                return (
+                  <>
+                    <View style={[styles.sectionHeader, activeActivities.length > 0 && styles.sectionHeaderWithMargin]}>
+                      <View style={styles.sectionHeaderContent}>
+                        <View style={styles.sectionIconContainer}>
+                          <Bookmark size={16} color={Colors.accent} />
+                        </View>
+                        <Text style={styles.sectionTitle}>Saved for Later</Text>
+                        <View style={styles.sectionBadge}>
+                          <Text style={styles.sectionBadgeText}>{savedFiltered.length}</Text>
+                        </View>
+                      </View>
+                    </View>
+                    {savedFiltered.map((activity) => (
+                      <UpcomingActivityCard
+                        key={activity.id}
+                        activity={activity}
+                        mode={mode}
+                        isActive={false}
+                        onPress={() => handleActivityPress(activity)}
+                        onDelete={() => handleDelete(activity.id, activity.title, false)}
+                      />
+                    ))}
+                  </>
+                );
+              })()}
+            </View>
           )}
         </ScrollView>
       )}
@@ -614,11 +677,12 @@ function MemoryPolaroidCard({ activity, mode, onPress, onDelete }: MemoryPolaroi
 interface UpcomingActivityCardProps {
   activity: SavedActivity;
   mode: Mode;
+  isActive?: boolean;
   onPress: () => void;
   onDelete: () => void;
 }
 
-function UpcomingActivityCard({ activity, mode, onPress, onDelete }: UpcomingActivityCardProps) {
+function UpcomingActivityCard({ activity, mode, isActive = false, onPress, onDelete }: UpcomingActivityCardProps) {
   return (
     <View style={styles.upcomingCardWrapper}>
       <TouchableOpacity
@@ -628,17 +692,23 @@ function UpcomingActivityCard({ activity, mode, onPress, onDelete }: UpcomingAct
       >
         {/* Category icon with playful styling */}
         <View style={styles.upcomingIconContainer}>
-          <View style={styles.upcomingIcon}>
+          <View style={[styles.upcomingIcon, isActive && styles.upcomingIconActive]}>
             {mode === 'couples' ? (
-              <Heart size={20} color={Colors.primary} />
+              <Heart size={20} color={isActive ? Colors.primary : Colors.textLight} />
             ) : (
-              <Users size={20} color={Colors.primary} />
+              <Users size={20} color={isActive ? Colors.primary : Colors.textLight} />
             )}
           </View>
-          {/* Mini polaroid accent */}
-          <View style={styles.miniPolaroidAccent}>
-            <Sparkles size={10} color={Colors.accent} />
-          </View>
+          {/* Status indicator */}
+          {isActive ? (
+            <View style={styles.miniPolaroidAccent}>
+              <Clock size={10} color={Colors.primary} />
+            </View>
+          ) : (
+            <View style={styles.miniPolaroidAccent}>
+              <Bookmark size={10} color={Colors.accent} />
+            </View>
+          )}
         </View>
 
         {/* Content */}
@@ -1079,9 +1149,15 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: Colors.primaryMuted,
+    backgroundColor: Colors.backgroundLight,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  upcomingIconActive: {
+    backgroundColor: Colors.primaryMuted,
+    borderColor: Colors.primary,
   },
   miniPolaroidAccent: {
     position: 'absolute',
@@ -1090,9 +1166,48 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: Colors.accentMuted,
+    backgroundColor: Colors.cardBackground,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  sectionHeader: {
+    marginTop: Spacing.lg,
+    marginBottom: Spacing.md,
+  },
+  sectionHeaderWithMargin: {
+    marginTop: Spacing.xl,
+  },
+  sectionHeaderContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  sectionIconContainer: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: Colors.primaryMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sectionTitle: {
+    fontSize: Typography.sizes.h3,
+    fontWeight: '600' as const,
+    color: Colors.text,
+    flex: 1,
+  },
+  sectionBadge: {
+    backgroundColor: Colors.backgroundLight,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 2,
+    borderRadius: BorderRadius.full,
+  },
+  sectionBadgeText: {
+    fontSize: Typography.sizes.tiny,
+    fontWeight: '600' as const,
+    color: Colors.textLight,
   },
   upcomingContent: {
     flex: 1,

@@ -1301,22 +1301,22 @@ const styles = StyleSheet.create({
     fontWeight: '400' as const,
   },
   proTipSection: {
-    backgroundColor: Colors.accent + '15',
+    backgroundColor: Colors.primaryMuted,
     borderRadius: BorderRadius.medium,
     padding: Spacing.lg,
     marginBottom: Spacing.lg,
     borderWidth: 1,
-    borderColor: Colors.accent + '40',
+    borderColor: Colors.primary + '40',
   },
   proTipLabel: {
     fontSize: Typography.sizes.h3,
-    fontWeight: '400' as const,
-    color: Colors.text,
+    fontWeight: '600' as const,
+    color: Colors.primary,
     marginBottom: Spacing.sm,
   },
   proTipText: {
     fontSize: Typography.sizes.body,
-    color: Colors.textLight,
+    color: Colors.text,
     lineHeight: 24,
   },
   ratingSection: {

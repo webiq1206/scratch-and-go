@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Dimensions, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Dimensions, ActivityIndicator, TextInput } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Heart, Users, Check } from 'lucide-react-native';
+import { Heart, Users, Check, Mail, Lock, User as UserIcon } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import Typography from '@/constants/typography';
 import Spacing from '@/constants/spacing';
@@ -20,12 +20,17 @@ type WelcomeStep = OnboardingStep | 'login';
 
 export default function WelcomeScreen() {
   const router = useRouter();
-  const { loginWithGoogle, loginWithFacebook, isAuthenticated } = useAuth();
+  const { loginWithGoogle, loginWithFacebook, signupWithEmail, loginWithEmail, isAuthenticated, authError } = useAuth();
   const [step, setStep] = useState<OnboardingStep | 'login'>('login');
   const [selectedMode, setSelectedMode] = useState<'couples' | 'family' | null>(null);
   const [preferences, setPreferences] = useState<UserPreferences>(DEFAULT_PREFERENCES);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [showEmailForm, setShowEmailForm] = useState(false);
+  const [isSignup, setIsSignup] = useState(true);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
@@ -166,9 +171,40 @@ export default function WelcomeScreen() {
     await completeOnboarding(DEFAULT_PREFERENCES);
   };
 
-  const handleContinueWithoutLogin = () => {
-    // User chose to continue without login, show mode selection
-    setStep('mode');
+  const handleEmailSignup = async () => {
+    if (!email || !password || !name) {
+      return;
+    }
+    setIsLoggingIn(true);
+    try {
+      await signupWithEmail(email, password, name);
+      const savedMode = await AsyncStorage.getItem(MODE_KEY);
+      if (!savedMode) {
+        setStep('mode');
+      }
+    } catch (error) {
+      console.error('Email signup error:', error);
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  const handleEmailLogin = async () => {
+    if (!email || !password) {
+      return;
+    }
+    setIsLoggingIn(true);
+    try {
+      await loginWithEmail(email, password);
+      const savedMode = await AsyncStorage.getItem(MODE_KEY);
+      if (!savedMode) {
+        setStep('mode');
+      }
+    } catch (error) {
+      console.error('Email login error:', error);
+    } finally {
+      setIsLoggingIn(false);
+    }
   };
 
   const handleReligionSelection = (religionId: string) => {
@@ -485,7 +521,7 @@ export default function WelcomeScreen() {
         <View style={[styles.contentContainer, { paddingBottom: Math.max(insets.bottom, Spacing.xxl) }]}>
           <Text style={styles.mainTagline}>Create memories that last forever.</Text>
           <Text style={styles.subTagline}>
-            Discover meaningful moments to share{('\n')}with the people you love most.
+            Discover meaningful moments to share{'\n'}with the people you love most.
           </Text>
 
           <View style={styles.authButtonsContainer}>
@@ -533,28 +569,100 @@ export default function WelcomeScreen() {
               <View style={styles.divider} />
             </View>
 
-            <TouchableOpacity
-              onPress={handleContinueWithoutLogin}
-              activeOpacity={0.8}
-              style={{ width: '100%' }}
-              disabled={isLoggingIn}
-              accessibilityLabel="Continue without signing in"
-              accessibilityRole="button"
-              accessibilityState={{ disabled: isLoggingIn }}
-            >
-              <LinearGradient
-                colors={[Colors.primaryGradientStart, Colors.primaryGradientEnd]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.nextButton}
+            {!showEmailForm ? (
+              <TouchableOpacity
+                onPress={() => setShowEmailForm(true)}
+                activeOpacity={0.8}
+                style={styles.emailButton}
+                disabled={isLoggingIn}
               >
-                {isLoggingIn ? (
-                  <ActivityIndicator color="#1A1A1A" />
-                ) : (
-                  <Text style={styles.nextButtonText}>Continue</Text>
+                <Mail size={20} color={Colors.primary} />
+                <Text style={styles.emailButtonText}>Continue with Email</Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.emailForm}>
+                {isSignup && (
+                  <View style={styles.inputContainer}>
+                    <UserIcon size={18} color={Colors.textLight} />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Name"
+                      placeholderTextColor={Colors.textMuted}
+                      value={name}
+                      onChangeText={setName}
+                      autoCapitalize="words"
+                      autoCorrect={false}
+                    />
+                  </View>
                 )}
-              </LinearGradient>
-            </TouchableOpacity>
+                <View style={styles.inputContainer}>
+                  <Mail size={18} color={Colors.textLight} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Email"
+                    placeholderTextColor={Colors.textMuted}
+                    value={email}
+                    onChangeText={setEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                </View>
+                <View style={styles.inputContainer}>
+                  <Lock size={18} color={Colors.textLight} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Password"
+                    placeholderTextColor={Colors.textMuted}
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                </View>
+                
+                {authError && (
+                  <Text style={styles.errorText}>{authError}</Text>
+                )}
+
+                <TouchableOpacity
+                  onPress={isSignup ? handleEmailSignup : handleEmailLogin}
+                  activeOpacity={0.8}
+                  style={{ width: '100%' }}
+                  disabled={isLoggingIn || !email || !password || (isSignup && !name)}
+                >
+                  <LinearGradient
+                    colors={[Colors.primaryGradientStart, Colors.primaryGradientEnd]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={[styles.nextButton, (!email || !password || (isSignup && !name)) && styles.nextButtonDisabled]}
+                  >
+                    {isLoggingIn ? (
+                      <ActivityIndicator color="#1A1A1A" />
+                    ) : (
+                      <Text style={styles.nextButtonText}>
+                        {isSignup ? 'Create Account' : 'Sign In'}
+                      </Text>
+                    )}
+                  </LinearGradient>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => {
+                    setIsSignup(!isSignup);
+                    setEmail('');
+                    setPassword('');
+                    setName('');
+                  }}
+                  style={styles.switchAuthButton}
+                >
+                  <Text style={styles.switchAuthText}>
+                    {isSignup ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         </View>
       </View>
@@ -942,5 +1050,59 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontStyle: 'italic',
     marginTop: Spacing.md,
+  },
+  emailButton: {
+    width: '100%',
+    paddingVertical: 14,
+    borderRadius: BorderRadius.full,
+    backgroundColor: Colors.cardBackground,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.primary + '40',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+  },
+  emailButtonText: {
+    fontSize: Typography.sizes.body,
+    fontWeight: '500' as const,
+    color: Colors.primary,
+  },
+  emailForm: {
+    width: '100%',
+    gap: Spacing.md,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.cardBackground,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    gap: Spacing.sm,
+  },
+  input: {
+    flex: 1,
+    fontSize: Typography.sizes.body,
+    color: Colors.text,
+  },
+  errorText: {
+    fontSize: Typography.sizes.small,
+    color: Colors.error,
+    textAlign: 'center',
+    marginTop: -Spacing.sm,
+  },
+  switchAuthButton: {
+    paddingVertical: Spacing.sm,
+    alignItems: 'center',
+  },
+  switchAuthText: {
+    fontSize: Typography.sizes.small,
+    color: Colors.textLight,
+  },
+  nextButtonDisabled: {
+    opacity: 0.5,
   },
 });

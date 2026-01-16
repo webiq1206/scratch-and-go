@@ -453,7 +453,7 @@ export default function ActivityInProgressScreen() {
           {activity.proTip && (
             <View style={[styles.card, styles.proTipCard]}>
               <View style={styles.proTipHeader}>
-                <Sparkles size={20} color={Colors.accent} />
+                <Sparkles size={20} color={Colors.primary} />
                 <Text style={styles.proTipTitle}>Pro Tip</Text>
               </View>
               <Text style={styles.proTipText}>{activity.proTip}</Text>
@@ -783,8 +783,8 @@ const styles = StyleSheet.create({
     color: Colors.text,
   },
   proTipCard: {
-    backgroundColor: Colors.accent + '10',
-    borderColor: Colors.accent + '30',
+    backgroundColor: Colors.primaryMuted,
+    borderColor: Colors.primary + '40',
   },
   proTipHeader: {
     flexDirection: 'row',
@@ -794,8 +794,8 @@ const styles = StyleSheet.create({
   },
   proTipTitle: {
     fontSize: Typography.sizes.h3,
-    fontWeight: '400' as const,
-    color: Colors.accent,
+    fontWeight: '600' as const,
+    color: Colors.primary,
   },
   proTipText: {
     fontSize: Typography.sizes.body,

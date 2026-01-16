@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { View, StyleSheet, PanResponder, Animated, Dimensions, Platform } from 'react-native';
-import Svg, { Circle, Defs, Mask, Rect, LinearGradient, Stop } from 'react-native-svg';
+import Svg, { Circle, Defs, Mask, Rect, LinearGradient, Stop, Text } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 import { BorderRadius } from '@/constants/design';
 import Colors from '@/constants/colors';
@@ -10,6 +10,7 @@ const CARD_WIDTH = SCREEN_WIDTH - 48;
 const CARD_HEIGHT = Math.min(SCREEN_HEIGHT * 0.65, 550); // Responsive height, max 550px
 const SCRATCH_THRESHOLD = 55; // Auto-reveal at 55% - achievable threshold
 const BRUSH_RADIUS = 30; // Circular brush radius in pixels
+const BRUSH_RADIUS_SQUARED = BRUSH_RADIUS * BRUSH_RADIUS; // Pre-compute for performance
 const INTERPOLATION_STEP = 4; // Pixels between interpolated points for smooth lines
 const GRID_SIZE = 6; // Grid size for accurate area calculation (6px grid)
 
@@ -47,6 +48,8 @@ export default function ScratchCard({
   const circleIdCounter = useRef(0);
   // Pixel-based tracking for accurate area calculation
   const scratchedGridRef = useRef<Set<string>>(new Set());
+  const rafId = useRef<number | null>(null);
+  const pendingRender = useRef(false);
 
   disabledRef.current = disabled;
   isRevealedRef.current = isRevealed;
@@ -61,6 +64,13 @@ export default function ScratchCard({
 
   // Reset when resetKey changes (NOT when opacity changes!)
   useEffect(() => {
+    // Cancel any pending animation frame
+    if (rafId.current !== null) {
+      cancelAnimationFrame(rafId.current);
+      rafId.current = null;
+    }
+    pendingRender.current = false;
+    
     scratchCirclesRef.current = [];
     scratchedGridRef.current = new Set();
     circleIdCounter.current = 0;
@@ -138,39 +148,51 @@ export default function ScratchCard({
   // Add scratched grid cells for accurate area calculation
   // Grid is based on the scratchable area (offset by BRUSH_RADIUS from edges)
   const addScratchedGridCells = useCallback((x: number, y: number) => {
+    // Pre-compute grid bounds for this scratchable area
+    const maxGridX = Math.ceil(scratchableWidth / GRID_SIZE) - 1;
+    const maxGridY = Math.ceil(scratchableHeight / GRID_SIZE) - 1;
+    
     // Convert to scratchable area coordinates (0,0 is at BRUSH_RADIUS, BRUSH_RADIUS)
     const scratchX = x - BRUSH_RADIUS;
     const scratchY = y - BRUSH_RADIUS;
-
-    // Calculate grid bounds for the circle within scratchable area
-    const maxGridX = Math.ceil(scratchableWidth / GRID_SIZE) - 1;
-    const maxGridY = Math.ceil(scratchableHeight / GRID_SIZE) - 1;
 
     const minGridXCell = Math.max(0, Math.floor((scratchX - BRUSH_RADIUS) / GRID_SIZE));
     const maxGridXCell = Math.min(maxGridX, Math.ceil((scratchX + BRUSH_RADIUS) / GRID_SIZE));
     const minGridYCell = Math.max(0, Math.floor((scratchY - BRUSH_RADIUS) / GRID_SIZE));
     const maxGridYCell = Math.min(maxGridY, Math.ceil((scratchY + BRUSH_RADIUS) / GRID_SIZE));
 
-    // Check each grid cell within the circle
+    // Check each grid cell within the circle - optimized with squared distance
     for (let gridY = minGridYCell; gridY <= maxGridYCell; gridY++) {
+      const cellCenterY = gridY * GRID_SIZE + GRID_SIZE / 2;
+      const dy = scratchY - cellCenterY;
+      const dySquared = dy * dy;
+      
       for (let gridX = minGridXCell; gridX <= maxGridXCell; gridX++) {
         // Calculate center of grid cell in scratchable coordinates
         const cellCenterX = gridX * GRID_SIZE + GRID_SIZE / 2;
-        const cellCenterY = gridY * GRID_SIZE + GRID_SIZE / 2;
+        const dx = scratchX - cellCenterX;
         
-        // Check if cell center is within circle radius
-        const distance = Math.sqrt(
-          Math.pow(scratchX - cellCenterX, 2) + 
-          Math.pow(scratchY - cellCenterY, 2)
-        );
+        // Use squared distance to avoid sqrt calculation
+        const distanceSquared = dx * dx + dySquared;
         
-        if (distance <= BRUSH_RADIUS) {
+        if (distanceSquared <= BRUSH_RADIUS_SQUARED) {
           const gridKey = `${gridX},${gridY}`;
           scratchedGridRef.current.add(gridKey);
         }
       }
     }
-  }, [scratchableWidth, scratchableHeight]);
+  }, [maxGridX, maxGridY]);
+
+  // Schedule render update using requestAnimationFrame for smooth, responsive updates
+  const scheduleRender = useCallback(() => {
+    if (!pendingRender.current) {
+      pendingRender.current = true;
+      rafId.current = requestAnimationFrame(() => {
+        setRenderTrigger(prev => prev + 1);
+        pendingRender.current = false;
+      });
+    }
+  }, []);
 
   // Add scratch point and update circles
   const addScratchPoint = useCallback((x: number, y: number) => {
@@ -192,36 +214,38 @@ export default function ScratchCard({
     // Add to grid for accurate area calculation
     addScratchedGridCells(clampedX, clampedY);
     
-    // Don't limit circles - keep ALL of them for complete scratch persistence
-    // Update render trigger periodically to force re-renders (every 3 circles)
-    // This triggers React to re-render and show new circles from the ref
-    if (scratchCirclesRef.current.length % 3 === 0 || scratchCirclesRef.current.length === 1) {
-      setRenderTrigger(prev => prev + 1);
-    }
+    // Schedule immediate render update for maximum responsiveness
+    scheduleRender();
     
     // Check for auto-reveal (throttled to avoid excessive checks)
     checkAndReveal();
-  }, [addScratchedGridCells, checkAndReveal]);
+  }, [addScratchedGridCells, checkAndReveal, scheduleRender]);
 
   // Interpolate between two points for smooth continuous scratching
+  // Optimized to reduce calculations during interpolation
   const scratchBetween = useCallback((x1: number, y1: number, x2: number, y2: number) => {
-    const distance = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const distance = Math.sqrt(dx * dx + dy * dy);
     const steps = Math.max(1, Math.ceil(distance / INTERPOLATION_STEP));
 
+    // Pre-calculate step increments for better performance
+    const stepX = dx / steps;
+    const stepY = dy / steps;
+
     for (let i = 0; i <= steps; i++) {
-      const t = i / steps;
-      const x = x1 + (x2 - x1) * t;
-      const y = y1 + (y2 - y1) * t;
+      const x = x1 + stepX * i;
+      const y = y1 + stepY * i;
       addScratchPoint(x, y);
     }
   }, [addScratchPoint]);
 
-  // Haptic feedback with throttling
+  // Haptic feedback with throttling - reduced delay for better responsiveness
   const triggerHaptic = useCallback(() => {
     if (Platform.OS === 'web') return;
 
     const now = Date.now();
-    if (now - lastHapticTime.current > 50) {
+    if (now - lastHapticTime.current > 30) { // Reduced from 50ms to 30ms for more responsive feel
       lastHapticTime.current = now;
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
@@ -259,7 +283,12 @@ export default function ScratchCard({
   const handleScratchEnd = useCallback(() => {
     lastPoint.current = null;
     
-    // Force final re-render to ensure ALL circles are shown
+    // Cancel any pending RAF and force immediate final re-render
+    if (rafId.current !== null) {
+      cancelAnimationFrame(rafId.current);
+      rafId.current = null;
+    }
+    pendingRender.current = false;
     setRenderTrigger(prev => prev + 1);
     
     if (onTouchEnd) onTouchEnd();
@@ -395,6 +424,21 @@ export default function ScratchCard({
               fill="url(#scratchGradient)"
               mask="url(#scratchMask)"
             />
+            {/* "Scratch to Reveal" text - also masked so it gets scratched off */}
+            <Text
+              x={CARD_WIDTH / 2}
+              y={CARD_HEIGHT / 2 + 8}
+              fontSize={24}
+              fontWeight="600"
+              fill="white"
+              stroke="rgba(0, 0, 0, 0.3)"
+              strokeWidth={0.5}
+              textAnchor="middle"
+              opacity={0.95}
+              mask="url(#scratchMask)"
+            >
+              Scratch to Reveal
+            </Text>
           </Svg>
         </Animated.View>
       )}
