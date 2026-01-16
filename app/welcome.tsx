@@ -163,9 +163,13 @@ export default function WelcomeScreen() {
     }
   };
 
-  const handleModeSelect = async (mode: 'couples' | 'family') => {
+  const handleModeSelect = (mode: 'couples' | 'family') => {
     setSelectedMode(mode);
-    await AsyncStorage.setItem(MODE_KEY, mode);
+  };
+
+  const handleModeContinue = async () => {
+    if (!selectedMode) return;
+    await AsyncStorage.setItem(MODE_KEY, selectedMode);
     // Skip preferences step - go directly to home
     // User will set preferences before their first activity
     await completeOnboarding(DEFAULT_PREFERENCES);
@@ -356,6 +360,23 @@ export default function WelcomeScreen() {
           <Text style={styles.modeNote}>
             You can change this anytime in settings
           </Text>
+
+          {selectedMode && (
+            <TouchableOpacity
+              onPress={handleModeContinue}
+              activeOpacity={0.8}
+              style={styles.modeContinueButton}
+            >
+              <LinearGradient
+                colors={[Colors.primaryGradientStart, Colors.primaryGradientEnd]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.modeContinueGradient}
+              >
+                <Text style={styles.modeContinueText}>Continue</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          )}
         </ScrollView>
       </View>
     );
@@ -1050,6 +1071,21 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontStyle: 'italic',
     marginTop: Spacing.md,
+  },
+  modeContinueButton: {
+    width: '100%',
+    marginTop: Spacing.xl,
+  },
+  modeContinueGradient: {
+    width: '100%',
+    paddingVertical: 16,
+    borderRadius: BorderRadius.full,
+    alignItems: 'center',
+  },
+  modeContinueText: {
+    fontSize: Typography.sizes.h3,
+    fontWeight: '400' as const,
+    color: '#1A1A1A',
   },
   emailButton: {
     width: '100%',

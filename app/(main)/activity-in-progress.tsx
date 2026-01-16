@@ -12,7 +12,7 @@ import Colors from '@/constants/colors';
 import Typography from '@/constants/typography';
 import Spacing from '@/constants/spacing';
 import { BorderRadius } from '@/constants/design';
-import { Clock, DollarSign, X, MapPin, Sparkles, Edit3, FileText, Camera, Image as ImageIcon, Trash2, CheckCircle, Heart, Users, Save, CloudSun } from 'lucide-react-native';
+import { Clock, DollarSign, X, MapPin, Sparkles, Edit3, FileText, Camera, Image as ImageIcon, Trash2, CheckCircle, Heart, Users, Save, CloudSun, Crown } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 export default function ActivityInProgressScreen() {
@@ -453,7 +453,7 @@ export default function ActivityInProgressScreen() {
           {activity.proTip && (
             <View style={[styles.card, styles.proTipCard]}>
               <View style={styles.proTipHeader}>
-                <Sparkles size={20} color={Colors.primary} />
+                <Crown size={20} color={Colors.primary} />
                 <Text style={styles.proTipTitle}>Pro Tip</Text>
               </View>
               <Text style={styles.proTipText}>{activity.proTip}</Text>

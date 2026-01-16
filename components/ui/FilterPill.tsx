@@ -54,9 +54,9 @@ const styles = StyleSheet.create({
     borderColor: Colors.primary,
   },
   premiumLocked: {
-    borderColor: Colors.accent,
+    borderColor: Colors.primary,
     borderWidth: 1.5,
-    backgroundColor: 'rgba(251, 191, 36, 0.1)',
+    backgroundColor: Colors.primaryMuted,
   },
   pillContent: {
     flexDirection: 'row',
@@ -85,10 +85,10 @@ const styles = StyleSheet.create({
     fontWeight: '400' as const,
   },
   premiumText: {
-    color: Colors.accent,
+    color: Colors.primary,
   },
   premiumBadge: {
-    backgroundColor: Colors.accent,
+    backgroundColor: Colors.primary,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
   premiumBadgeText: {
     fontSize: 9,
     fontWeight: '600' as const,
-    color: '#1A1A1A',
+    color: Colors.white,
     letterSpacing: 0.5,
   },
 });

@@ -14,7 +14,7 @@ import Colors from '@/constants/colors';
 import Typography from '@/constants/typography';
 import Spacing from '@/constants/spacing';
 import { BorderRadius } from '@/constants/design';
-import { Clock, DollarSign, Calendar, CheckCircle, Trash2, Edit3, Save, X, Share2, Users, CalendarPlus, Camera, MapPin, Plus, ChevronLeft, ChevronRight, FileText, Facebook, Instagram } from 'lucide-react-native';
+import { Clock, DollarSign, Calendar, CheckCircle, Trash2, Edit3, Save, X, Share2, Users, CalendarPlus, Camera, MapPin, Plus, ChevronLeft, ChevronRight, FileText, Facebook, Instagram, Crown } from 'lucide-react-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -666,7 +666,10 @@ export default function ActivityDetailScreen() {
 
           {activity.proTip && (
             <View style={styles.proTipSection}>
-              <Text style={styles.proTipLabel}>Pro Tip</Text>
+              <View style={styles.proTipHeader}>
+                <Crown size={20} color={Colors.primary} />
+                <Text style={styles.proTipLabel}>Pro Tip</Text>
+              </View>
               <Text style={styles.proTipText}>{activity.proTip}</Text>
             </View>
           )}
@@ -796,7 +799,10 @@ export default function ActivityDetailScreen() {
 
               {activity.proTip && (
                 <View style={styles.memoryProTip}>
-                  <Text style={styles.memoryProTipLabel}>💡 Pro Tip</Text>
+                  <View style={styles.memoryProTipHeader}>
+                    <Crown size={16} color={Colors.primary} />
+                    <Text style={styles.memoryProTipLabel}>Pro Tip</Text>
+                  </View>
                   <Text style={styles.memoryProTipText}>{activity.proTip}</Text>
                 </View>
               )}
@@ -1308,11 +1314,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.primary + '40',
   },
+  proTipHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: Spacing.sm,
+  },
   proTipLabel: {
     fontSize: Typography.sizes.h3,
     fontWeight: '600' as const,
     color: Colors.primary,
-    marginBottom: Spacing.sm,
   },
   proTipText: {
     fontSize: Typography.sizes.body,
@@ -2008,16 +2019,23 @@ const styles = StyleSheet.create({
     color: Colors.text,
   },
   memoryProTip: {
-    backgroundColor: Colors.backgroundDark,
+    backgroundColor: Colors.primaryMuted,
     borderRadius: BorderRadius.medium,
     padding: Spacing.md,
     marginBottom: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.primary + '40',
+  },
+  memoryProTipHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: Spacing.xs,
   },
   memoryProTipLabel: {
     fontSize: Typography.sizes.body,
     fontWeight: Typography.weights.semibold,
-    color: Colors.text,
-    marginBottom: Spacing.xs,
+    color: Colors.primary,
   },
   memoryProTipText: {
     fontSize: Typography.sizes.body,

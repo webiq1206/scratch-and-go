@@ -299,17 +299,39 @@ export default function HomeScreen() {
           advancedFilters: isPremium ? advancedFilters : undefined,
         };
         const result = await generateActivity(filters);
-        if (!result.success && result.reason === 'cooldown_active') {
-          const remaining = getCooldownRemaining();
-          alert(
-            'Cooldown Active',
-            `Your next scratch is available in ${formatCooldownTime(remaining)}.`,
-            [
-              { text: 'Not Now', style: 'cancel' },
-              { text: 'Upgrade', onPress: () => router.push('/paywall' as any) }
-            ],
-            'warning'
-          );
+        if (!result.success) {
+          if (result.reason === 'cooldown_active') {
+            const remaining = getCooldownRemaining();
+            alert(
+              'Cooldown Active',
+              `Your next scratch is available in ${formatCooldownTime(remaining)}.`,
+              [
+                { text: 'Not Now', style: 'cancel' },
+                { text: 'Upgrade', onPress: () => router.push('/paywall' as any) }
+              ],
+              'warning'
+            );
+          } else if (result.reason === 'premium_category') {
+            alert(
+              'Premium Category',
+              'This category is only available for Premium users. Upgrade to unlock exclusive activity categories!',
+              [
+                { text: 'Not Now', style: 'cancel' },
+                { text: 'Upgrade', onPress: () => router.push('/paywall' as any) }
+              ],
+              'info'
+            );
+          } else if (result.reason === 'limit_reached') {
+            alert(
+              'Scratch Limit Reached',
+              `You've used your 3 free scratches this month! Upgrade to premium for unlimited scratches.`,
+              [
+                { text: 'Not Now', style: 'cancel' },
+                { text: 'Upgrade', onPress: () => router.push('/paywall' as any) }
+              ],
+              'warning'
+            );
+          }
         }
       });
     }
@@ -460,17 +482,39 @@ export default function HomeScreen() {
     setIsDescriptionExpanded(false);
     scratchCardKeyRef.current = `card-${Date.now()}`;
     const result = await regenerateActivity();
-    if (!result.success && result.reason === 'cooldown_active') {
-      const remaining = getCooldownRemaining();
-      alert(
-        'Cooldown Active',
-        `Your next scratch is available in ${formatCooldownTime(remaining)}.`,
-        [
-          { text: 'Not Now', style: 'cancel' },
-          { text: 'Upgrade', onPress: () => router.push('/paywall' as any) }
-        ],
-        'warning'
-      );
+    if (!result.success) {
+      if (result.reason === 'cooldown_active') {
+        const remaining = getCooldownRemaining();
+        alert(
+          'Cooldown Active',
+          `Your next scratch is available in ${formatCooldownTime(remaining)}.`,
+          [
+            { text: 'Not Now', style: 'cancel' },
+            { text: 'Upgrade', onPress: () => router.push('/paywall' as any) }
+          ],
+          'warning'
+        );
+      } else if (result.reason === 'premium_category') {
+        alert(
+          'Premium Category',
+          'This category is only available for Premium users. Upgrade to unlock exclusive activity categories!',
+          [
+            { text: 'Not Now', style: 'cancel' },
+            { text: 'Upgrade', onPress: () => router.push('/paywall' as any) }
+          ],
+          'info'
+        );
+      } else if (result.reason === 'limit_reached') {
+        alert(
+          'Scratch Limit Reached',
+          `You've used your 3 free scratches this month! Upgrade to premium for unlimited scratches.`,
+          [
+            { text: 'Not Now', style: 'cancel' },
+            { text: 'Upgrade', onPress: () => router.push('/paywall' as any) }
+          ],
+          'warning'
+        );
+      }
     }
   };
 
@@ -716,7 +760,7 @@ export default function HomeScreen() {
                   }}
                   activeOpacity={0.7}
                 >
-                  <Crown size={16} color={Colors.accent} />
+                  <Crown size={16} color={Colors.primary} />
                   <Text style={styles.advancedFiltersButtonLockedText}>Advanced Filters</Text>
                   <View style={styles.proBadgeSmall}>
                     <Text style={styles.proBadgeSmallText}>PRO</Text>
@@ -977,7 +1021,7 @@ export default function HomeScreen() {
                           {currentActivity.proTip && (
                             <View style={styles.proTipContainer}>
                               <View style={styles.proTipHeader}>
-                                <Lightbulb size={16} color={Colors.primary} />
+                                <Crown size={16} color={Colors.primary} />
                                 <Text style={styles.proTipLabel}>Pro Tip</Text>
                               </View>
                               <Text style={styles.proTipText}>{currentActivity.proTip}</Text>
@@ -1146,11 +1190,10 @@ export default function HomeScreen() {
           <Pressable style={styles.advancedFiltersModal} onPress={(e) => e.stopPropagation()}>
             <View style={styles.advancedFiltersHeader}>
               <View style={styles.advancedFiltersTitleRow}>
-                <Sliders size={20} color={Colors.primary} />
+                <Crown size={20} color={Colors.primary} />
                 <Text style={styles.advancedFiltersTitle}>Advanced Filters</Text>
                 <View style={styles.premiumBadge}>
-                  <Crown size={12} color={Colors.backgroundDark} />
-                  <Text style={styles.premiumBadgeText}>PREMIUM</Text>
+                  <Text style={styles.premiumBadgeText}>PRO</Text>
                 </View>
               </View>
               <TouchableOpacity
@@ -1463,7 +1506,7 @@ export default function HomeScreen() {
           <View style={styles.scratchCountContainer}>
             {cooldownDisplay && !isPremium ? (
               <View style={styles.cooldownContainer}>
-                <Timer size={14} color={Colors.accent} />
+                <Timer size={14} color={Colors.primary} />
                 <Text style={styles.cooldownText}>
                   Next scratch in {cooldownDisplay}
                 </Text>
@@ -1805,7 +1848,7 @@ const styles = StyleSheet.create({
     color: Colors.textLight,
   },
   premiumTag: {
-    backgroundColor: Colors.accent,
+    backgroundColor: Colors.primary,
     paddingHorizontal: Spacing.sm,
     paddingVertical: 2,
     borderRadius: BorderRadius.xs,
@@ -1813,7 +1856,7 @@ const styles = StyleSheet.create({
   premiumTagText: {
     fontSize: Typography.sizes.tiny,
     fontWeight: '600' as const,
-    color: Colors.backgroundDark,
+    color: Colors.white,
   },
   
   // Budget Grid
@@ -2184,7 +2227,7 @@ const styles = StyleSheet.create({
   },
   cooldownText: {
     fontSize: Typography.sizes.small,
-    color: Colors.accent,
+    color: Colors.primary,
     fontWeight: '500' as const,
   },
   upgradeLink: {
@@ -2244,14 +2287,14 @@ const styles = StyleSheet.create({
     fontWeight: '500' as const,
   },
   proBadgeSmall: {
-    backgroundColor: Colors.accent,
+    backgroundColor: Colors.primary,
     borderRadius: BorderRadius.xs,
     paddingHorizontal: Spacing.xs,
     paddingVertical: 1,
   },
   proBadgeSmallText: {
     fontSize: 9,
-    color: Colors.backgroundDark,
+    color: Colors.white,
     fontWeight: '700' as const,
   },
   
@@ -2290,14 +2333,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: Colors.accent,
+    backgroundColor: Colors.primary,
     paddingHorizontal: Spacing.sm,
     paddingVertical: 3,
     borderRadius: BorderRadius.xs,
   },
   premiumBadgeText: {
     fontSize: 10,
-    color: Colors.backgroundDark,
+    color: Colors.white,
     fontWeight: '700' as const,
   },
   advancedFiltersClose: {

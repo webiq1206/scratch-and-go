@@ -205,7 +205,7 @@ export default function ActivitySharedScreen() {
           {activity.proTip && (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Lightbulb size={20} color={Colors.primary} />
+                <Crown size={20} color={Colors.primary} />
                 <Text style={styles.sectionTitle}>Pro Tip</Text>
               </View>
               <Text style={styles.sectionText}>{activity.proTip}</Text>
@@ -255,7 +255,7 @@ export default function ActivitySharedScreen() {
                     <Text style={styles.featureText}>Save and organize your favorites</Text>
                   </View>
                   <View style={styles.featureItem}>
-                    <Crown size={16} color={Colors.accent} />
+                    <Crown size={16} color={Colors.primary} />
                     <Text style={styles.featureText}>Premium plans available</Text>
                   </View>
                 </View>

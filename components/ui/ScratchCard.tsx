@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { View, StyleSheet, PanResponder, Animated, Dimensions, Platform } from 'react-native';
 import Svg, { Circle, Defs, Mask, Rect, LinearGradient, Stop, Text } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
@@ -56,11 +56,19 @@ export default function ScratchCard({
 
   // Calculate scratchable area (accounting for brush radius clamping at edges)
   // Users can only scratch from BRUSH_RADIUS to CARD_WIDTH - BRUSH_RADIUS
-  const scratchableWidth = CARD_WIDTH - 2 * BRUSH_RADIUS;
-  const scratchableHeight = CARD_HEIGHT - 2 * BRUSH_RADIUS;
+  // Memoize these values to ensure they're stable and prevent dependency issues
+  const scratchableWidth = useMemo(() => CARD_WIDTH - 2 * BRUSH_RADIUS, []);
+  const scratchableHeight = useMemo(() => CARD_HEIGHT - 2 * BRUSH_RADIUS, []);
+  
+  // Pre-compute grid bounds - memoized to ensure stability
+  const maxGridX = useMemo(() => Math.ceil(scratchableWidth / GRID_SIZE) - 1, [scratchableWidth]);
+  const maxGridY = useMemo(() => Math.ceil(scratchableHeight / GRID_SIZE) - 1, [scratchableHeight]);
   
   // Total grid cells based on SCRATCHABLE area, not full card
-  const totalGridCells = Math.ceil(scratchableWidth / GRID_SIZE) * Math.ceil(scratchableHeight / GRID_SIZE);
+  const totalGridCells = useMemo(
+    () => Math.ceil(scratchableWidth / GRID_SIZE) * Math.ceil(scratchableHeight / GRID_SIZE),
+    [scratchableWidth, scratchableHeight]
+  );
 
   // Reset when resetKey changes (NOT when opacity changes!)
   useEffect(() => {
@@ -147,11 +155,8 @@ export default function ScratchCard({
 
   // Add scratched grid cells for accurate area calculation
   // Grid is based on the scratchable area (offset by BRUSH_RADIUS from edges)
+  // maxGridX and maxGridY are now memoized constants, ensuring they're always defined
   const addScratchedGridCells = useCallback((x: number, y: number) => {
-    // Pre-compute grid bounds for this scratchable area
-    const maxGridX = Math.ceil(scratchableWidth / GRID_SIZE) - 1;
-    const maxGridY = Math.ceil(scratchableHeight / GRID_SIZE) - 1;
-    
     // Convert to scratchable area coordinates (0,0 is at BRUSH_RADIUS, BRUSH_RADIUS)
     const scratchX = x - BRUSH_RADIUS;
     const scratchY = y - BRUSH_RADIUS;

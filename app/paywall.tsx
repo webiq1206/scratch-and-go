@@ -28,12 +28,12 @@ export default function PaywallScreen() {
   const { alert, showSuccess, showError, showInfo } = useAlert();
 
   const benefits = [
-    { icon: Zap, text: 'Unlimited scratches every month', color: Colors.accent, isLogo: false },
-    { icon: null, text: 'No 24-hour cooldown between scratches', color: Colors.accent, isLogo: false, customIcon: '⏱️' },
-    { icon: null, text: 'Advanced filters: cuisine, accessibility & more', color: Colors.accent, isLogo: false, customIcon: '🎛️' },
-    { icon: null, text: 'Exclusive premium activity categories', color: Colors.accent, isLogo: true },
-    { icon: Sparkles, text: 'Priority support from our team', color: Colors.accent, isLogo: false },
-    { icon: Crown, text: '100% ad-free experience', color: Colors.accent, isLogo: false },
+    { icon: Zap, text: 'Unlimited scratches every month', color: Colors.primary, isLogo: false },
+    { icon: null, text: 'No 24-hour cooldown between scratches', color: Colors.primary, isLogo: false, customIcon: '⏱️' },
+    { icon: null, text: 'Advanced filters: cuisine, accessibility & more', color: Colors.primary, isLogo: false, customIcon: '🎛️' },
+    { icon: null, text: 'Exclusive premium activity categories', color: Colors.primary, isLogo: true },
+    { icon: Sparkles, text: 'Priority support from our team', color: Colors.primary, isLogo: false },
+    { icon: Crown, text: '100% ad-free experience', color: Colors.primary, isLogo: false },
   ];
 
   const packages = offerings?.current?.availablePackages || [];
@@ -162,7 +162,7 @@ export default function PaywallScreen() {
             end={{ x: 1, y: 1 }}
             style={styles.iconContainer}
           >
-            <Crown size={40} color="#1A1A1A" />
+            <Crown size={40} color={Colors.backgroundDark} />
           </LinearGradient>
           
           <Text style={styles.title}>Upgrade to Premium</Text>
@@ -393,7 +393,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(251, 191, 36, 0.1)',
+    backgroundColor: Colors.primaryMuted,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -427,7 +427,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -12,
     right: Spacing.lg,
-    backgroundColor: Colors.accent,
+    backgroundColor: Colors.primary,
     paddingHorizontal: Spacing.md,
     paddingVertical: 4,
     borderRadius: BorderRadius.small,

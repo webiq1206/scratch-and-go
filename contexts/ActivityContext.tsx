@@ -392,6 +392,15 @@ export const [ActivityProvider, useActivity] = createContextHook(() => {
       return { success: false, reason: 'cooldown_active' as const };
     }
 
+    // Enforce premium category restrictions for free users
+    if (!isPremium && filters.category) {
+      const premiumCategories = filters.mode === 'couples' ? ['Adventure'] : ['Outdoor'];
+      if (premiumCategories.includes(filters.category)) {
+        console.log('Premium category selected by free user');
+        return { success: false, reason: 'premium_category' as const };
+      }
+    }
+
     setIsGenerating(true);
     setGenerationError(null);
     setCurrentFilters(filters);
@@ -421,6 +430,15 @@ export const [ActivityProvider, useActivity] = createContextHook(() => {
     if (!isPremium && isCooldownActive()) {
       console.log('Cooldown active for free user');
       return { success: false, reason: 'cooldown_active' as const };
+    }
+
+    // Enforce premium category restrictions for free users
+    if (!isPremium && currentFilters.category) {
+      const premiumCategories = currentFilters.mode === 'couples' ? ['Adventure'] : ['Outdoor'];
+      if (premiumCategories.includes(currentFilters.category)) {
+        console.log('Premium category selected by free user');
+        return { success: false, reason: 'premium_category' as const };
+      }
     }
 
     setIsGenerating(true);

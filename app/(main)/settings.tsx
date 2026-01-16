@@ -458,7 +458,7 @@ export default function SettingsScreen() {
               </View>
               {(isPremium || isTrial) && (
                 <View style={styles.premiumBadge}>
-                  <Crown size={12} color={Colors.backgroundDark} />
+                  <Crown size={12} color={Colors.white} />
                   <Text style={styles.premiumBadgeText}>PRO</Text>
                 </View>
               )}
@@ -1109,7 +1109,7 @@ const styles = StyleSheet.create({
   premiumBadgeText: {
     fontSize: Typography.sizes.tiny,
     fontWeight: '600' as const,
-    color: Colors.backgroundDark,
+    color: Colors.white,
   },
   subscriptionActions: {
     gap: Spacing.md,
