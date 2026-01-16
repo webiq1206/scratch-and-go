@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import { Platform } from 'react-native';
 import createContextHook from '@nkzw/create-context-hook';
+import { AUTH_USER_KEY } from '@/constants/storageKeys';
 
 // Safely call maybeCompleteAuthSession
 try {
@@ -23,8 +24,6 @@ export interface User {
   accessToken?: string;
 }
 
-const AUTH_USER_KEY = 'scratch_and_go_user';
-
 const discovery = {
   authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
   tokenEndpoint: 'https://oauth2.googleapis.com/token',
@@ -39,13 +38,22 @@ const facebookDiscovery = {
 export const [AuthContext, useAuth] = createContextHook(() => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   const redirectUri = AuthSession.makeRedirectUri({
     scheme: 'rork-app',
     path: 'auth',
   });
 
-  console.log('Auth redirect URI:', redirectUri);
+  // Clear auth error after 5 seconds
+  useEffect(() => {
+    if (authError) {
+      const timer = setTimeout(() => setAuthError(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [authError]);
+
+  const clearError = useCallback(() => setAuthError(null), []);
 
   const [, googleResponse, googlePromptAsync] = AuthSession.useAuthRequest(
     {
@@ -93,7 +101,18 @@ export const [AuthContext, useAuth] = createContextHook(() => {
     try {
       const savedUser = await AsyncStorage.getItem(AUTH_USER_KEY);
       if (savedUser) {
-        setUser(JSON.parse(savedUser));
+        try {
+          const parsed = JSON.parse(savedUser);
+          if (parsed && typeof parsed === 'object' && parsed.id) {
+            setUser(parsed);
+          } else {
+            console.error('Invalid user data structure, clearing');
+            await AsyncStorage.removeItem(AUTH_USER_KEY);
+          }
+        } catch (parseError) {
+          console.error('Corrupted user data, clearing:', parseError);
+          await AsyncStorage.removeItem(AUTH_USER_KEY);
+        }
       }
     } catch (error) {
       console.error('Error loading user:', error);
@@ -110,6 +129,7 @@ export const [AuthContext, useAuth] = createContextHook(() => {
       const accessToken = authentication?.accessToken;
 
       if (!accessToken) {
+        setAuthError('Failed to authenticate with Google. Please try again.');
         console.error('No access token received');
         return;
       }
@@ -121,8 +141,12 @@ export const [AuthContext, useAuth] = createContextHook(() => {
         }
       );
 
+      if (!userInfoResponse.ok) {
+        setAuthError('Failed to get user info from Google. Please try again.');
+        return;
+      }
+
       const userInfo = await userInfoResponse.json();
-      console.log('Google user info:', userInfo);
 
       const newUser: User = {
         id: userInfo.id,
@@ -135,8 +159,10 @@ export const [AuthContext, useAuth] = createContextHook(() => {
 
       await AsyncStorage.setItem(AUTH_USER_KEY, JSON.stringify(newUser));
       setUser(newUser);
+      setAuthError(null);
     } catch (error) {
       console.error('Error handling Google login:', error);
+      setAuthError('An error occurred during Google login. Please try again.');
     }
   };
 
@@ -148,6 +174,7 @@ export const [AuthContext, useAuth] = createContextHook(() => {
       const accessToken = authentication?.accessToken;
 
       if (!accessToken) {
+        setAuthError('Failed to authenticate with Facebook. Please try again.');
         console.error('No access token received');
         return;
       }
@@ -156,8 +183,12 @@ export const [AuthContext, useAuth] = createContextHook(() => {
         `https://graph.facebook.com/me?fields=id,name,email,picture.type(large)&access_token=${accessToken}`
       );
 
+      if (!userInfoResponse.ok) {
+        setAuthError('Failed to get user info from Facebook. Please try again.');
+        return;
+      }
+
       const userInfo = await userInfoResponse.json();
-      console.log('Facebook user info:', userInfo);
 
       const newUser: User = {
         id: userInfo.id,
@@ -170,26 +201,30 @@ export const [AuthContext, useAuth] = createContextHook(() => {
 
       await AsyncStorage.setItem(AUTH_USER_KEY, JSON.stringify(newUser));
       setUser(newUser);
+      setAuthError(null);
     } catch (error) {
       console.error('Error handling Facebook login:', error);
+      setAuthError('An error occurred during Facebook login. Please try again.');
     }
   };
 
   const loginWithGoogle = async () => {
     try {
-      console.log('Attempting Google login...');
+      setAuthError(null);
       await googlePromptAsync();
     } catch (error) {
       console.error('Error during Google login:', error);
+      setAuthError('Failed to start Google login. Please try again.');
     }
   };
 
   const loginWithFacebook = async () => {
     try {
-      console.log('Attempting Facebook login...');
+      setAuthError(null);
       await facebookPromptAsync();
     } catch (error) {
       console.error('Error during Facebook login:', error);
+      setAuthError('Failed to start Facebook login. Please try again.');
     }
   };
 
@@ -197,14 +232,18 @@ export const [AuthContext, useAuth] = createContextHook(() => {
     try {
       await AsyncStorage.removeItem(AUTH_USER_KEY);
       setUser(null);
+      setAuthError(null);
     } catch (error) {
       console.error('Error logging out:', error);
+      setAuthError('Failed to log out. Please try again.');
     }
   };
 
   return {
     user,
     isLoading,
+    authError,
+    clearError,
     loginWithGoogle,
     loginWithFacebook,
     logout,

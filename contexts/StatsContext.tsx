@@ -3,10 +3,27 @@ import { useMemo, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Activity, SavedActivity } from '@/types/activity';
 import { ActivityStats, CategoryStat, MonthlyRecap, StreakData, WeeklyActivity } from '@/types/stats';
+import { HISTORY_KEY, SCRATCH_COUNT_KEY, SAVED_ACTIVITIES_KEY } from '@/constants/storageKeys';
 
-const HISTORY_KEY = 'scratch_and_go_history';
-const SCRATCH_COUNT_KEY = 'scratch_and_go_count';
-const SAVED_ACTIVITIES_KEY = 'scratch_and_go_saved_activities';
+// Duration estimates in minutes (used for time spent calculations)
+// These are approximate values for typical activity durations
+const DURATION_ESTIMATES = {
+  QUICK_ACTIVITY: 90,      // 1.5 hours for "quick" or "1-2 hour" activities
+  HALF_DAY: 240,           // 4 hours for "half day" activities
+  FULL_DAY: 480,           // 8 hours for "full day" activities
+} as const;
+
+// Cost estimates in dollars (used for money spent calculations)
+// These represent typical spending ranges for each cost tier
+const COST_ESTIMATES = {
+  FREE: 0,                 // No cost
+  LOW: 25,                 // '$' tier - budget-friendly activities
+  MEDIUM: 75,              // '$$' tier - moderate cost activities
+  HIGH: 150,               // '$$$' tier - premium/expensive activities
+} as const;
+
+// Stats refresh interval (30 seconds) - how often data is reloaded from storage
+const STATS_REFRESH_INTERVAL_MS = 30000;
 
 export const [StatsProvider, useStats] = createContextHook(() => {
   const [activityHistory, setActivityHistory] = useState<Activity[]>([]);
@@ -23,9 +40,49 @@ export const [StatsProvider, useStats] = createContextHook(() => {
           AsyncStorage.getItem(SAVED_ACTIVITIES_KEY),
         ]);
         
-        if (historyStr) setActivityHistory(JSON.parse(historyStr));
-        if (countStr) setScratchCount(parseInt(countStr));
-        if (savedStr) setSavedActivities(JSON.parse(savedStr));
+        // Parse history with error handling
+        if (historyStr) {
+          try {
+            const parsed = JSON.parse(historyStr);
+            if (Array.isArray(parsed)) {
+              setActivityHistory(parsed);
+            } else {
+              console.error('Activity history is not an array, clearing corrupted data');
+              await AsyncStorage.removeItem(HISTORY_KEY);
+            }
+          } catch (parseError) {
+            console.error('Corrupted activity history, clearing:', parseError);
+            await AsyncStorage.removeItem(HISTORY_KEY);
+          }
+        }
+        
+        // Parse count with NaN handling
+        if (countStr) {
+          const parsed = parseInt(countStr, 10);
+          if (!isNaN(parsed) && parsed >= 0) {
+            setScratchCount(parsed);
+          } else {
+            console.error('Invalid scratch count, resetting to 0');
+            await AsyncStorage.removeItem(SCRATCH_COUNT_KEY);
+            setScratchCount(0);
+          }
+        }
+        
+        // Parse saved activities with error handling
+        if (savedStr) {
+          try {
+            const parsed = JSON.parse(savedStr);
+            if (Array.isArray(parsed)) {
+              setSavedActivities(parsed);
+            } else {
+              console.error('Saved activities is not an array, clearing corrupted data');
+              await AsyncStorage.removeItem(SAVED_ACTIVITIES_KEY);
+            }
+          } catch (parseError) {
+            console.error('Corrupted saved activities in stats, clearing:', parseError);
+            await AsyncStorage.removeItem(SAVED_ACTIVITIES_KEY);
+          }
+        }
       } catch (error) {
         console.error('Failed to load stats data:', error);
       }
@@ -34,7 +91,7 @@ export const [StatsProvider, useStats] = createContextHook(() => {
     loadData();
     
     // Set up interval to refresh data periodically
-    const interval = setInterval(loadData, 5000);
+    const interval = setInterval(loadData, STATS_REFRESH_INTERVAL_MS);
     return () => clearInterval(interval);
   }, []);
 
@@ -69,11 +126,11 @@ export const [StatsProvider, useStats] = createContextHook(() => {
     completedActivities.forEach(activity => {
       const duration = activity.duration.toLowerCase();
       if (duration.includes('quick') || duration.includes('1-2 hour')) {
-        totalMinutes += 90;
+        totalMinutes += DURATION_ESTIMATES.QUICK_ACTIVITY;
       } else if (duration.includes('half day')) {
-        totalMinutes += 240;
+        totalMinutes += DURATION_ESTIMATES.HALF_DAY;
       } else if (duration.includes('full day')) {
-        totalMinutes += 480;
+        totalMinutes += DURATION_ESTIMATES.FULL_DAY;
       } else if (duration.includes('hour')) {
         const match = duration.match(/(\d+)/);
         if (match) {
@@ -92,16 +149,16 @@ export const [StatsProvider, useStats] = createContextHook(() => {
     completedActivities.forEach(activity => {
       switch (activity.cost) {
         case 'free':
-          totalCost += 0;
+          totalCost += COST_ESTIMATES.FREE;
           break;
         case '$':
-          totalCost += 25;
+          totalCost += COST_ESTIMATES.LOW;
           break;
         case '$$':
-          totalCost += 75;
+          totalCost += COST_ESTIMATES.MEDIUM;
           break;
         case '$$$':
-          totalCost += 150;
+          totalCost += COST_ESTIMATES.HIGH;
           break;
       }
     });
@@ -182,20 +239,20 @@ export const [StatsProvider, useStats] = createContextHook(() => {
     monthCompleted.forEach(activity => {
       const duration = activity.duration.toLowerCase();
       if (duration.includes('quick') || duration.includes('1-2 hour')) {
-        monthTimeSpent += 90;
+        monthTimeSpent += DURATION_ESTIMATES.QUICK_ACTIVITY;
       } else if (duration.includes('half day')) {
-        monthTimeSpent += 240;
+        monthTimeSpent += DURATION_ESTIMATES.HALF_DAY;
       } else if (duration.includes('full day')) {
-        monthTimeSpent += 480;
+        monthTimeSpent += DURATION_ESTIMATES.FULL_DAY;
       }
     });
 
     let monthMoneySpent = 0;
     monthCompleted.forEach(activity => {
       switch (activity.cost) {
-        case '$': monthMoneySpent += 25; break;
-        case '$$': monthMoneySpent += 75; break;
-        case '$$$': monthMoneySpent += 150; break;
+        case '$': monthMoneySpent += COST_ESTIMATES.LOW; break;
+        case '$$': monthMoneySpent += COST_ESTIMATES.MEDIUM; break;
+        case '$$$': monthMoneySpent += COST_ESTIMATES.HIGH; break;
       }
     });
 

@@ -2,8 +2,7 @@ import createContextHook from '@nkzw/create-context-hook';
 import { useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { UserPreferences, DEFAULT_PREFERENCES, PersonalizationData, FamilyMember, CoupleNames, GroupType } from '@/types/preferences';
-
-const PREFERENCES_KEY = 'scratch_and_go_preferences';
+import { PREFERENCES_KEY } from '@/constants/storageKeys';
 
 export const [PreferencesProvider, usePreferences] = createContextHook(() => {
   const [preferences, setPreferences] = useState<UserPreferences>(DEFAULT_PREFERENCES);
@@ -17,8 +16,23 @@ export const [PreferencesProvider, usePreferences] = createContextHook(() => {
     try {
       const stored = await AsyncStorage.getItem(PREFERENCES_KEY);
       if (stored) {
-        const parsed = JSON.parse(stored);
-        setPreferences(parsed);
+        try {
+          const parsed = JSON.parse(stored);
+          if (parsed && typeof parsed === 'object') {
+            // Merge with defaults to handle incomplete/outdated saved preferences
+            const mergedPreferences: UserPreferences = {
+              ...DEFAULT_PREFERENCES,
+              ...parsed,
+            };
+            setPreferences(mergedPreferences);
+          } else {
+            console.error('Invalid preferences data, using defaults');
+            await AsyncStorage.removeItem(PREFERENCES_KEY);
+          }
+        } catch (parseError) {
+          console.error('Corrupted preferences data, clearing and using defaults:', parseError);
+          await AsyncStorage.removeItem(PREFERENCES_KEY);
+        }
       }
     } catch (error) {
       console.error('Failed to load preferences:', error);
@@ -246,11 +260,17 @@ export const [PreferencesProvider, usePreferences] = createContextHook(() => {
     return null;
   }, [preferences.personalization, getFamilyAgesSummary]);
 
+  // Mark preferences as configured (after user completes preferences setup)
+  const markPreferencesConfigured = useCallback(async () => {
+    await updatePreferences({ hasConfiguredPreferences: true });
+  }, [updatePreferences]);
+
   return {
     preferences,
     isLoading,
     updatePreferences,
     getContentRestrictions,
+    markPreferencesConfigured,
     // Personalization
     getPersonalization,
     updatePersonalization,

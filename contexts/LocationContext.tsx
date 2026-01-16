@@ -3,8 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform, AppState, AppStateStatus } from 'react-native';
 import { LocationData, WeatherData } from '@/types/activity';
-
-const LOCATION_KEY = 'scratch_and_go_location';
+import { LOCATION_KEY } from '@/constants/storageKeys';
 const WEATHER_CACHE_DURATION = 30 * 60 * 1000;
 const LOCATION_CHECK_INTERVAL = 30 * 60 * 1000;
 const SIGNIFICANT_DISTANCE = 50000;
@@ -24,7 +23,18 @@ export const [LocationProvider, useLocation] = createContextHook(() => {
     try {
       const stored = await AsyncStorage.getItem(LOCATION_KEY);
       if (stored) {
-        setLocation(JSON.parse(stored));
+        try {
+          const parsed = JSON.parse(stored);
+          if (parsed && typeof parsed === 'object' && parsed.city) {
+            setLocation(parsed);
+          } else {
+            console.error('Invalid location data structure, clearing');
+            await AsyncStorage.removeItem(LOCATION_KEY);
+          }
+        } catch (parseError) {
+          console.error('Corrupted location data, clearing:', parseError);
+          await AsyncStorage.removeItem(LOCATION_KEY);
+        }
       }
     } catch (error) {
       console.error('Failed to load saved location:', error);
@@ -510,14 +520,14 @@ export const [LocationProvider, useLocation] = createContextHook(() => {
 });
 
 function getWeatherInfo(weatherCode: number): { condition: string; description: string; icon: string } {
-  if (weatherCode === 0) return { condition: 'Clear', description: 'Clear sky', icon: '' };
-  if (weatherCode <= 3) return { condition: 'Partly Cloudy', description: 'Partly cloudy', icon: '' };
-  if (weatherCode <= 48) return { condition: 'Foggy', description: 'Fog', icon: '' };
-  if (weatherCode <= 57) return { condition: 'Drizzle', description: 'Drizzle', icon: '' };
-  if (weatherCode <= 67) return { condition: 'Rain', description: 'Rain', icon: '' };
-  if (weatherCode <= 77) return { condition: 'Snow', description: 'Snow', icon: '' };
-  if (weatherCode <= 82) return { condition: 'Rain', description: 'Rain showers', icon: '' };
-  if (weatherCode <= 86) return { condition: 'Snow', description: 'Snow showers', icon: '' };
-  if (weatherCode <= 99) return { condition: 'Thunderstorm', description: 'Thunderstorm', icon: '' };
-  return { condition: 'Unknown', description: 'Weather unknown', icon: '' };
+  if (weatherCode === 0) return { condition: 'Clear', description: 'Clear sky', icon: '☀️' };
+  if (weatherCode <= 3) return { condition: 'Partly Cloudy', description: 'Partly cloudy', icon: '⛅' };
+  if (weatherCode <= 48) return { condition: 'Foggy', description: 'Fog', icon: '🌫️' };
+  if (weatherCode <= 57) return { condition: 'Drizzle', description: 'Drizzle', icon: '🌧️' };
+  if (weatherCode <= 67) return { condition: 'Rain', description: 'Rain', icon: '🌧️' };
+  if (weatherCode <= 77) return { condition: 'Snow', description: 'Snow', icon: '❄️' };
+  if (weatherCode <= 82) return { condition: 'Rain', description: 'Rain showers', icon: '🌦️' };
+  if (weatherCode <= 86) return { condition: 'Snow', description: 'Snow showers', icon: '🌨️' };
+  if (weatherCode <= 99) return { condition: 'Thunderstorm', description: 'Thunderstorm', icon: '⛈️' };
+  return { condition: 'Unknown', description: 'Weather unknown', icon: '🌡️' };
 }

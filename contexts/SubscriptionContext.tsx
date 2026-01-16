@@ -7,14 +7,28 @@ const ENTITLEMENT_ID = 'premium';
 
 function getRCApiKey(): string {
   try {
+    let apiKey = '';
+    
     if (__DEV__ || Platform.OS === 'web') {
-      return process.env.EXPO_PUBLIC_REVENUECAT_TEST_API_KEY || '';
+      apiKey = process.env.EXPO_PUBLIC_REVENUECAT_TEST_API_KEY || '';
+      if (!apiKey) {
+        console.warn('[RevenueCat] Missing EXPO_PUBLIC_REVENUECAT_TEST_API_KEY - purchases will not work in development');
+      }
+    } else {
+      apiKey = Platform.select({
+        ios: process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY || '',
+        android: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY || '',
+        default: process.env.EXPO_PUBLIC_REVENUECAT_TEST_API_KEY || '',
+      }) || '';
+      
+      if (!apiKey) {
+        const platform = Platform.OS;
+        console.warn(`[RevenueCat] Missing API key for ${platform} - purchases will not work`);
+        console.warn(`[RevenueCat] Set EXPO_PUBLIC_REVENUECAT_${platform.toUpperCase()}_API_KEY in your environment`);
+      }
     }
-    return Platform.select({
-      ios: process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY || '',
-      android: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY || '',
-      default: process.env.EXPO_PUBLIC_REVENUECAT_TEST_API_KEY || '',
-    }) || '';
+    
+    return apiKey;
   } catch {
     console.warn('[RevenueCat] Failed to get API key');
     return '';
@@ -205,10 +219,21 @@ export const [SubscriptionProvider, useSubscription] = createContextHook(() => {
     purchasePackage,
     restorePurchases,
     refreshCustomerInfo,
+    // Trial functionality - not implemented in current version
     getTrialDaysRemaining: (): number => 0,
-    activatePremium: async () => {},
-    startTrial: async () => {},
-    cancelSubscription: async () => {},
-    updateSubscriptionTier: async () => {},
+    // These functions are placeholders for future subscription management features
+    // They are kept for API compatibility but do nothing in the current implementation
+    activatePremium: async () => {
+      console.warn('activatePremium is not implemented - use purchasePackage instead');
+    },
+    startTrial: async () => {
+      console.warn('startTrial is not implemented in current version');
+    },
+    cancelSubscription: async () => {
+      console.warn('cancelSubscription should be done through platform settings (App Store/Play Store)');
+    },
+    updateSubscriptionTier: async () => {
+      console.warn('updateSubscriptionTier is not implemented - use purchasePackage for upgrades');
+    },
   };
 });

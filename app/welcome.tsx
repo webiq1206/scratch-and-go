@@ -161,7 +161,9 @@ export default function WelcomeScreen() {
   const handleModeSelect = async (mode: 'couples' | 'family') => {
     setSelectedMode(mode);
     await AsyncStorage.setItem(MODE_KEY, mode);
-    setStep('preferences');
+    // Skip preferences step - go directly to home
+    // User will set preferences before their first activity
+    await completeOnboarding(DEFAULT_PREFERENCES);
   };
 
   const handleContinueWithoutLogin = () => {
@@ -492,11 +494,15 @@ export default function WelcomeScreen() {
               activeOpacity={0.8}
               style={styles.socialButton}
               disabled={isLoggingIn}
+              accessibilityLabel="Sign in with Google"
+              accessibilityRole="button"
+              accessibilityState={{ disabled: isLoggingIn }}
             >
               <View style={styles.socialButtonContent}>
                 <Image
                   source={{ uri: 'https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg' }}
                   style={styles.socialIcon}
+                  accessibilityIgnoresInvertColors
                 />
                 <Text style={styles.socialButtonText}>Continue with Google</Text>
               </View>
@@ -507,17 +513,21 @@ export default function WelcomeScreen() {
               activeOpacity={0.8}
               style={[styles.socialButton, styles.facebookButton]}
               disabled={isLoggingIn}
+              accessibilityLabel="Sign in with Facebook"
+              accessibilityRole="button"
+              accessibilityState={{ disabled: isLoggingIn }}
             >
               <View style={styles.socialButtonContent}>
                 <Image
                   source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/5/51/Facebook_f_logo_%282019%29.svg' }}
                   style={styles.socialIcon}
+                  accessibilityIgnoresInvertColors
                 />
                 <Text style={[styles.socialButtonText, styles.facebookButtonText]}>Continue with Facebook</Text>
               </View>
             </TouchableOpacity>
 
-            <View style={styles.dividerContainer}>
+            <View style={styles.dividerContainer} accessibilityElementsHidden>
               <View style={styles.divider} />
               <Text style={styles.dividerText}>or</Text>
               <View style={styles.divider} />
@@ -528,6 +538,9 @@ export default function WelcomeScreen() {
               activeOpacity={0.8}
               style={{ width: '100%' }}
               disabled={isLoggingIn}
+              accessibilityLabel="Continue without signing in"
+              accessibilityRole="button"
+              accessibilityState={{ disabled: isLoggingIn }}
             >
               <LinearGradient
                 colors={[Colors.primaryGradientStart, Colors.primaryGradientEnd]}

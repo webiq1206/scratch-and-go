@@ -2,9 +2,7 @@ import createContextHook from '@nkzw/create-context-hook';
 import { useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Activity, SavedActivity, LocationData } from '@/types/activity';
-
-const SAVED_ACTIVITIES_KEY = 'scratch_and_go_saved_activities';
-const LOCATION_KEY = 'scratch_and_go_location';
+import { SAVED_ACTIVITIES_KEY, LOCATION_KEY } from '@/constants/storageKeys';
 
 export const [MemoryBookProvider, useMemoryBook] = createContextHook(() => {
   const [savedActivities, setSavedActivities] = useState<SavedActivity[]>([]);
@@ -17,7 +15,15 @@ export const [MemoryBookProvider, useMemoryBook] = createContextHook(() => {
       try {
         const stored = await AsyncStorage.getItem(LOCATION_KEY);
         if (stored) {
-          setCurrentLocation(JSON.parse(stored));
+          try {
+            const parsed = JSON.parse(stored);
+            if (parsed && typeof parsed === 'object') {
+              setCurrentLocation(parsed);
+            }
+          } catch (parseError) {
+            console.error('Corrupted location data, clearing:', parseError);
+            await AsyncStorage.removeItem(LOCATION_KEY);
+          }
         }
       } catch (error) {
         console.error('Failed to load location in MemoryBook:', error);
@@ -34,8 +40,18 @@ export const [MemoryBookProvider, useMemoryBook] = createContextHook(() => {
     try {
       const stored = await AsyncStorage.getItem(SAVED_ACTIVITIES_KEY);
       if (stored) {
-        const activities = JSON.parse(stored) as SavedActivity[];
-        setSavedActivities(activities);
+        try {
+          const activities = JSON.parse(stored);
+          if (Array.isArray(activities)) {
+            setSavedActivities(activities as SavedActivity[]);
+          } else {
+            console.error('Saved activities is not an array, clearing corrupted data');
+            await AsyncStorage.removeItem(SAVED_ACTIVITIES_KEY);
+          }
+        } catch (parseError) {
+          console.error('Corrupted saved activities data, clearing:', parseError);
+          await AsyncStorage.removeItem(SAVED_ACTIVITIES_KEY);
+        }
       }
     } catch (error) {
       console.error('Failed to load saved activities:', error);

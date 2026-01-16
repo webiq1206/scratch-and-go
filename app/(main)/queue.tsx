@@ -8,15 +8,15 @@ import { ThumbsUp, ThumbsDown, Trash2, Users, CheckCircle, Clock, Heart, Sparkle
 import Colors from '@/constants/colors';
 import Typography from '@/constants/typography';
 import Spacing from '@/constants/spacing';
-import { BorderRadius, Shadows } from '@/constants/design';
+import { BorderRadius } from '@/constants/design';
 import { useCollaborative } from '@/contexts/CollaborativeContext';
 import { CollaborativeActivity } from '@/types/collaborative';
 import { useMemoryBook } from '@/contexts/MemoryBookContext';
 import { useAlert } from '@/contexts/AlertContext';
 import PolaroidFrame from '@/components/ui/PolaroidFrame';
+import { MODE_KEY } from '@/constants/storageKeys';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const MODE_KEY = 'scratch_and_go_mode';
 type Mode = 'couples' | 'family';
 
 // Mode-specific content
@@ -49,18 +49,30 @@ export default function QueueScreen() {
     approvedActivities,
   } = useCollaborative();
 
-  const { saveActivity, getCompletedActivities } = useMemoryBook();
+  const { saveActivity, savedActivities } = useMemoryBook();
   const { alert, showSuccess, showError } = useAlert();
   const [activeTab, setActiveTab] = useState<'pending' | 'approved'>('pending');
   const [refreshing, setRefreshing] = useState(false);
   const [mode, setMode] = useState<Mode>('couples');
+  const [isModeLoading, setIsModeLoading] = useState(true);
 
-  // Load mode
+  // Load mode with error handling
   useEffect(() => {
     const loadMode = async () => {
-      const savedMode = await AsyncStorage.getItem(MODE_KEY);
-      if (savedMode) {
-        setMode(savedMode as Mode);
+      try {
+        const savedMode = await AsyncStorage.getItem(MODE_KEY);
+        if (savedMode && (savedMode === 'couples' || savedMode === 'family')) {
+          setMode(savedMode);
+        } else if (savedMode) {
+          // Invalid mode value, clear and use default
+          console.error('Invalid mode value in storage, using default');
+          await AsyncStorage.removeItem(MODE_KEY);
+        }
+      } catch (error) {
+        console.error('Failed to load mode:', error);
+        // Use default mode on error
+      } finally {
+        setIsModeLoading(false);
       }
     };
     loadMode();
@@ -70,12 +82,12 @@ export default function QueueScreen() {
 
   // Get user photos for empty state decoration
   const userPhotos = useMemo(() => {
-    const completed = getCompletedActivities();
+    const completed = savedActivities.filter(a => a.isCompleted);
     return completed
       .filter(a => a.photos && a.photos.length > 0)
       .flatMap(a => a.photos!)
       .slice(0, 3);
-  }, [getCompletedActivities]);
+  }, [savedActivities]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -107,7 +119,17 @@ export default function QueueScreen() {
 
   const handleSaveToMemoryBook = async (activity: CollaborativeActivity) => {
     try {
-      await saveActivity(activity);
+      // Map CollaborativeActivity to Activity type for saving
+      const activityToSave = {
+        title: activity.title,
+        description: activity.description,
+        cost: activity.cost,
+        duration: activity.duration,
+        category: activity.category,
+        proTip: activity.proTip,
+        supplies: activity.supplies,
+      };
+      saveActivity(activityToSave);
       showSuccess('Saved!', mode === 'couples' 
         ? 'Date idea saved for your next adventure together!' 
         : 'Activity saved for your next family adventure!');

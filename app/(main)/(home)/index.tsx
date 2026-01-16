@@ -13,6 +13,7 @@ import { BorderRadius } from '@/constants/design';
 
 import ScratchCard from '@/components/ui/ScratchCard';
 import LocationSelector from '@/components/ui/LocationSelector';
+import PreferencesSetupModal from '@/components/ui/PreferencesSetupModal';
 import { useActivity } from '@/contexts/ActivityContext';
 import { useLocation } from '@/contexts/LocationContext';
 import { useSubscription } from '@/contexts/SubscriptionContext';
@@ -117,9 +118,11 @@ export default function HomeScreen() {
   const { isPremium } = useSubscription();
   const { alert, showSuccess, showError, showInfo } = useAlert();
   const { user, isAuthenticated, logout } = useAuth();
-  const { getDisplayName, getPersonalization } = usePreferences();
+  const { preferences, getDisplayName, getPersonalization } = usePreferences();
   const [isSharing, setIsSharing] = useState(false);
   const [isSavedForLater, setIsSavedForLater] = useState(false);
+  const [showPreferencesSetup, setShowPreferencesSetup] = useState(false);
+  const pendingWizardActionRef = useRef<(() => void) | null>(null);
   
   // Get personalized display name
   const displayName = getDisplayName();
@@ -317,10 +320,22 @@ export default function HomeScreen() {
   }, [slideAnim, wizardStep]);
 
   const handleStartWizard = useCallback(() => {
+    // Check if preferences are configured before starting
+    if (!preferences.hasConfiguredPreferences) {
+      // Store the action to continue after preferences setup
+      pendingWizardActionRef.current = () => {
+        setWizardAnswers({});
+        setWizardStep('category');
+        slideAnim.setValue(SCREEN_WIDTH);
+      };
+      setShowPreferencesSetup(true);
+      return;
+    }
+    
     setWizardAnswers({});
     setWizardStep('category');
     slideAnim.setValue(SCREEN_WIDTH);
-  }, [slideAnim]);
+  }, [slideAnim, preferences.hasConfiguredPreferences]);
 
   const handleRestartWizard = useCallback(() => {
     setWizardAnswers({});
@@ -330,6 +345,15 @@ export default function HomeScreen() {
     scratchCardKeyRef.current = `card-${Date.now()}`;
     clearCurrentActivity();
   }, [clearCurrentActivity]);
+
+  const handlePreferencesSetupComplete = useCallback(() => {
+    setShowPreferencesSetup(false);
+    // Execute the pending action after preferences are set
+    if (pendingWizardActionRef.current) {
+      pendingWizardActionRef.current();
+      pendingWizardActionRef.current = null;
+    }
+  }, []);
 
   const wizardProgress = useMemo(() => {
     const steps = ['category', 'budget', 'timing', 'setting'];
@@ -1073,6 +1097,13 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      {/* Preferences Setup Modal - shown before first activity */}
+      <PreferencesSetupModal
+        visible={showPreferencesSetup}
+        onComplete={handlePreferencesSetupComplete}
+        onSkip={handlePreferencesSetupComplete}
+      />
+
       {/* Advanced Filters Modal (Premium Only) */}
       <Modal
         visible={showAdvancedFilters}

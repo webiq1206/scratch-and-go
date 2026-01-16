@@ -20,8 +20,29 @@ export const [YearRecapProvider, useYearRecap] = createContextHook(() => {
           AsyncStorage.getItem(HISTORY_KEY),
         ]);
         
-        if (savedStr) setSavedActivities(JSON.parse(savedStr));
-        if (historyStr) setActivityHistory(JSON.parse(historyStr));
+        // Parse saved activities with error handling
+        if (savedStr) {
+          try {
+            const parsed = JSON.parse(savedStr);
+            if (Array.isArray(parsed)) {
+              setSavedActivities(parsed);
+            }
+          } catch (parseError) {
+            console.error('Corrupted saved activities in year recap:', parseError);
+          }
+        }
+        
+        // Parse activity history with error handling
+        if (historyStr) {
+          try {
+            const parsed = JSON.parse(historyStr);
+            if (Array.isArray(parsed)) {
+              setActivityHistory(parsed);
+            }
+          } catch (parseError) {
+            console.error('Corrupted activity history in year recap:', parseError);
+          }
+        }
       } catch (error) {
         console.error('Failed to load year recap data:', error);
       }
@@ -29,8 +50,8 @@ export const [YearRecapProvider, useYearRecap] = createContextHook(() => {
     
     loadData();
     
-    // Refresh data periodically
-    const interval = setInterval(loadData, 10000);
+    // Refresh data periodically (30 seconds instead of 10 for performance)
+    const interval = setInterval(loadData, 30000);
     return () => clearInterval(interval);
   }, []);
 

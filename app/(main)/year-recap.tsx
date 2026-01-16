@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, Component, ErrorInfo, ReactNode } from 'react';
 import {
   View,
   Text,
@@ -20,6 +20,51 @@ import Spacing from '@/constants/spacing';
 import Button from '@/components/ui/Button';
 import { triggerHaptic } from '@/utils/haptics';
 
+// Error boundary for individual slides
+interface SlideErrorBoundaryProps {
+  children: ReactNode;
+  fallbackColor: string;
+}
+
+interface SlideErrorBoundaryState {
+  hasError: boolean;
+}
+
+class SlideErrorBoundary extends Component<SlideErrorBoundaryProps, SlideErrorBoundaryState> {
+  constructor(props: SlideErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(): SlideErrorBoundaryState {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('Slide error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <LinearGradient
+          colors={[this.props.fallbackColor, '#333333']}
+          style={styles.slide}
+        >
+          <View style={styles.slideContent}>
+            <Text style={styles.slideTitle}>Oops!</Text>
+            <Text style={styles.slideDescription}>
+              Something went wrong loading this slide.
+            </Text>
+          </View>
+        </LinearGradient>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default function YearRecapScreen() {
@@ -31,6 +76,24 @@ export default function YearRecapScreen() {
   const insets = useSafeAreaInsets();
 
   const totalSlides = 7;
+
+  // Fallback if recap is not available
+  if (!currentYearRecap) {
+    return (
+      <View style={styles.container}>
+        <Stack.Screen options={{ headerShown: false }} />
+        <LinearGradient
+          colors={['#FF6B6B', '#FF8E53', '#FFB347']}
+          style={styles.slide}
+        >
+          <View style={styles.slideContent}>
+            <Text style={styles.slideTitle}>Loading...</Text>
+            <Text style={styles.slideDescription}>Preparing your year in review</Text>
+          </View>
+        </LinearGradient>
+      </View>
+    );
+  }
 
   useEffect(() => {
     Animated.parallel([
@@ -48,7 +111,7 @@ export default function YearRecapScreen() {
     ]).start();
   }, [currentSlide, fadeAnim, scaleAnim]);
 
-  const handleScroll = (event: any) => {
+  const handleScroll = (event: { nativeEvent: { contentOffset: { x: number } } }) => {
     const slideIndex = Math.round(event.nativeEvent.contentOffset.x / SCREEN_WIDTH);
     if (slideIndex !== currentSlide) {
       setCurrentSlide(slideIndex);
@@ -124,13 +187,27 @@ export default function YearRecapScreen() {
           onMomentumScrollEnd={handleScroll}
           scrollEventThrottle={16}
         >
-          <Slide1 recap={currentYearRecap} fadeAnim={fadeAnim} scaleAnim={scaleAnim} />
-          <Slide2 recap={currentYearRecap} fadeAnim={fadeAnim} scaleAnim={scaleAnim} />
-          <Slide3 recap={currentYearRecap} fadeAnim={fadeAnim} scaleAnim={scaleAnim} />
-          <Slide4 recap={currentYearRecap} fadeAnim={fadeAnim} scaleAnim={scaleAnim} />
-          <Slide5 recap={currentYearRecap} fadeAnim={fadeAnim} scaleAnim={scaleAnim} />
-          <Slide6 recap={currentYearRecap} fadeAnim={fadeAnim} scaleAnim={scaleAnim} />
-          <Slide7 recap={currentYearRecap} fadeAnim={fadeAnim} scaleAnim={scaleAnim} />
+          <SlideErrorBoundary fallbackColor="#FF6B6B">
+            <Slide1 recap={currentYearRecap} fadeAnim={fadeAnim} scaleAnim={scaleAnim} />
+          </SlideErrorBoundary>
+          <SlideErrorBoundary fallbackColor="#667EEA">
+            <Slide2 recap={currentYearRecap} fadeAnim={fadeAnim} scaleAnim={scaleAnim} />
+          </SlideErrorBoundary>
+          <SlideErrorBoundary fallbackColor="#11998E">
+            <Slide3 recap={currentYearRecap} fadeAnim={fadeAnim} scaleAnim={scaleAnim} />
+          </SlideErrorBoundary>
+          <SlideErrorBoundary fallbackColor="#FA709A">
+            <Slide4 recap={currentYearRecap} fadeAnim={fadeAnim} scaleAnim={scaleAnim} />
+          </SlideErrorBoundary>
+          <SlideErrorBoundary fallbackColor="#4E54C8">
+            <Slide5 recap={currentYearRecap} fadeAnim={fadeAnim} scaleAnim={scaleAnim} />
+          </SlideErrorBoundary>
+          <SlideErrorBoundary fallbackColor="#F857A6">
+            <Slide6 recap={currentYearRecap} fadeAnim={fadeAnim} scaleAnim={scaleAnim} />
+          </SlideErrorBoundary>
+          <SlideErrorBoundary fallbackColor="#12C2E9">
+            <Slide7 recap={currentYearRecap} fadeAnim={fadeAnim} scaleAnim={scaleAnim} />
+          </SlideErrorBoundary>
         </ScrollView>
 
         <View style={[styles.navigation, { bottom: Math.max(insets.bottom, 30) }]}>
@@ -172,7 +249,17 @@ export default function YearRecapScreen() {
 }
 
 interface SlideProps {
-  recap: any;
+  recap: {
+    year: number;
+    totalActivitiesCompleted: number;
+    totalTimeSpent: number;
+    totalMoneySpent: number;
+    favoriteCategory: string | null;
+    monthlyBreakdown: Array<{ month: string; count: number }>;
+    highlights: Array<{ title: string; description: string }>;
+    personalizedMessage: string;
+    streakRecord: number;
+  };
   fadeAnim: Animated.Value;
   scaleAnim: Animated.Value;
 }

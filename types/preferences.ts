@@ -27,6 +27,7 @@ export interface UserPreferences {
   includeArtsAndCulture: boolean;
   includeLiveEntertainment: boolean;
   completedOnboarding: boolean;
+  hasConfiguredPreferences: boolean;
   personalization?: PersonalizationData;
 }
 
@@ -39,6 +40,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   includeArtsAndCulture: true,
   includeLiveEntertainment: true,
   completedOnboarding: false,
+  hasConfiguredPreferences: false,
   personalization: undefined,
 };
 

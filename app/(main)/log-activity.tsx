@@ -19,6 +19,12 @@ const COST_OPTIONS = [
   { value: '$$' as const, label: '$$' },
   { value: '$$$' as const, label: '$$$' },
 ];
+const DURATION_OPTIONS = [
+  { value: '30 minutes', label: '30 min' },
+  { value: '1-2 hours', label: '1-2 hrs' },
+  { value: 'Half day', label: 'Half day' },
+  { value: 'Full day', label: 'Full day' },
+];
 
 export default function LogActivityScreen() {
   const { createManualActivity } = useMemoryBook();
@@ -224,12 +230,34 @@ export default function LogActivityScreen() {
           </View>
 
           <Text style={styles.sectionTitle}>Duration</Text>
+          <View style={styles.durationContainer}>
+            {DURATION_OPTIONS.map((option) => (
+              <TouchableOpacity
+                key={option.value}
+                style={[
+                  styles.durationOption,
+                  duration === option.value && styles.durationOptionSelected,
+                ]}
+                onPress={() => setDuration(option.value)}
+                activeOpacity={0.7}
+              >
+                <Text
+                  style={[
+                    styles.durationOptionText,
+                    duration === option.value && styles.durationOptionTextSelected,
+                  ]}
+                >
+                  {option.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
           <TextInput
             style={styles.input}
-            placeholder="e.g., '1-2 hours', 'Half day', 'Full day'"
+            placeholder="Or enter custom duration..."
             placeholderTextColor={Colors.textLight}
-            value={duration}
-            onChangeText={setDuration}
+            value={DURATION_OPTIONS.some(d => d.value === duration) ? '' : duration}
+            onChangeText={(text) => setDuration(text)}
             maxLength={50}
           />
 
@@ -410,6 +438,33 @@ const styles = StyleSheet.create({
     fontWeight: '400' as const,
   },
   costOptionTextSelected: {
+    color: Colors.primary,
+    fontWeight: '600' as const,
+  },
+  durationContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
+    marginBottom: Spacing.sm,
+  },
+  durationOption: {
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.medium,
+    backgroundColor: Colors.cardBackground,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  durationOptionSelected: {
+    backgroundColor: Colors.primary + '20',
+    borderColor: Colors.primary,
+  },
+  durationOptionText: {
+    fontSize: Typography.sizes.small,
+    color: Colors.textLight,
+    fontWeight: '400' as const,
+  },
+  durationOptionTextSelected: {
     color: Colors.primary,
     fontWeight: '600' as const,
   },
