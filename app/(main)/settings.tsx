@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Linking, Platform, TextInput, Modal, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
@@ -8,7 +8,6 @@ import {
   Crown, 
   Heart, 
   Users, 
-  Settings as SettingsIcon, 
   RefreshCw, 
   Shield, 
   FileText, 
@@ -21,13 +20,15 @@ import {
   Palette,
   Music,
   Sparkles,
-  User,
   Plus,
   Trash2,
   Edit3,
   Check,
   X,
-  Camera
+  Code,
+  Zap,
+  Database,
+  RotateCcw
 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import Typography from '@/constants/typography';
@@ -42,11 +43,14 @@ import { RELIGIONS, FamilyMember, GroupType } from '@/types/preferences';
 import PolaroidFrame from '@/components/ui/PolaroidFrame';
 
 const MODE_KEY = 'scratch_and_go_mode';
+const DEV_MODE_KEY = 'scratch_and_go_dev_mode';
+const DEV_PREMIUM_OVERRIDE_KEY = 'scratch_and_go_dev_premium_override';
+const DEV_TAP_COUNT_REQUIRED = 7;
 
 type Mode = 'couples' | 'family';
 
 // Mode-specific content
-const getModeContent = (mode: Mode) => ({
+const MODE_CONTENT = {
   couples: {
     modeLabel: 'For two',
     modeDescription: 'Perfect for romantic adventures',
@@ -59,7 +63,7 @@ const getModeContent = (mode: Mode) => ({
     personalizationTitle: 'Your Family',
     personalizationDescription: 'Add your family details for personalized activity suggestions',
   },
-});
+};
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -72,8 +76,7 @@ export default function SettingsScreen() {
     setFamilyLastName,
     addFamilyMember,
     updateFamilyMember,
-    removeFamilyMember,
-    getDisplayName
+    removeFamilyMember
   } = usePreferences();
   const { isPremium, isTrial, getTrialDaysRemaining, getSubscriptionEndDate, restorePurchases } = useSubscription();
   const { user, logout, isAuthenticated } = useAuth();
@@ -92,7 +95,7 @@ export default function SettingsScreen() {
       .slice(0, 2);
   }, [getCompletedActivities]);
   
-  const content = getModeContent(mode)[mode];
+  const content = MODE_CONTENT[mode];
   
   // Personalization state
   const [partner1Name, setPartner1Name] = useState('');
@@ -103,11 +106,104 @@ export default function SettingsScreen() {
   const [editingMember, setEditingMember] = useState<FamilyMember | null>(null);
   const [newMemberName, setNewMemberName] = useState('');
   const [newMemberAge, setNewMemberAge] = useState('');
+  
+  // Developer mode state
+  const [devModeEnabled, setDevModeEnabled] = useState(false);
+  const [devTapCount, setDevTapCount] = useState(0);
+  const [devPremiumOverride, setDevPremiumOverride] = useState<boolean | null>(null);
+  const [lastTapTime, setLastTapTime] = useState(0);
 
   useEffect(() => {
     loadMode();
     loadPersonalization();
+    loadDevMode();
   }, []);
+
+  const loadDevMode = async () => {
+    try {
+      const devMode = await AsyncStorage.getItem(DEV_MODE_KEY);
+      const premiumOverride = await AsyncStorage.getItem(DEV_PREMIUM_OVERRIDE_KEY);
+      if (devMode === 'true') {
+        setDevModeEnabled(true);
+      }
+      if (premiumOverride !== null) {
+        setDevPremiumOverride(premiumOverride === 'true');
+      }
+    } catch (error) {
+      console.error('Error loading dev mode:', error);
+    }
+  };
+
+  const handleVersionTap = useCallback(() => {
+    const now = Date.now();
+    if (now - lastTapTime > 2000) {
+      setDevTapCount(1);
+    } else {
+      setDevTapCount(prev => prev + 1);
+    }
+    setLastTapTime(now);
+
+    if (devTapCount + 1 >= DEV_TAP_COUNT_REQUIRED && !devModeEnabled) {
+      setDevModeEnabled(true);
+      AsyncStorage.setItem(DEV_MODE_KEY, 'true');
+      showSuccess('Developer Mode', 'Developer options unlocked!');
+      setDevTapCount(0);
+    } else if (devTapCount + 1 >= 3 && !devModeEnabled) {
+      const remaining = DEV_TAP_COUNT_REQUIRED - (devTapCount + 1);
+      showInfo('Keep Tapping', `${remaining} more tap${remaining === 1 ? '' : 's'} to unlock developer mode`);
+    }
+  }, [devTapCount, lastTapTime, devModeEnabled, showSuccess, showInfo]);
+
+  const handleToggleDevPremium = async () => {
+    const newValue = devPremiumOverride === null ? true : devPremiumOverride ? false : null;
+    setDevPremiumOverride(newValue);
+    if (newValue === null) {
+      await AsyncStorage.removeItem(DEV_PREMIUM_OVERRIDE_KEY);
+      showInfo('Premium Override', 'Using actual subscription status');
+    } else {
+      await AsyncStorage.setItem(DEV_PREMIUM_OVERRIDE_KEY, String(newValue));
+      showInfo('Premium Override', newValue ? 'Simulating premium user' : 'Simulating free user');
+    }
+  };
+
+  const handleClearAllData = () => {
+    alert(
+      'Clear All Data',
+      'This will clear all app data including preferences, memories, and settings. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear All',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await AsyncStorage.clear();
+              showSuccess('Data Cleared', 'All app data has been cleared. Restart the app.');
+            } catch (error) {
+              showError('Error', 'Failed to clear data');
+            }
+          },
+        },
+      ],
+      'warning'
+    );
+  };
+
+  const handleDisableDevMode = async () => {
+    setDevModeEnabled(false);
+    setDevPremiumOverride(null);
+    await AsyncStorage.removeItem(DEV_MODE_KEY);
+    await AsyncStorage.removeItem(DEV_PREMIUM_OVERRIDE_KEY);
+    showInfo('Developer Mode', 'Developer options disabled');
+  };
+
+  const getEffectivePremiumStatus = useCallback(() => {
+    if (devPremiumOverride !== null) return devPremiumOverride;
+    return isPremium || isTrial;
+  }, [devPremiumOverride, isPremium, isTrial]);
+
+  // Log effective status for debugging
+  console.log('[DevMode] Effective premium status:', getEffectivePremiumStatus());
 
   const loadPersonalization = () => {
     const personalization = getPersonalization();
@@ -531,7 +627,7 @@ export default function SettingsScreen() {
                   Couples
                 </Text>
                 <Text style={styles.modeDescription}>
-                  {getModeContent('couples').modeDescription}
+                  {MODE_CONTENT.couples.modeDescription}
                 </Text>
               </View>
               {mode === 'couples' && (
@@ -554,7 +650,7 @@ export default function SettingsScreen() {
                   Family
                 </Text>
                 <Text style={styles.modeDescription}>
-                  {getModeContent('family').modeDescription}
+                  {MODE_CONTENT.family.modeDescription}
                 </Text>
               </View>
               {mode === 'family' && (
@@ -845,8 +941,66 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* Developer Section - Only visible when enabled */}
+        {devModeEnabled && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Code size={18} color={Colors.warning} />
+              <Text style={[styles.sectionTitle, { color: Colors.warning }]}>Developer Options</Text>
+            </View>
+            
+            <View style={styles.devCard}>
+              <View style={styles.devInfoRow}>
+                <Text style={styles.devLabel}>Actual Status:</Text>
+                <Text style={styles.devValue}>{isPremium ? 'Premium' : isTrial ? 'Trial' : 'Free'}</Text>
+              </View>
+              
+              <View style={styles.devInfoRow}>
+                <Text style={styles.devLabel}>Override:</Text>
+                <Text style={[styles.devValue, { color: devPremiumOverride === null ? Colors.textMuted : devPremiumOverride ? Colors.success : Colors.error }]}>
+                  {devPremiumOverride === null ? 'None' : devPremiumOverride ? 'Premium' : 'Free'}
+                </Text>
+              </View>
+              
+              <View style={styles.devActions}>
+                <TouchableOpacity
+                  style={styles.devButton}
+                  onPress={handleToggleDevPremium}
+                  activeOpacity={0.7}
+                >
+                  <Zap size={16} color={Colors.warning} />
+                  <Text style={styles.devButtonText}>
+                    {devPremiumOverride === null ? 'Simulate Premium' : devPremiumOverride ? 'Simulate Free' : 'Use Actual'}
+                  </Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={[styles.devButton, styles.devButtonDanger]}
+                  onPress={handleClearAllData}
+                  activeOpacity={0.7}
+                >
+                  <Database size={16} color={Colors.error} />
+                  <Text style={[styles.devButtonText, { color: Colors.error }]}>Clear All Data</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={styles.devButton}
+                  onPress={handleDisableDevMode}
+                  activeOpacity={0.7}
+                >
+                  <RotateCcw size={16} color={Colors.textMuted} />
+                  <Text style={[styles.devButtonText, { color: Colors.textMuted }]}>Disable Dev Mode</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        )}
+
         {/* Version */}
-        <Text style={styles.versionText}>Version 1.0.0</Text>
+        <TouchableOpacity onPress={handleVersionTap} activeOpacity={0.7}>
+          <Text style={styles.versionText}>Version 1.0.0</Text>
+          {devModeEnabled && <Text style={styles.devModeIndicator}>Developer Mode Active</Text>}
+        </TouchableOpacity>
       </ScrollView>
 
       {/* Add Family Member Modal */}
@@ -1315,6 +1469,62 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
     textAlign: 'center',
     marginTop: Spacing.lg,
+  },
+  devModeIndicator: {
+    fontSize: Typography.sizes.tiny,
+    color: Colors.warning,
+    textAlign: 'center',
+    marginTop: Spacing.xs,
+  },
+  
+  // Developer Options
+  devCard: {
+    backgroundColor: Colors.cardBackground,
+    borderRadius: BorderRadius.large,
+    padding: Spacing.lg,
+    borderWidth: 1,
+    borderColor: Colors.warning,
+  },
+  devInfoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: Spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.cardBorder,
+  },
+  devLabel: {
+    fontSize: Typography.sizes.small,
+    color: Colors.textLight,
+  },
+  devValue: {
+    fontSize: Typography.sizes.small,
+    color: Colors.text,
+    fontWeight: '500' as const,
+  },
+  devActions: {
+    marginTop: Spacing.lg,
+    gap: Spacing.sm,
+  },
+  devButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.medium,
+    backgroundColor: Colors.backgroundLight,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  devButtonDanger: {
+    borderColor: Colors.error,
+    backgroundColor: Colors.errorMuted,
+  },
+  devButtonText: {
+    fontSize: Typography.sizes.small,
+    color: Colors.warning,
+    fontWeight: '500' as const,
   },
   
   // Religion Picker
