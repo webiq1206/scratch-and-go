@@ -120,6 +120,7 @@ export default function HomeScreen() {
   const { preferences, getDisplayName, getPersonalization } = usePreferences();
   const { getCompletedActivities, saveActivity, savedActivities, isActivitySaved } = useMemoryBook();
   const [isSharing, setIsSharing] = useState(false);
+  const [isSavedForLater, setIsSavedForLater] = useState(false);
   const [showPreferencesSetup, setShowPreferencesSetup] = useState(false);
   const pendingWizardActionRef = useRef<(() => void) | null>(null);
   
