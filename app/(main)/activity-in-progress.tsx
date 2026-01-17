@@ -47,7 +47,7 @@ export default function ActivityInProgressScreen() {
   const [photos, setPhotos] = useState<string[]>([]);
   const [isCompleted, setIsCompleted] = useState(false);
   const notesInputRef = useRef<TextInput>(null);
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const initializedActivityKeyRef = useRef<string | null>(null);
 
   // Create activity object from params (memoized to prevent unnecessary re-renders)

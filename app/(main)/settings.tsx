@@ -92,7 +92,7 @@ export default function SettingsScreen() {
       .slice(0, 2);
   }, [getCompletedActivities]);
   
-  const content = getModeContent(mode);
+  const content = getModeContent(mode)[mode];
   
   // Personalization state
   const [partner1Name, setPartner1Name] = useState('');

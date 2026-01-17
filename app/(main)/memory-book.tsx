@@ -107,7 +107,7 @@ export default function MemoryBookScreen() {
     loadMode();
   }, []);
 
-  const content = getModeContent(mode);
+  const content = getModeContent(mode)[mode];
 
   // Handle tab query parameter (e.g., when redirected from activity completion)
   useEffect(() => {

@@ -43,7 +43,6 @@ export default function MainLayout() {
             <Logo 
               size={focused ? 26 : 24} 
               color={color}
-              strokeWidth={focused ? 3 : 2.5}
             />
           ),
         }}

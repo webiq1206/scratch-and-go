@@ -74,7 +74,7 @@ export default function StatsScreen() {
     loadMode();
   }, []);
 
-  const content = getModeContent(mode);
+  const content = getModeContent(mode)[mode];
 
   // Get user photos for decorative polaroids
   const userPhotos = useMemo(() => {

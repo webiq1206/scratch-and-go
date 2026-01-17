@@ -32,9 +32,12 @@ export default function WelcomeScreen() {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const insets = useSafeAreaInsets();
+  const isNavigating = React.useRef(false);
 
   useEffect(() => {
     const checkExistingMode = async () => {
+      if (isNavigating.current) return;
+      
       try {
         const savedMode = await AsyncStorage.getItem(MODE_KEY);
         const savedPreferences = await AsyncStorage.getItem(PREFERENCES_KEY);
@@ -43,6 +46,7 @@ export default function WelcomeScreen() {
           try {
             const prefs = JSON.parse(savedPreferences);
             if (prefs && prefs.completedOnboarding) {
+              isNavigating.current = true;
               router.replace('/(main)/(home)' as any);
             }
           } catch (parseError) {
@@ -64,6 +68,8 @@ export default function WelcomeScreen() {
   // Check onboarding status and ensure mode selection is shown on first login
   useEffect(() => {
     const checkOnboardingStatus = async () => {
+      if (isNavigating.current) return;
+      
       try {
         const savedPreferences = await AsyncStorage.getItem(PREFERENCES_KEY);
         
@@ -72,6 +78,7 @@ export default function WelcomeScreen() {
           try {
             const prefs = JSON.parse(savedPreferences);
             if (prefs && prefs.completedOnboarding) {
+              isNavigating.current = true;
               router.replace('/(main)/(home)' as any);
               return;
             }
@@ -227,6 +234,9 @@ export default function WelcomeScreen() {
   };
 
   const completeOnboarding = async (finalPreferences: UserPreferences) => {
+    if (isNavigating.current) return;
+    isNavigating.current = true;
+    
     try {
       const preferencesWithFlag = {
         ...finalPreferences,

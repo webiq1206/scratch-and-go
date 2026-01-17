@@ -78,7 +78,7 @@ export default function QueueScreen() {
     loadMode();
   }, []);
 
-  const content = getModeContent(mode);
+  const content = getModeContent(mode)[mode];
 
   // Get user photos for empty state decoration
   const userPhotos = useMemo(() => {
